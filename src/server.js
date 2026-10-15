@@ -15,7 +15,12 @@ lowercase d h u j i r = pending dig designation, @ citizen, E hostile, a other c
 W workshop, S stockpile, P farm plot, B bed, D door, K table, C chair/box/cabinet, c unfinished building.
 Workshops are 3x3 and placed by their CENTRE tile; farm plots, stockpiles and zones take a top-left corner + size.
 Farm plots need soil/mud floor underground or any soil surface. Check df_help for building keys.
-df_lua runs raw DFHack Lua (call emit(v) to return data). Save with df_save before risky moves.`;
+Production: use df_workshop action=add (direct workshop tasks, works without a manager). Prefer native tasks
+("construct bed", "make barrel", "brew drink from plant") over "make wooden ..." reactions.
+Farm plots reset to fallow when construction finishes: set crops with df_crop AFTER the plot is built.
+People: df_unit (detail), df_labor (labors/work details), df_noble (appoint MANAGER, MILITIA_COMMANDER...),
+df_rooms (assign bedrooms/offices), df_military (squads: create, add, station, kill, cancel).
+Inventory: df_stocks. df_lua runs raw DFHack Lua (call emit(v) to return data). Save with df_save before risky moves.`;
 
 const server = new McpServer({ name: "dwarf-fortress", version: "0.1.0" }, { instructions: INSTRUCTIONS });
 
@@ -156,6 +161,44 @@ tool("df_order", "Queue a manager work order, e.g. job=BrewDrink amount=20, Make
     const out = await command("workorder", [a.job, String(a.amount ?? 1)]);
     return text(out.trim() || `Queued ${a.amount ?? 1} x ${a.job}`);
   });
+
+// ---------- people & management ----------
+tool("df_unit", "Detailed view of one unit: unmet needs, recent emotions, wounds, inventory, all skills, enabled labors.",
+  { unit_id: z.number().int() }, (a) => luaTool("unit", a));
+
+tool("df_noble", "Fort positions. action=list shows every position and holder. action=appoint gives position (e.g. MANAGER, BOOKKEEPER, BROKER, CHIEF_MEDICAL_DWARF, MILITIA_COMMANDER, SHERIFF) to unit_id; action=remove vacates it. A MANAGER is required before work orders run.",
+  { action: z.enum(["list", "appoint", "remove"]).default("list"), position: z.string().optional(), unit_id: z.number().int().optional() },
+  (a) => luaTool("noble", a));
+
+tool("df_labor", "Labors and work details. action=list shows work details (members, labors) and every citizen's enabled labors. enable/disable toggle labors (e.g. MINE, CUTWOOD, HAUL_FOOD, BREWER, COOK, CARPENTER, MASON, PLANT) for unit_id. detail_add/detail_remove put unit_id in a named work detail (e.g. 'Miners') and apply its labors.",
+  { action: z.enum(["list", "enable", "disable", "detail_add", "detail_remove"]).default("list"),
+    unit_id: z.number().int().optional(), labors: z.array(z.string()).optional(), detail: z.string().optional() },
+  (a) => luaTool("labor", a));
+
+tool("df_rooms", "Zones. action=list shows all zones (bedrooms, dining halls, offices, pastures...) with owners. action=assign gives zone_id to unit_id; unassign clears the owner.",
+  { action: z.enum(["list", "assign", "unassign"]).default("list"), zone_id: z.number().int().optional(), unit_id: z.number().int().optional() },
+  (a) => luaTool("rooms", a));
+
+tool("df_crop", "Farming. action=list shows farm plots with crops per season and seeds in stock (with underground/surface and growing seasons). action=set makes plot_id grow plant (id or name, e.g. 'plump helmet', or 'fallow') in the given seasons (default all four).",
+  { action: z.enum(["list", "set"]).default("list"), plot_id: z.number().int().optional(), plant: z.string().optional(),
+    seasons: z.array(z.enum(["spring", "summer", "autumn", "winter"])).optional() },
+  (a) => luaTool("crop", a));
+
+tool("df_stocks", "Item inventory. No args: totals per item type. type=<ITEM_TYPE> (e.g. BAR, BLOCKS, WEAPON, TOOL, BARREL, BED) and/or search=<text> (e.g. 'pick', 'iron', 'plump helmet'): breakdown by item plus some locations.",
+  { type: z.string().optional(), search: z.string().optional() }, (a) => luaTool("stocks", a));
+
+tool("df_military", "Squads. list: squads, members, orders and leader positions. create: make a squad led by the holder of position (default MILITIA_COMMANDER; appoint with df_noble first). add/remove: unit_id into squad_id / out of its squad. station: send squad_id to x,y,z. kill: attack unit_ids. cancel: clear squad_id's orders.",
+  { action: z.enum(["list", "create", "add", "remove", "station", "kill", "cancel"]).default("list"),
+    squad_id: z.number().int().optional(), unit_id: z.number().int().optional(), position: z.string().optional(),
+    name: z.string().optional(), unit_ids: z.array(z.number().int()).optional(),
+    x: optCoord, y: optCoord, z: optCoord },
+  (a) => luaTool("military", a));
+
+tool("df_workshop", "Workshops and furnaces. action=list shows each with queued jobs (pass building_id or show_tasks=true to see task names it accepts). action=add queues a task directly at building_id, like the in-game Add task button (no manager needed): task is a name or substring (e.g. 'bed', 'barrel', 'brew', 'prepare easy meal', 'rock table'); count up to 10; repeat=true keeps redoing it. action=cancel removes the job at index.",
+  { action: z.enum(["list", "add", "cancel"]).default("list"), building_id: z.number().int().optional(),
+    task: z.string().optional(), count: z.number().int().min(1).max(10).optional(), repeat: z.boolean().optional(),
+    index: z.number().int().optional(), show_tasks: z.boolean().optional() },
+  (a) => luaTool("workshop", a));
 
 // ---------- time ----------
 async function tick() {
