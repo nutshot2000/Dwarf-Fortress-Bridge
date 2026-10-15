@@ -57,7 +57,7 @@ out.stocks = {
 local hostile = 0
 for _, u in ipairs(df.global.world.units.active) do
   if dfhack.units.isActive(u) and not dfhack.units.isDead(u) and try(function() return dfhack.units.isDanger(u) end, false)
-     and not u.flags1.caged then
+     and not u.flags1.caged and not try(function() return dfhack.maps.getTileFlags(u.pos).hidden end, true) then
     hostile = hostile + 1
   end
 end

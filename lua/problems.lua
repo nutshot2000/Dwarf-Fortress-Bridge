@@ -45,6 +45,7 @@ end
 local hostile = {}
 for _, u in ipairs(df.global.world.units.active) do
   if dfhack.units.isActive(u) and not dfhack.units.isDead(u) and not u.flags1.caged
+     and not try(function() return dfhack.maps.getTileFlags(u.pos).hidden end, true)
      and try(function() return dfhack.units.isDanger(u) end, false) then
     table.insert(hostile, ('%s at %d,%d,%d'):format(unit_name(u), u.pos.x, u.pos.y, u.pos.z))
   end
