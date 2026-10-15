@@ -17,9 +17,9 @@ local function tile_glyph(x, y)
   local tt = dfhack.maps.getTileType(x, y, z)
   if not tt then return ' ' end
   local fl = dfhack.maps.getTileFlags(x, y, z)
-  if fl.hidden then return '?' end
   local dig = df.tile_dig_designation[fl.dig]
   if dig and DIG[dig] then return DIG[dig] end
+  if fl.hidden then return '?' end
   if fl.flow_size > 0 then
     if fl.liquid_type then return '!' end
     return fl.flow_size >= 4 and '~' or tostring(fl.flow_size)

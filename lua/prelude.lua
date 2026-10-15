@@ -35,10 +35,10 @@ local function date_info()
 end
 
 local function unit_name(u)
-  return try(function() return dfhack.units.getReadableName(u) end)
+  return dfhack.df2utf(try(function() return dfhack.units.getReadableName(u) end)
       or try(function() return dfhack.translation.translateName(dfhack.units.getVisibleName(u)) end)
       or try(function() return dfhack.TranslateName(dfhack.units.getVisibleName(u)) end)
-      or ('unit ' .. u.id)
+      or ('unit ' .. u.id))
 end
 
 local function unit_job(u)

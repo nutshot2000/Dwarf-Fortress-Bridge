@@ -68,14 +68,25 @@ tool("df_look", "ASCII map slice of one z-level plus lists of units and building
     const body = rows.map((r, i) => String(y1 + i).padStart(5) + " " + r).join("\n");
     const tens = [];
     for (let x = x1; x <= x2; x++) if (x % 10 === 0) tens.push(x);
+    const people = units.filter((u) => u.kind !== "other")
+      .map((u) => `  ${u.kind === "hostile" ? "E" : "@"} ${u.x},${u.y} #${u.id} ${u.name}${u.job ? ` - ${u.job}` : ""}`);
+    const critters = {};
+    for (const u of units.filter((u) => u.kind === "other")) {
+      const k = u.name.replace(/\s*\(.*\)$/, "");
+      critters[k] = (critters[k] || 0) + 1;
+    }
+    const animals = Object.entries(critters).map(([k, n]) => (n > 1 ? `${n} ${k}` : k)).join(", ");
+    const blds = buildings.map((b) => `  ${b.type}${b.name ? ` "${b.name}"` : ""} #${b.id} ${b.x},${b.y}` +
+      (b.x2 !== b.x || b.y2 !== b.y ? `..${b.x2},${b.y2}` : "") + (b.built ? "" : " (unbuilt)"));
     return text(
       `z=${zz}  x ${x1}..${x2}  y ${y1}..${y2}  (map ${map_size.x}x${map_size.y}x${map_size.z}; | marks x=${tens.join(",")})\n` +
-      `${ruler}\n${body}\n\nunits: ${json(units)}\nbuildings: ${json(buildings)}`);
+      `${ruler}\n${body}\n\nunits:\n${people.join("\n") || "  none"}\nanimals: ${animals || "none"}\n` +
+      `buildings:\n${blds.join("\n") || "  none"}`);
   });
 
 // ---------- designate (quickfort) ----------
 async function quickfort(mode, rows, x, y, zz, extra = []) {
-  const name = `${mode}-${Date.now() % 100000}`;
+  const name = `last-${mode}`;
   const file = writeBlueprint(name, `#${mode}\n${rows.join("\n")}\n`);
   const out = await command("quickfort", ["run", file, "-c", `${x},${y},${zz}`, ...extra]);
   return out.trim() || "(no output)";
