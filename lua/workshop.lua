@@ -13,10 +13,26 @@ local function shop_type(b)
   local sub = df.building_workshopst:is_instance(b) and df.workshop_type[b.type] or df.furnace_type[b.type]
   return bt .. ':' .. tostring(sub)
 end
+-- Common jobs missing from dfhack.workshops' catalogue (it lists mostly reactions for craftsdwarfs).
+local function boulder() return {item_type = df.item_type.BOULDER, mat_type = 0, mat_index = -1, quantity = 1,
+  flags2 = {non_economic = true}} end
+local EXTRA = {
+  Craftsdwarfs = {
+    {name = 'make rock crafts', job_fields = {job_type = df.job_type.MakeCrafts, mat_type = 0}, items = {boulder()}},
+    {name = 'make rock mug', job_fields = {job_type = df.job_type.MakeGoblet, mat_type = 0}, items = {boulder()}},
+    {name = 'make rock short sword (training)', job_fields = {job_type = df.job_type.MakeWeapon, mat_type = 0}, items = {boulder()}},
+    {name = 'make wood crafts', job_fields = {job_type = df.job_type.MakeCrafts, material_category = {wood = true}},
+      items = {{item_type = df.item_type.WOOD, quantity = 1}}},
+    {name = 'make bone crafts', job_fields = {job_type = df.job_type.MakeCrafts, material_category = {bone = true}},
+      items = {{item_type = -1, quantity = 1, flags1 = {}, flags2 = {bone = true, body_part = true}}}},
+  },
+}
 local function task_list(b)
   local jobs = workshops.getJobs(b:getType(), b:getSubtype(), b:getCustomType()) or {}
   local list = {}
   for _, j in pairs(jobs) do table.insert(list, j) end
+  local sub = df.building_workshopst:is_instance(b) and df.workshop_type[b.type]
+  for _, j in ipairs(sub and EXTRA[sub] or {}) do table.insert(list, j) end
   table.sort(list, function(a, c) return a.name < c.name end)
   return list
 end
@@ -38,7 +54,10 @@ if action == 'list' then
         built = b:getBuildStage() >= b:getMaxBuildStage(), jobs = queued(b)}
       if ARGS.building_id == b.id or ARGS.show_tasks then
         entry.tasks = {}
-        for _, t in ipairs(task_list(b)) do table.insert(entry.tasks, dfhack.df2utf(t.name)) end
+        local flt = ARGS.filter and ARGS.filter:lower()
+        for _, t in ipairs(task_list(b)) do
+          if not flt or t.name:lower():find(flt, 1, true) then table.insert(entry.tasks, dfhack.df2utf(t.name)) end
+        end
       end
       table.insert(out, entry)
     end

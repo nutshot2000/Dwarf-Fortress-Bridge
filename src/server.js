@@ -200,7 +200,7 @@ tool("df_military", "Squads. list: squads, members, orders and leader positions.
 tool("df_workshop", "Workshops and furnaces. action=list shows each with queued jobs (pass building_id or show_tasks=true to see task names it accepts). action=add queues a task directly at building_id, like the in-game Add task button (no manager needed): task is a name or substring (e.g. 'bed', 'barrel', 'brew', 'prepare easy meal', 'rock table'); count up to 10; repeat=true keeps redoing it. action=cancel removes the job at index.",
   { action: z.enum(["list", "add", "cancel"]).default("list"), building_id: z.number().int().optional(),
     task: z.string().optional(), count: z.number().int().min(1).max(10).optional(), repeat: z.boolean().optional(),
-    index: z.number().int().optional(), show_tasks: z.boolean().optional() },
+    index: z.number().int().optional(), show_tasks: z.boolean().optional(), filter: z.string().optional() },
   (a) => luaTool("workshop", a));
 
 tool("df_animals", "Livestock and pets. list: own animals (race, sex, age, grazer/milkable/egg-layer, pasture, training) and pastures/ponds. pasture: put unit_id/unit_ids into pen zone_id (make one with df_zone type n). unpasture, slaughter / unslaughter (butcher marks), train (assign a trainer). Grazers starve without a grassy pasture.",
