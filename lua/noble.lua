@@ -38,10 +38,29 @@ for i, a in ipairs(ent.positions.assignments) do
 end
 if not asn then emit({error = 'No position ' .. code .. '. Use action=list to see codes.'}) return end
 
+-- Same history record the game writes when you appoint/remove in the Nobles screen.
+local function history(new_type, hfid)
+  local ev = df[new_type]:new()
+  ev.id = df.global.hist_event_next_id
+  df.global.hist_event_next_id = df.global.hist_event_next_id + 1
+  ev.year = df.global.cur_year
+  ev.seconds = df.global.cur_year_tick
+  ev.civ = ent.id
+  ev.histfig = hfid
+  ev.link_type = df.histfig_entity_link_type.POSITION
+  ev.position_id = asn.position_id
+  pcall(function() ev.appointer_hfid = -1 end)
+  pcall(function() ev.promise_to_hfid = -1 end)
+  df.global.world.history.events:insert('#', ev)
+end
+
 -- clear the current holder
 if asn.histfig >= 0 then
   local old = df.historical_figure.find(asn.histfig)
-  if old then unlink(old, asn.id) end
+  if old then
+    unlink(old, asn.id)
+    history('history_event_remove_hf_entity_linkst', old.id)
+  end
   asn.histfig = -1
   asn.histfig2 = -1
 end
@@ -51,7 +70,11 @@ local u = df.unit.find(ARGS.unit_id or -1)
 if not u then emit({error = 'No unit ' .. tostring(ARGS.unit_id)}) return end
 local hf = df.historical_figure.find(u.hist_figure_id)
 if not hf then emit({error = 'Unit has no historical figure'}) return end
+-- the game sets both histfig and histfig2; leaving histfig2 at -1 makes the UI treat the post as vacant
 asn.histfig = hf.id
+asn.histfig2 = hf.id
 hf.entity_links:insert('#', {new = df.histfig_entity_link_positionst, entity_id = ent.id,
-  link_strength = 100, assignment_id = asn.id, assignment_vector_idx = asn_idx, start_year = df.global.cur_year})
+  link_strength = 100, assignment_id = asn.id, assignment_vector_idx = asn_idx, entity_vector_idx = ent.id,
+  start_year = df.global.cur_year})
+history('history_event_add_hf_entity_linkst', hf.id)
 emit({ok = true, position = code, holder = unit_name(u)})

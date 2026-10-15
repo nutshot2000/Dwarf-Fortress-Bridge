@@ -258,6 +258,10 @@ tool("df_wait", "Unpause and let the game run for a number of in-game days (1 da
       now = await tick();
       if (now.abs >= target) break;
       if (now.paused) { reason = "game paused itself (check announcements)"; break; }
+      if (now.abs === start.abs && Date.now() - t0 > 6000) {
+        reason = "time is not advancing - a game menu or dialog is probably open (ask the player to close it with Esc)";
+        break;
+      }
       if (Date.now() - t0 > 50000) { reason = "real-time cap reached; call df_wait again to continue"; break; }
     }
     await setPause(true);
