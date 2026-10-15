@@ -16,7 +16,7 @@ If DF/DFHack aren't in `D:\SteamLibrary`, set `DF_DIR` and `DFHACK_DIR`.
 
 | Observe | Build | Manage | Time / misc |
 |---|---|---|---|
-| `df_status` `df_problems` `df_units` `df_unit` `df_announcements` `df_look` `df_stocks` | `df_dig` `df_build` `df_stockpile` `df_zone` `df_blueprint` | `df_workshop` `df_order` `df_crop` `df_labor` `df_noble` `df_rooms` `df_military` | `df_wait` `df_pause` `df_resume` `df_view` `df_save` `df_cmd` `df_lua` `df_help` |
+| `df_status` `df_problems` `df_units` `df_unit` `df_announcements` `df_look` `df_stocks` | `df_dig` `df_build` `df_stockpile` `df_zone` `df_blueprint` | `df_workshop` `df_jobs` `df_order` `df_crop` `df_labor` `df_standing` `df_noble` `df_rooms` `df_animals` `df_military` `df_burrow` `df_trade` `df_justice` | `df_wait` `df_pause` `df_resume` `df_view` `df_save` `df_cmd` `df_lua` `df_help` |
 
 Notes:
 - `df_workshop add` queues tasks directly at a workshop, the same as the in-game "Add task" button. In testing, manager work orders (`df_order`) never got dispatched, even with a manager appointed, so production goes through workshops.

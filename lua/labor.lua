@@ -63,7 +63,7 @@ if action == 'detail_add' or action == 'detail_remove' then
   if not w then emit({error = 'No work detail "' .. tostring(ARGS.detail) .. '"'}) return end
   local add = action == 'detail_add'
   local k = in_detail(w, u.id)
-  if add and not k then w.assigned_units:insert('sorted', u.id) end
+  if add and not k then w.assigned_units:insert('#', u.id) end
   if not add and k then w.assigned_units:erase(k) end
   for i, name in ipairs(df.unit_labor) do
     if name ~= 'NONE' and w.allowed_labors[i] then u.status.labors[i] = add end

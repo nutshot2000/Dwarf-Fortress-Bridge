@@ -20,6 +20,9 @@ Production: use df_workshop action=add (direct workshop tasks, works without a m
 Farm plots reset to fallow when construction finishes: set crops with df_crop AFTER the plot is built.
 People: df_unit (detail), df_labor (labors/work details), df_noble (appoint MANAGER, MILITIA_COMMANDER...),
 df_rooms (assign bedrooms/offices), df_military (squads: create, add, station, kill, cancel).
+Animals: df_animals (pastures, slaughter, training). df_standing (standing orders). df_jobs (all tasks).
+Emergencies: df_burrow alert_on burrow=Safety keeps civilians inside; alert_off afterwards.
+Trade: df_trade (caravans, send goods to depot, select on the open trade screen). df_justice (crimes).
 Inventory: df_stocks. df_lua runs raw DFHack Lua (call emit(v) to return data). Save with df_save before risky moves.`;
 
 const server = new McpServer({ name: "dwarf-fortress", version: "0.1.0" }, { instructions: INSTRUCTIONS });
@@ -199,6 +202,37 @@ tool("df_workshop", "Workshops and furnaces. action=list shows each with queued 
     task: z.string().optional(), count: z.number().int().min(1).max(10).optional(), repeat: z.boolean().optional(),
     index: z.number().int().optional(), show_tasks: z.boolean().optional() },
   (a) => luaTool("workshop", a));
+
+tool("df_animals", "Livestock and pets. list: own animals (race, sex, age, grazer/milkable/egg-layer, pasture, training) and pastures/ponds. pasture: put unit_id/unit_ids into pen zone_id (make one with df_zone type n). unpasture, slaughter / unslaughter (butcher marks), train (assign a trainer). Grazers starve without a grassy pasture.",
+  { action: z.enum(["list", "pasture", "unpasture", "slaughter", "unslaughter", "train"]).default("list"),
+    unit_id: z.number().int().optional(), unit_ids: z.array(z.number().int()).optional(), zone_id: z.number().int().optional() },
+  (a) => luaTool("animals", a));
+
+tool("df_standing", "Standing orders (Labor > Standing orders). No args lists all (gather_refuse, auto_butcher, auto_kitchen, dump_corpses, forbid_used_ammo, zoneonly_drink...). name + value (0/1, or true/false) changes one.",
+  { name: z.string().optional(), value: z.union([z.number().int(), z.boolean()]).optional() },
+  (a) => luaTool("standing", a));
+
+tool("df_jobs", "Every job in the fort (the Tasks screen). list: summary counts plus jobs (filter by name substring, limit). cancel / suspend / resume / do_now act on job_id.",
+  { action: z.enum(["list", "cancel", "suspend", "resume", "do_now"]).default("list"),
+    job_id: z.number().int().optional(), filter: z.string().optional(), limit: z.number().int().min(1).max(200).optional() },
+  (a) => luaTool("jobs", a));
+
+tool("df_burrow", "Burrows and the civilian alert. list: burrows and alerts. create (name). add_rect / remove_rect: tiles x1,y1..x2,y2 on z (or z1..z2) for burrow (name or id). add_units / remove_units (unit_ids or all_citizens=true), clear_tiles, clear_units. alert_on burrow=<name>: civilians stay inside it (use in sieges); alert_off ends it.",
+  { action: z.enum(["list", "create", "add_rect", "remove_rect", "clear_tiles", "add_units", "remove_units", "clear_units", "alert_on", "alert_off"]).default("list"),
+    burrow: z.union([z.string(), z.number().int()]).optional(), name: z.string().optional(),
+    x1: optCoord, y1: optCoord, x2: optCoord, y2: optCoord, z: optCoord, z1: optCoord, z2: optCoord,
+    unit_ids: z.array(z.number().int()).optional(), all_citizens: z.boolean().optional() },
+  (a) => luaTool("burrow", a));
+
+tool("df_trade", "Trading. status: caravans on the map, depots, broker, whether the trade screen is open. send: mark goods to haul to the depot by search text (e.g. 'crafts', 'mug', 'leather') or item_ids, up to limit. With the in-game trade screen open: screen lists merchant and fort goods with values and indices; select / deselect toggle indices on side merchant|fort and report selected totals. Proposing the deal (Trade button) is done on the screen.",
+  { action: z.enum(["status", "send", "screen", "select", "deselect"]).default("status"),
+    search: z.string().optional(), item_ids: z.array(z.number().int()).optional(), limit: z.number().int().optional(),
+    depot_id: z.number().int().optional(), side: z.enum(["merchant", "fort"]).optional(),
+    indices: z.array(z.number().int()).optional(), show_contained: z.boolean().optional() },
+  (a) => luaTool("trade", a));
+
+tool("df_justice", "Crimes involving the fort: type, criminal, accused, victim, witnesses, punishment. Use df_cmd 'justice' for convicts serving sentences and 'justice pardon --unit <id>' to pardon.",
+  {}, () => luaTool("justice"));
 
 // ---------- time ----------
 async function tick() {
