@@ -1,6 +1,12 @@
 -- Trade: caravans, depots, sending goods to the depot, and the trade screen (when open).
 if not need_map() then return end
 local action = ARGS.action or 'status'
+-- Esc does not close the trade screen (it lives inside the main dwarfmode screen); clear its open flag.
+if action == 'close' then
+  df.global.game.main_interface.trade.open = false
+  emit({closed = true, focus = dfhack.gui.getCurFocus(true)})
+  return
+end
 local T = df.global.game.main_interface.trade
 
 local function depots()
