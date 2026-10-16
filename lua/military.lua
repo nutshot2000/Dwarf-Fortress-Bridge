@@ -33,6 +33,38 @@ local function get_squad()
   return sq
 end
 
+if action == 'status' then
+  -- per soldier: gear worn vs assigned, empty uniform slots, what they are doing; per squad: routine and orders
+  local A = df.global.plotinfo.alerts
+  local out = {}
+  for _, s in ipairs(df.global.world.squads.all) do
+    if s.entity_id == df.global.plotinfo.group_id and (not ARGS.squad_id or ARGS.squad_id == s.id) then
+      local orders = {}
+      for _, o in ipairs(s.orders) do orders[#orders + 1] = tostring(o._type):match('squad_order_(%w+)') or '?' end
+      local rt = A.routines[s.cur_routine_idx]
+      local members = {}
+      for _, p in ipairs(s.positions) do
+        local u = hf_unit(p.occupant)
+        if u then
+          local inv = {}
+          for _, x in ipairs(u.inventory) do inv[x.item.id] = true end
+          local worn, empty = 0, {}
+          for _, id in ipairs(p.equipment.assigned_items) do if inv[id] then worn = worn + 1 end end
+          for sl = 0, 6 do for _, sp in ipairs(p.equipment.uniform[sl]) do
+            if #sp.assigned == 0 then empty[#empty + 1] = df.item_type[sp.item_type] end
+          end end
+          members[#members + 1] = {name = unit_name(u), worn = worn .. '/' .. #p.equipment.assigned_items,
+            empty_slots = #empty > 0 and table.concat(empty, ',') or nil,
+            at = u.pos.x .. ',' .. u.pos.y .. ',' .. u.pos.z, doing = unit_job(u)}
+        end
+      end
+      out[#out + 1] = {id = s.id, name = dfhack.df2utf(s.alias ~= '' and s.alias or dfhack.translation.translateName(s.name, true)),
+        routine = rt and rt.name, orders = orders, members = members}
+    end
+  end
+  emit({squads = out, hint = 'worn < assigned: soldiers still fetching; empty_slots: run action=equip or make that gear.'}) return
+end
+
 if action == 'list' then
   local out = {}
   for _, id in ipairs(ent.squads) do

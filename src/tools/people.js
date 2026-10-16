@@ -262,8 +262,19 @@ tool("df_levers", "Levers and mechanisms. list: levers (state, what each is link
     target_id: z.number().int().optional(), urgent: z.boolean().optional() },
   (a) => luaTool("levers", a));
 
-tool("df_mood", "Strange moods: which dwarf is in a mood, which workshop they claimed, and exactly which items they still need (runs DFHack showmood). Provide the materials quickly or the dwarf goes insane.",
-  {}, async () => text((await command("showmood")).trim() || "No dwarf is in a strange mood."));
+tool("df_mood", "Strange moods: which dwarf is in a mood, which workshop they claimed, and exactly which items they still need (runs DFHack showmood). check=true instead counts suitable items in the fort for each requirement, says how to get missing ones and gives days left, so impossible moods show up early. Provide the materials quickly or the dwarf goes insane.",
+  { check: z.boolean().optional() },
+  async (a) => a.check ? luaTool("moodcheck", {}) : text((await command("showmood")).trim() || "No dwarf is in a strange mood."));
+
+tool("df_threats", "Threat report: visible hostiles (and how many unseen), night creatures and cursed units on the map including werebeasts/vampires disguised as visitors, residents or even citizens, and every killer of the last N days (default 60) with victim counts and whether they are still alive and on the map.",
+  { days: z.number().int().min(1).max(400).optional() }, (a) => luaTool("threats", a));
+
+tool("df_items", "Find items by description text and/or item type (BARREL, WEAPON, BAR, BOULDER...): where each is (stockpile, building, dump, loose, held by whom) and flags that block use (forbid, dump, in_job, trader, owned, artifact). Use when something 'exists' but nobody uses it.",
+  { search: z.string().optional(), type: z.string().optional(), limit: z.number().int().min(1).max(200).optional() },
+  (a) => luaTool("items", a));
+
+tool("df_squad_status", "Every squad (or squad_id): routine, active orders, and per soldier the gear worn vs assigned, empty uniform slots, position and current activity.",
+  { squad_id: z.number().int().optional() }, (a) => luaTool("military", { ...a, action: "status" }));
 
 tool("df_dump", "Clear loose clutter (boulders by default) out of rooms: mark items on levels z (or z1..z2), optionally inside x1,y1..x2,y2, for dumping; dwarves haul them to a garbage dump zone (df_zone type d; no per-tile limit). WARNING: the game FORBIDS items once they land in a dump, so dumped stone/ore is unusable until you run action=unforbid (clears forbid on everything in dump zones; they stay put but masons/smelters can use them). Items already in stockpiles or dumps are skipped. count first, unmark to undo. types: df.items.other names, e.g. BOULDER, WOOD, BAR.",
   { action: z.enum(["count", "mark", "unmark", "unforbid"]).default("count"), z: optCoord, z1: optCoord, z2: optCoord,
