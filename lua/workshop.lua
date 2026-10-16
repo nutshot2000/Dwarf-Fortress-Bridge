@@ -78,7 +78,7 @@ end
 
 if action == 'add' then
   if b:getBuildStage() < b:getMaxBuildStage() then emit({error = 'Workshop is not built yet'}) return end
-  local want = (ARGS.task or ''):lower()
+  local want = dfhack.utf2df((ARGS.task or '')):lower()
   local pick
   for _, t in ipairs(task_list(b)) do
     if t.name:lower() == want then pick = t break end
@@ -111,6 +111,6 @@ if action == 'add' then
     b.jobs:insert('#', job)
     dfhack.job.linkIntoWorld(job, true)
   end
-  emit({ok = true, added = pick.name, count = count, jobs = queued(b)}) return
+  emit({ok = true, added = dfhack.df2utf(pick.name), count = count, jobs = queued(b)}) return
 end
 emit({error = 'Unknown action ' .. action})
