@@ -31,8 +31,10 @@ for _, u in ipairs(cits) do
     local m = df.mood_type[u.mood]
     local sev = (m == 'Berserk' or m == 'Melancholy' or m == 'Traumatized' or m == 'Possessed') and 'high' or 'medium'
     local j = u.job.current_job
-    local working = j and df.job_type[j.job_type]:find('^StrangeMood') ~= nil
-    add(working and 'low' or sev, ('%s is in a %s mood%s.'):format(name, m,
+    -- "working" only once every required item has been brought; before that the dwarf is waiting on materials
+    local working = j and df.job_type[j.job_type]:find('^StrangeMood') ~= nil and #j.items >= try(function() return #j.job_items.elements end, try(function() return #j.job_items end, 0))
+    local left = (not working and u.job.mood_timeout > 0) and (' ~%d days left before insanity;'):format(u.job.mood_timeout // 1230) or ''
+    add(working and 'low' or sev, ('%s is in a %s mood%s%s.'):format(name, m, left,
       working and ' (working on the artifact; leave the workshop alone)'
       or (m == 'Fey' or m == 'Secretive' or m == 'Macabre' or m == 'Fell' or m == 'Possessed')
         and ' (needs a free workshop and materials or will go insane: see df_mood)' or ''))
