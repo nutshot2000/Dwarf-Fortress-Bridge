@@ -162,15 +162,17 @@ tool("df_blueprint", "Apply a free-form quickfort blueprint. rows are CSV lines 
 // Orders without a material never get dispatched (the game's own UI always sets one), so pick a
 // sensible default per job and let the caller override it.
 const WOOD_JOBS = /^(ConstructBed|MakeBarrel|ConstructChest|ConstructBin|MakeBucket|ConstructCabinet|ConstructCoffin|ConstructWeaponRack|ConstructArmorStand|ConstructHatchCover|ConstructSplint|ConstructCrutch|MakeCage|MakeAnimalTrap|ConstructGrate|ConstructFloodgate)$/;
-const STONE_JOBS = /^(ConstructTable|ConstructThrone|ConstructDoor|ConstructStatue|ConstructSlab|ConstructQuern|ConstructMillstone|MakeGoblet|MakeCrafts|ConstructBlocks|ConstructBox)$/;
+const STONE_JOBS = /^(ConstructTable|ConstructThrone|ConstructDoor|ConstructStatue|ConstructSlab|ConstructQuern|ConstructMillstone|MakeGoblet|MakeCrafts|ConstructBlocks|ConstructBox|ConstructMechanisms)$/;
 const CATEGORY_MATS = ["wood", "plant", "cloth", "silk", "leather", "bone", "shell", "yarn", "tooth", "horn", "pearl", "soap"];
 
-tool("df_order", "Queue a manager work order (needs a MANAGER; df_noble repair if the game says one is required). job is a df.job_type name, e.g. ConstructBed, MakeBarrel, ConstructTable, ConstructThrone, ConstructDoor, BrewDrink, PrepareMeal, ConstructBlocks. material: wood, stone, bone, leather, cloth, ... (defaults: wood for carpenter jobs, stone for mason jobs). repeat: daily/weekly/monthly/seasonally/yearly. Omit job to list orders. df_cmd 'workorder -l <filter>' lists job names.",
-  { job: z.string().optional(), amount: z.number().int().min(1).max(1000).optional(), material: z.string().optional(),
+tool("df_order", "Queue a manager work order (needs a MANAGER; df_noble repair if the game says one is required). job is a df.job_type name, e.g. ConstructBed, MakeBarrel, ConstructTable, ConstructThrone, ConstructDoor, BrewDrink, PrepareMeal, ConstructBlocks. material: wood, stone, bone, leather, cloth, ... (defaults: wood for carpenter jobs, stone for mason jobs). repeat: daily/weekly/monthly/seasonally/yearly. Brewing, cooking and many crafts are reactions: pass reaction instead of job (BREW_DRINK_FROM_PLANT, BREW_DRINK_FROM_PLANT_GROWTH, MAKE_SOAP...). Omit job to list orders. df_cmd 'workorder -l <filter>' lists job names.",
+  { job: z.string().optional(), reaction: z.string().optional(), amount: z.number().int().min(1).max(1000).optional(), material: z.string().optional(),
     repeat: z.enum(["daily", "weekly", "monthly", "seasonally", "yearly"]).optional() },
   async (a) => {
+    if (a.reaction) { a.job = "CustomReaction"; }
     if (!a.job) return luaTool("orders");
     const order = { job: a.job, amount_total: a.amount ?? 1 };
+    if (a.reaction) order.reaction = a.reaction.toUpperCase();
     const mat = (a.material || (WOOD_JOBS.test(a.job) ? "wood" : STONE_JOBS.test(a.job) ? "stone" : "")).toLowerCase();
     if (CATEGORY_MATS.includes(mat)) order.material_category = [mat];
     else if (mat === "stone" || mat === "rock") order.material = "INORGANIC";
