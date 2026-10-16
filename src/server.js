@@ -215,9 +215,65 @@ tool("df_labor", "Labors and work details. action=list shows work details (membe
     return text(`Re-applied work detail "${detail}" through the Labor screen (labors and tool assignment updated).`);
   });
 
-tool("df_rooms", "Zones. action=list shows all zones with owners. action=assign gives zone_id to unit_id; unassign clears the owner. action=audit checks EVERY zone against the wiki requirements (required furniture per zone type, owners, overlaps that zero room value, room quality rank, tavern/temple/hospital/library needs incl. dance floor and stocked goblets/instruments/supplies, staff) , every noble's room demands, and untidy stockpiles (fragmented, stray, on stairs). Run audit after building or changing rooms.",
-  { action: z.enum(["list", "assign", "unassign", "audit"]).default("list"), zone_id: z.number().int().optional(), unit_id: z.number().int().optional() },
-  (a) => (a.action === "audit" ? luaTool("audit", a) : luaTool("rooms", a)));
+tool("df_rooms", "Zones. action=list shows all zones with owners. action=assign gives zone_id to unit_id; unassign clears the owner. action=audit checks EVERY zone against the wiki requirements (required furniture per zone type, owners, overlaps that zero room value, room quality rank, tavern/temple/hospital/library needs incl. dance floor and stocked goblets/instruments/supplies, staff) , every noble's room demands, and untidy stockpiles (fragmented, stray, on stairs). Run audit after building or changing rooms. action=bedroom_wing builds a tidy wing of private 3x3 bedrooms either side of a corridor (z, x1=west end, y=corridor row, per_side, shaft_x to keep clear): phase dig, then furnish (door/bed/cabinet/chest), then zone (zones + assigns adults without a room).",
+  { action: z.enum(["list", "assign", "unassign", "audit", "bedroom_wing"]).default("list"), zone_id: z.number().int().optional(), unit_id: z.number().int().optional(),
+    phase: z.enum(["dig", "furnish", "zone"]).optional(), z: optCoord, x1: optCoord, y: optCoord, per_side: z.number().int().min(1).max(15).optional(),
+    shaft_x: optCoord, priority: z.number().int().min(1).max(7).optional() },
+  async (a) => {
+    if (a.action === "audit") return luaTool("audit", a);
+    if (a.action !== "bedroom_wing") return luaTool("rooms", a);
+    // A tidy wing of private 3x3 bedrooms either side of a corridor (row y), each with a doorway.
+    // Rooms skip the column of a stair shaft at shaft_x. Run phase dig, then furnish, then zone.
+    const Z = a.z, Y = a.y ?? 97, X1 = a.x1 ?? 84, N = a.per_side ?? 10, SX = a.shaft_x ?? 104, P = a.priority ?? 3;
+    if (Z === undefined) return fail("bedroom_wing needs z");
+    const rooms = [];
+    for (let x = X1; rooms.length < N; x += 4) {
+      if (x <= SX + 1 && x + 2 >= SX - 1) x = SX + 2; // keep the shaft clear with a wall either side
+      rooms.push(x);
+    }
+    const xEnd = rooms[rooms.length - 1] + 2;
+    const log = [];
+    const dig = async (kind, x1, y1, x2, y2) => {
+      const out = await quickfort("dig", [`${DIG_KEYS[kind]}(${x2 - x1 + 1}x${y2 - y1 + 1})`], x1, y1, Z, ["-p", String(P)]);
+      return out;
+    };
+    if (a.phase === "dig" || !a.phase) {
+      await dig("dig", X1, Y, xEnd, Y);
+      for (const x of rooms) {
+        await dig("dig", x, Y - 4, x + 2, Y - 2); await dig("dig", x + 1, Y - 1, x + 1, Y - 1);
+        await dig("dig", x, Y + 2, x + 2, Y + 4); await dig("dig", x + 1, Y + 1, x + 1, Y + 1);
+      }
+      await quickfort("dig", ["i"], SX, Y, Z, ["-p", "1"]); // re-assert the shaft after the corridor dig
+      log.push(`dig: corridor x${X1}-${xEnd} y${Y} and ${rooms.length * 2} rooms on z${Z}; shaft at ${SX},${Y}`);
+    }
+    if (a.phase === "furnish") {
+      for (const x of rooms) {
+        await quickfort("build", ["b,,f", ",,", ",,h", ",d,"], x, Y - 4, Z);
+        await quickfort("build", [",d,", ",,h", ",,", "b,,f"], x, Y + 1, Z);
+      }
+      log.push(`furnish: door, bed, cabinet, chest placed in ${rooms.length * 2} rooms (they build as items exist)`);
+    }
+    if (a.phase === "zone") {
+      let n = 0;
+      const names = [];
+      for (const x of rooms) for (const yy of [Y - 4, Y + 2]) {
+        n++; const name = `Bedroom ${Z}-${n}`; names.push(name);
+        await quickfort("zone", [`b{name="${name}"}(3x3)`], x, yy, Z);
+      }
+      // assign to adults without a bedroom
+      const { value: zl } = await luaFile("rooms", { action: "list" });
+      const owned = new Set((zl?.zones ?? []).filter((q) => q.type === "Bedroom" && q.owner).map((q) => q.owner));
+      const free = (zl?.zones ?? []).filter((q) => names.includes(q.name) && !q.owner);
+      const { value: ul } = await luaFile("units", {});
+      const homeless = (ul?.citizens ?? []).filter((u) => !u.child && !owned.has(u.name));
+      let assigned = 0;
+      for (let i = 0; i < free.length && i < homeless.length; i++) {
+        await luaFile("rooms", { action: "assign", zone_id: free[i].id, unit_id: homeless[i].id }); assigned++;
+      }
+      log.push(`zone: ${names.length} bedroom zones; assigned ${assigned} to adults without a room`);
+    }
+    return text(log.join("\n") + "\nRun df_rooms action=audit afterwards.");
+  });
 
 tool("df_crop", "Farming. action=list shows farm plots with crops per season and seeds in stock (with underground/surface and growing seasons). action=set makes plot_id grow plant (id or name, e.g. 'plump helmet', or 'fallow') in the given seasons (default all four).",
   { action: z.enum(["list", "set"]).default("list"), plot_id: z.number().int().optional(), plant: z.string().optional(),
