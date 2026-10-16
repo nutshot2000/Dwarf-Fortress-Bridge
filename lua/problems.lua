@@ -62,6 +62,18 @@ for _, u in ipairs(df.global.world.units.active) do
   end
 end
 
+-- diplomat meetings: a noble stuck in a meeting with no place blocks trading (broker) until the visitor leaves
+for _, u in ipairs(cits) do
+  for _, r in ipairs(u.specific_refs) do
+    if r.type == df.specific_ref_type.ACTIVITY then
+      local a = try(function() return r.data.activity end)
+      if a and try(function() return a.unit_noble end) == u.id and a.place == -1 then
+        add('high', ('%s is stuck in a diplomat meeting with no meeting room: give them an Office zone (Decent quality is best) or the meeting and depot trading stall.'):format(unit_name(u)))
+      end
+    end
+  end
+end
+
 -- hostiles
 local hostile = {}
 for _, u in ipairs(df.global.world.units.active) do

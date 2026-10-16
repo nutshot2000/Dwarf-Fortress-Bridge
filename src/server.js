@@ -540,6 +540,12 @@ tool("df_wait", "Unpause and let the game run for a number of in-game days (1 da
       if (now.paused) { reason = "game paused itself (check announcements)"; break; }
       if (Date.now() - lastMove > 6000) {
         reason = "time is not advancing - a game menu or dialog is probably open (ask the player to close it with Esc)";
+        // diplomacy meetings and other dialogs: show their text so the overseer can answer with df_screen
+        const { value: sc } = await luaFile("screen", { action: "read" });
+        if (sc?.focus?.some((f) => /Diplomacy|Petition|Mandate/.test(f))) {
+          const lines = (sc.lines ?? []).map((l) => (typeof l === "string" ? l : l.text ?? "")).filter((l) => l.trim()).slice(0, 25).join(String.fromCharCode(10));
+          reason = `a ${sc.focus.join(" ")} dialog is open - answer it with df_screen (click its buttons):` + String.fromCharCode(10) + lines;
+        }
         break;
       }
       if (Date.now() - t0 > 50000) { reason = "real-time cap reached; call df_wait again to continue"; break; }
