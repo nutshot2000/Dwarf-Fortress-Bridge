@@ -1,3 +1,4 @@
+local utils = require('utils')
 -- Squads: list, create, add/remove members, station, kill orders, cancel.
 if not need_map() then return end
 local ent = df.historical_entity.find(df.global.plotinfo.group_id)
@@ -105,6 +106,75 @@ if action == 'barracks' then
   local ok, err = pcall(function() dfhack.military.updateRoomAssignments(sq.id, z.id, flags) end)
   if not ok then emit({error = 'updateRoomAssignments failed: ' .. tostring(err)}) return end
   emit({ok = true, squad = squad_info(sq), barracks = z.id, flags = flags}) return
+end
+
+if action == 'equip' then
+  -- Assign free matching items to every empty uniform slot of squad_id, the way the game's
+  -- equipment pass does (slot.assigned + plotinfo.equipment assigned/unassigned index).
+  -- Use when dwarves stay unequipped although matching gear exists.
+  local E = df.global.plotinfo.equipment
+  local taken = {}
+  for _, p in ipairs(sq.positions) do for s = 0, 6 do for _, sp in ipairs(p.equipment.uniform[s]) do
+    for _, id in ipairs(sp.assigned) do taken[id] = true end end end end
+  local function is_metal(it)
+    local m = dfhack.matinfo.decode(it)
+    return m and m.material and m.material.flags.IS_METAL
+  end
+  local function fits(sp, it)
+    if it.flags.forbid or it.flags.trader or it.flags.in_job or it.flags.removed then return false end
+    if it.flags.in_inventory then return false end
+    if sp.item_subtype >= 0 and it:getSubtype() ~= sp.item_subtype then return false end
+    if sp.mattype >= 0 and (it:getMaterial() ~= sp.mattype or it:getMaterialIndex() ~= sp.matindex) then return false end
+    if df.item_type[sp.item_type] == 'WEAPON' then
+      local d = it.subtype
+      if d.id == 'ITEM_WEAPON_PICK' then return false end
+      local ranged = d.skill_ranged >= 0
+      if sp.indiv_choice.melee and ranged then return false end
+      if sp.indiv_choice.ranged and not ranged then return false end
+    elseif sp.material_class == df.entity_material_category.Armor and not is_metal(it)
+        and df.item_type[sp.item_type] ~= 'SHIELD' then -- any shield beats none
+      return false
+    end
+    return true
+  end
+  local done, missing = {}, {}
+  for pi, p in ipairs(sq.positions) do
+    if p.occupant >= 0 then
+      local hf = df.historical_figure.find(p.occupant)
+      local u = hf and df.unit.find(hf.unit_id)
+      for s = 0, 6 do
+        for _, sp in ipairs(p.equipment.uniform[s]) do
+          -- gloves and boots are single items: a slot wants a pair
+          local tname = df.item_type[sp.item_type]
+          local want = (tname == 'GLOVES' or tname == 'SHOES') and 2 or 1
+          while #sp.assigned < want do
+            -- search every item of the type: freed gear can be missing from the unassigned index
+            local pick
+            for _, it in ipairs(df.global.world.items.other[df.item_type[sp.item_type]]) do
+              if not taken[it.id] and fits(sp, it) then pick = it break end
+            end
+            if not pick then break end
+            local id = pick.id
+            local un = E.items_unassigned[sp.item_type]
+            local i = utils.linear_index(un, id)
+            if i then un:erase(i) end
+            local as = E.items_assigned[sp.item_type]
+            if not utils.linear_index(as, id) then utils.insert_sorted(as, id) end
+            sp.assigned:insert('#', id)
+            taken[id] = true
+            table.insert(done, (u and unit_name(u) or ('pos ' .. pi)) .. ': ' .. dfhack.df2utf(dfhack.items.getReadableDescription(df.item.find(id))))
+          end
+          if #sp.assigned == 0 then
+            do
+              table.insert(missing, (u and unit_name(u):match('^(%S+)') or ('pos ' .. pi)) .. ' ' .. df.item_type[sp.item_type])
+            end
+          end
+        end
+      end
+    end
+  end
+  emit({ok = true, assigned = done, still_missing = missing,
+    hint = 'Dwarves now collect the assigned items. still_missing = make or buy those.'}) return
 end
 
 if action == 'uniform' then

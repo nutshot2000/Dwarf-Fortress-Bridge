@@ -1,6 +1,16 @@
 -- Read the game's UI as a text grid, find text on it, press interface keys, or click.
 local gui = require('gui')
 local action = ARGS.action or 'read'
+if action == 'close' then
+  -- v50 panels (trade, squads, petitions, view sheets...) live inside the main dwarfmode screen and
+  -- ignore Esc sent from scripts; clear their open flags instead. Time stays frozen while some are open.
+  local closed = {}
+  for k, v in pairs(df.global.game.main_interface) do
+    local ok, open = pcall(function() return v.open end)
+    if ok and open == true then v.open = false table.insert(closed, k) end
+  end
+  emit({closed = closed, focus = dfhack.gui.getCurFocus(true)}) return
+end
 local W, H = dfhack.screen.getWindowSize()
 
 local function row_text(y, x1, x2)
