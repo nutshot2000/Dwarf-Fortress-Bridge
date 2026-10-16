@@ -103,6 +103,19 @@ local function tile_matval(x, y, z)
   end)
   return v
 end
+-- engraved tiles count like constructed ones (floor x7, wall x9); look them up once per level
+local engraved_cache = {}
+local function engraved(x, y, zz)
+  local m = engraved_cache[zz]
+  if not m then
+    m = {}
+    for _, e in ipairs(try(function() return df.global.world.event.engravings end, {})) do
+      if e.pos.z == zz then m[e.pos.x * 1000 + e.pos.y] = true end
+    end
+    engraved_cache[zz] = m
+  end
+  return m[x * 1000 + y]
+end
 local function room_value(z)
   local v = 0
   for x = z.x1, z.x2 do
@@ -114,9 +127,9 @@ local function room_value(z)
           local shape, mat, special = df.tiletype_shape[a.shape], df.tiletype_material[a.material], df.tiletype_special[a.special]
           local mv = tile_matval(x, y, z.z)
           if shape == 'FLOOR' then
-            v = v + mv * (mat == 'CONSTRUCTION' and 7 or (special == 'SMOOTH' and 4 or 1))
+            v = v + mv * ((mat == 'CONSTRUCTION' or engraved(x, y, z.z)) and 7 or (special == 'SMOOTH' and 4 or 1))
           elseif shape == 'WALL' then
-            v = v + mv * (mat == 'CONSTRUCTION' and 9 or (special == 'SMOOTH' and 5 or 1))
+            v = v + mv * ((mat == 'CONSTRUCTION' or engraved(x, y, z.z)) and 9 or (special == 'SMOOTH' and 5 or 1))
           end
         end
       end
