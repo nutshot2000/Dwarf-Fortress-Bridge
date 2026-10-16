@@ -23,6 +23,8 @@ df_rooms (assign bedrooms/offices), df_military (squads: create, add, station, k
 Animals: df_animals (pastures, slaughter, training). df_standing (standing orders). df_jobs (all tasks).
 Emergencies: df_burrow alert_on burrow=Safety keeps civilians inside; alert_off afterwards.
 Trade: df_trade (caravans, send goods to depot, select on the open trade screen). df_justice (crimes).
+Defence: df_levers (link/pull), df_military uniform/train/barracks. df_mood for strange moods. df_pile (stockpile presets and links), df_kitchen, df_auto (automation plugins).
+Screen: df_screen read/find/click/key handles pop-ups and any screen without a tool; the game pauses while menus are open.
 Inventory: df_stocks. df_lua runs raw DFHack Lua (call emit(v) to return data). Save with df_save before risky moves.`;
 
 const server = new McpServer({ name: "dwarf-fortress", version: "0.1.0" }, { instructions: INSTRUCTIONS });
@@ -203,8 +205,10 @@ tool("df_crop", "Farming. action=list shows farm plots with crops per season and
 tool("df_stocks", "Item inventory. No args: totals per item type. type=<ITEM_TYPE> (e.g. BAR, BLOCKS, WEAPON, TOOL, BARREL, BED) and/or search=<text> (e.g. 'pick', 'iron', 'plump helmet'): breakdown by item plus some locations.",
   { type: z.string().optional(), search: z.string().optional() }, (a) => luaTool("stocks", a));
 
-tool("df_military", "Squads. list: squads, members, orders and leader positions. create: make a squad led by the holder of position (default MILITIA_COMMANDER; appoint with df_noble first). add/remove: unit_id into squad_id / out of its squad. station: send squad_id to x,y,z. kill: attack unit_ids. cancel: clear squad_id's orders.",
-  { action: z.enum(["list", "create", "add", "remove", "station", "kill", "cancel"]).default("list"),
+tool("df_military", "Squads. list: squads, members, orders and leader positions. create: make a squad led by the holder of position (default MILITIA_COMMANDER; appoint with df_noble first). add/remove: unit_id into squad_id / out of its squad. uniform: apply a uniform template (template = name or id, e.g. 'melee, leather armor', 'melee, metal armor', 'crossbows, leather armor') to every position of squad_id. train: routine off|staggered|constant|ready. barracks: assign zone_id (a type B zone) for training (sleep=true to also sleep there). station: send squad_id to x,y,z. kill: attack unit_ids. cancel: clear squad_id's orders.",
+  { action: z.enum(["list", "create", "add", "remove", "uniform", "train", "barracks", "station", "kill", "cancel"]).default("list"),
+    template: z.string().optional(), routine: z.enum(["off", "staggered", "constant", "ready"]).optional(),
+    zone_id: z.number().int().optional(), sleep: z.boolean().optional(), train: z.boolean().optional(), replace_clothing: z.boolean().optional(),
     squad_id: z.number().int().optional(), unit_id: z.number().int().optional(), position: z.string().optional(),
     name: z.string().optional(), unit_ids: z.array(z.number().int()).optional(),
     x: optCoord, y: optCoord, z: optCoord },
@@ -246,6 +250,74 @@ tool("df_trade", "Trading. status: caravans on the map, depots, broker, whether 
 
 tool("df_justice", "Crimes involving the fort: type, criminal, accused, victim, witnesses, punishment. Use df_cmd 'justice' for convicts serving sentences and 'justice pardon --unit <id>' to pardon.",
   {}, () => luaTool("justice"));
+
+tool("df_screen", "The game's UI as text, plus input. read: the screen as numbered text lines (graphics-only map cells are blank; region via x1,y1,x2,y2) and the focus string. find: grid coordinates of text. key: press interface keys (LEAVESCREEN = Esc, SELECT = Enter, STANDARDSCROLL_UP/DOWN, CUSTOM_* letters). click: left-click at x,y or on a text label (e.g. text='Okay', occurrence=n); right=true for right-click. Use it for pop-ups, the trade screen and anything without a dedicated tool; read again after acting.",
+  { action: z.enum(["read", "find", "key", "click"]).default("read"), text: z.string().optional(),
+    keys: z.array(z.string()).optional(), x: optCoord, y: optCoord, occurrence: z.number().int().min(1).optional(),
+    right: z.boolean().optional(), x1: optCoord, y1: optCoord, x2: optCoord, y2: optCoord },
+  async (a) => {
+    const { value } = await luaFile("screen", a);
+    if (value?.error) return fail(value.error);
+    if (value.lines) return text(`focus: ${value.focus.join(" | ")}  paused: ${value.paused}  (${value.size.w}x${value.size.h})\n${value.lines.join("\n")}`);
+    return text(json(value));
+  });
+
+tool("df_levers", "Levers and mechanisms. list: levers (state, what each is linked to, pending jobs), buildings that can be linked (bridges, doors, hatches, floodgates, grates, bars, cages) and free mechanisms. link: queue the job linking lever_id to target_id (uses 2 mechanisms). pull: queue a dwarf to pull lever_id (urgent=true for top priority). Build a lever with df_build key=Tl; a drawbridge with key g / gw / gd / gx / ga.",
+  { action: z.enum(["list", "link", "pull"]).default("list"), lever_id: z.number().int().optional(),
+    target_id: z.number().int().optional(), urgent: z.boolean().optional() },
+  (a) => luaTool("levers", a));
+
+tool("df_mood", "Strange moods: which dwarf is in a mood, which workshop they claimed, and exactly which items they still need (runs DFHack showmood). Provide the materials quickly or the dwarf goes insane.",
+  {}, async () => text((await command("showmood")).trim() || "No dwarf is in a strange mood."));
+
+tool("df_pile", "Stockpile settings and links. status: every stockpile with stats. presets: list settings presets (library/cat_food, library/booze, library/cat_stone, library/ironore, library/plants, ...; search filters the list). apply: import preset into pile_id (mode set = replace, enable = add, disable = remove; filter = comma-separated substrings to touch only matching items). links: show pile/workshop links. link / unlink: pile_id gives to workshop_id (direction give) or takes products from it (direction take).",
+  { action: z.enum(["status", "presets", "apply", "links", "link", "unlink"]).default("status"),
+    pile_id: z.number().int().optional(), preset: z.string().optional(), search: z.string().optional(),
+    mode: z.enum(["set", "enable", "disable"]).optional(), filter: z.string().optional(),
+    workshop_id: z.number().int().optional(), direction: z.enum(["give", "take"]).optional() },
+  async (a) => {
+    if (a.action === "status") return text((await command("stockpiles", ["status"])).trim());
+    if (a.action === "presets") return text((await command("stockpiles", ["list", ...(a.search ? [a.search] : [])])).trim());
+    if (a.action === "apply") {
+      if (a.pile_id === undefined || !a.preset) return fail("apply needs pile_id and preset");
+      const args = ["import", a.preset, "-s", String(a.pile_id)];
+      if (a.mode) args.push("-m", a.mode);
+      if (a.filter) args.push("-f", a.filter);
+      return text((await command("stockpiles", args)).trim() || `Applied ${a.preset} to stockpile ${a.pile_id}`);
+    }
+    return luaTool("piles", a);
+  });
+
+tool("df_kitchen", "Kitchen settings. list: current cook/brew exclusions. set: plant (name or id, e.g. 'plump helmet') with cook=true/false and/or brew=true/false. Tip: forbid cooking seed-bearing crops you need to replant, or enable the seedwatch automation.",
+  { action: z.enum(["list", "set"]).default("list"), plant: z.string().optional(),
+    cook: z.boolean().optional(), brew: z.boolean().optional() },
+  (a) => luaTool("kitchen", a));
+
+const AUTOMATION = {
+  autolabor: "assign labors automatically (overrides manual labor settings)",
+  autofarm: "pick crops by demand",
+  seedwatch: "stop cooking/brewing plants whose seeds run low",
+  autobutcher: "keep herds at a target size, slaughter the surplus",
+  tailor: "make replacement clothing when it wears out",
+  autoclothing: "keep a target amount of clothing per dwarf",
+  suspendmanager: "suspend construction jobs that would trap dwarves or fail",
+  autochop: "chop trees when wood runs low",
+  autonestbox: "put egg-layers on nest boxes",
+  autoslab: "engrave memorial slabs for ghosts",
+  "dwarfvet": "let animals be treated in hospitals",
+};
+tool("df_auto", `Fort automation plugins. No args: status of each. enable / disable a plugin by name. Available: ${Object.entries(AUTOMATION).map(([k, v]) => `${k} (${v})`).join("; ")}.`,
+  { action: z.enum(["status", "enable", "disable"]).default("status"), plugin: z.string().optional() },
+  async (a) => {
+    if (a.action === "status") {
+      const out = await command("enable");
+      const lines = out.split("\n").filter((l) => Object.keys(AUTOMATION).some((k) => l.includes(k)));
+      return text(lines.join("\n") || out.trim());
+    }
+    if (!a.plugin || !(a.plugin in AUTOMATION)) return fail(`plugin must be one of ${Object.keys(AUTOMATION).join(", ")}`);
+    const out = await command(a.action, [a.plugin]);
+    return text(out.trim() || `${a.action}d ${a.plugin}`);
+  });
 
 // ---------- time ----------
 async function tick() {

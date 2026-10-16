@@ -88,6 +88,66 @@ if action == 'remove' then
 end
 
 local sq = get_squad() if not sq then return end
+
+local ROUTINES = {off = 0, off_duty = 0, staggered = 1, staggered_training = 1, constant = 2, constant_training = 2, ready = 3}
+if action == 'train' then
+  local r = ROUTINES[(ARGS.routine or 'staggered'):lower()]
+  if not r then emit({error = 'routine must be off, staggered, constant or ready'}) return end
+  sq.cur_routine_idx = r
+  emit({ok = true, squad = squad_info(sq), routine = df.global.plotinfo.alerts.routines[r].name,
+    hint = 'Squads train in a barracks: create a zone type B and use action=barracks.'}) return
+end
+
+if action == 'barracks' then
+  local z = df.building.find(ARGS.zone_id or -1)
+  if not z or not df.building_civzonest:is_instance(z) then emit({error = 'No zone ' .. tostring(ARGS.zone_id)}) return end
+  local flags = {sleep = ARGS.sleep or false, train = ARGS.train ~= false, indiv_eq = true, squad_eq = true}
+  local ok, err = pcall(function() dfhack.military.updateRoomAssignments(sq.id, z.id, flags) end)
+  if not ok then emit({error = 'updateRoomAssignments failed: ' .. tostring(err)}) return end
+  emit({ok = true, squad = squad_info(sq), barracks = z.id, flags = flags}) return
+end
+
+if action == 'uniform' then
+  local e = df.global.plotinfo.main.fortress_entity or ent
+  local want = ARGS.template and tostring(ARGS.template):lower() or 'melee, leather armor'
+  local u
+  for _, t in ipairs(e.uniforms) do
+    if tostring(t.id) == want or t.name:lower() == want or t.name:lower():find(want, 1, true) then u = t break end
+  end
+  if not u then
+    local names = {}
+    for _, t in ipairs(e.uniforms) do table.insert(names, t.id .. ': ' .. t.name) end
+    emit({error = 'No uniform template ' .. want, templates = names}) return
+  end
+  local set = 0
+  for _, pos in ipairs(sq.positions) do
+    local eq = pos.equipment
+    for s = 0, 6 do
+      local slot = eq.uniform[s]
+      for i = #slot - 1, 0, -1 do local sp = slot[i] slot:erase(i) sp:delete() end
+      for k, itype in ipairs(u.uniform_item_types[s]) do
+        local spec = df.squad_uniform_spec:new()
+        spec.item = -1
+        spec.item_type = itype
+        spec.item_subtype = u.uniform_item_subtypes[s][k]
+        local info = u.uniform_item_info[s][k]
+        spec.material_class = info.material_class
+        spec.mattype = info.mattype
+        spec.matindex = info.matindex
+        pcall(function() spec.indiv_choice:assign(info.indiv_choice) end)
+        slot:insert('#', spec)
+      end
+    end
+    eq.flags.replace_clothing = ARGS.replace_clothing or false
+    set = set + 1
+  end
+  -- tell the game to redo equipment assignment (its Military screen sets these when a uniform changes)
+  local upd = df.global.plotinfo.equipment.update
+  for _, k in ipairs({'weapon', 'armor', 'shoes', 'shield', 'helm', 'gloves', 'ammo', 'pants', 'backpack', 'quiver', 'flask'}) do upd[k] = true end
+  emit({ok = true, squad = squad_info(sq), uniform = u.name, positions = set,
+    hint = 'Dwarves equip whatever matching items exist; make or buy armour and weapons.'}) return
+end
+
 if action == 'cancel' then
   for i = #sq.orders - 1, 0, -1 do
     local o = sq.orders[i]
