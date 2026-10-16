@@ -7,7 +7,7 @@ import { command, lua, luaFile, writeBlueprint } from "./dfhack.js";
 
 const INSTRUCTIONS = `You are the overseer of a live Dwarf Fortress fort, acting through DFHack.
 Coordinates are map tiles: x east, y south, z UP (higher z = closer to the sky). Underground is lower z.
-Loop: df_status -> df_problems -> df_look (around the area you will change) -> ONE action -> df_wait -> verify.
+Loop: df_alerts -> df_status -> df_problems -> df_look (around the area you will change) -> ONE action -> df_wait -> verify.
 Digging/building only designates work; dwarves do it while the game runs (df_wait).
 df_look glyphs: ? unrevealed, # stone wall, % soil wall, * ore/gem vein, . floor, , grass, ' ' open air,
 ^ ramp, v ramp top, < > X stairs up/down/both, T tree, o boulder, ~ deep water, 1-3 shallow water, ! magma,
@@ -410,11 +410,25 @@ tool("df_wait", "Unpause and let the game run for a number of in-game days (1 da
     }
     await setPause(true);
     const ran = (now.abs - start.abs) / 1200;
-    const { value: ann } = await luaFile("announcements", { since: start.last, limit: 25 });
-    const msgs = (ann?.messages ?? []).map((m) => `- ${m.text}`).join("\n");
-    return text(`Ran ${ran.toFixed(2)} days in ${((Date.now() - t0) / 1000).toFixed(0)}s: ${reason}. Paused.\n` +
-      (msgs ? `New announcements:\n${msgs}` : "No new announcements."));
+    const { value: ann } = await luaFile("announcements", { since: start.last, limit: 200 });
+    const all = ann?.messages ?? [];
+    // Events the overseer must react to are always listed first and never truncated.
+    const IMPORTANT = /CARAVAN|MERCHANT|MIGRANT|SIEGE|AMBUSH|THIEF|INVASION|ENEMY|MEGABEAST|FORGOTTEN|TITAN|WEREBEAST|NIGHT_CREATURE|UNDEAD|MOOD|BERSERK|MADNESS|INSANE|TANTRUM|DEATH|DIED|KILLED|BIRTH|ARTIFACT|DIPLOMAT|LIAISON|NOBLE|PETITION|FLOOD|CAVE_IN|COLLAPSE|STRUCK|DEMAND|MANDATE|CITIZEN|ELECTION|ANIMAL_?ATTACK|INJUR|SCREAM/i;
+    const IMPORTANT_TEXT = /caravan|merchants|migrant|siege|ambush|stolen|thief|snatcher|invad|attack|dead|died|killed|been slaughtered by|mood|berserk|insane|tantrum|withdraw|born|given birth|artifact|diplomat|liaison|petition|arrived|has become|struck|forgotten beast|titan|vampire|were/i;
+    const imp = all.filter((m) => IMPORTANT.test(m.type || "") || IMPORTANT_TEXT.test(m.text));
+    const rest = all.filter((m) => !imp.includes(m) && !/lightly tapping|strikes at|parried|deflected|rolls away|no longer stunned|is knocked over|punches|kicks|scratches|bites|grabs|releases the grip/i.test(m.text));
+    const sparring = all.length - imp.length - rest.length;
+    let out = `Ran ${ran.toFixed(2)} days in ${((Date.now() - t0) / 1000).toFixed(0)}s: ${reason}. Paused.\n`;
+    if (imp.length) out += `IMPORTANT:\n${imp.map((m) => `! ${m.text}`).join("\n")}\n`;
+    if (rest.length) out += `Other:\n${rest.slice(-20).map((m) => `- ${m.text}`).join("\n")}\n`;
+    if (sparring > 0) out += `(${sparring} combat/sparring lines omitted)\n`;
+    if (!all.length) out += "No new announcements.";
+    return text(out.trim());
   });
+
+tool("df_alerts", "The game's alert panel (red ALE button): grouped alerts newest first (caravans, deaths, migrants, moods, sieges...) with their latest messages, plus any open popup messages that pause the game. Check it at the start of every session and whenever df_wait reports IMPORTANT events.",
+  { limit: z.number().int().min(1).max(40).optional(), per_group: z.number().int().min(1).max(20).optional() },
+  (a) => luaTool("alerts", a));
 
 tool("df_pause", "Pause the game.", {}, async () => { await setPause(true); return text("Paused."); });
 tool("df_resume", "Unpause the game and leave it running (prefer df_wait for controlled steps).", {},
