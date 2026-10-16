@@ -1,5 +1,6 @@
 // Tools: time.
 import { runUpkeep } from "./production.js";
+import { camera, directorReset, directorStep } from "../camera.js";
 import { server, tool, luaTool, quickfort, text, fail, json, coord, optCoord, DIG_KEYS, z, command, lua, luaFile, writeBlueprint } from "../core.js";
 
 // One heartbeat per poll: the clock plus the watchdog counters (visible hostiles, active moods, caravans).
@@ -46,7 +47,7 @@ async function dismissPopup() {
   return { n, text: txt, after: await count() };
 }
 
-tool("df_wait", "Unpause and let the game run for a number of in-game days (1 day = 1200 ticks), then pause again and report new announcements. Stops early if the game pauses itself, and (watch, default on) the moment a hostile becomes visible, a citizen dies or leaves, a strange mood starts or a caravan arrives, so nothing happens unseen. on_threat=alert also turns on the civilian alert (burrow, default Inside) and puts squads on Ready when a hostile shows up. upkeep=true tops up stocks (df_upkeep apply) afterwards. Announcement popups are clicked away. Capped at ~50 s real time per call.",
+tool("df_wait", "Unpause and let the game run for a number of in-game days (1 day = 1200 ticks), then pause again and report new announcements. Stops early if the game pauses itself, and (watch, default on) the moment a hostile becomes visible, a citizen dies or leaves, a strange mood starts or a caravan arrives, so nothing happens unseen. on_threat=alert also turns on the civilian alert (burrow, default Inside) and puts squads on Ready when a hostile shows up. upkeep=true tops up stocks (df_upkeep apply) afterwards. The camera director (df_camera) moves the player's view to the action while time runs. Announcement popups are clicked away. Capped at ~50 s real time per call.",
   { days: z.number().min(0.1).max(28).default(1), watch: z.boolean().default(true),
     on_threat: z.enum(["stop", "alert"]).default("stop"), burrow: z.string().default("Inside"),
     upkeep: z.boolean().default(false) },
@@ -58,9 +59,11 @@ tool("df_wait", "Unpause and let the game run for a number of in-game days (1 da
     const t0 = Date.now();
     let now = start, reason = "done", lastAbs = start.abs, lastMove = Date.now();
     const popups = [];
+    directorReset(start.last);
     while (true) {
       await new Promise((r) => setTimeout(r, 700));
       now = await tick();
+      try { await directorStep(); } catch { /* the camera must never break a wait */ }
       if (now.abs >= target) break;
       if (now.abs !== lastAbs) { lastAbs = now.abs; lastMove = Date.now(); }
       if (now.paused || Date.now() - lastMove > 2500) {
@@ -124,6 +127,7 @@ tool("df_wait", "Unpause and let the game run for a number of in-game days (1 da
       const d = now.pop - start.pop;
       imp.unshift({ text: `Population ${start.pop} -> ${now.pop} (${d > 0 ? `+${d}: migrants or births` : `${d}: deaths or departures`}). Check df_units and bedrooms.` });
     }
+    if (camera.mode !== "off" && camera.log.length) out += `Camera (${camera.mode}) showed: ${camera.log.slice(-6).join(" | ")}\n`;
     if (popups.length) out += `POPUPS (dismissed so time could run):\n${popups.map((t) => `! ${t}`).join("\n")}\n`;
     if (imp.length) out += `IMPORTANT:\n${imp.map((m) => `! ${m.text}`).join("\n")}\n`;
     if (rest.length) out += `Other:\n${rest.slice(-20).map((m) => `- ${m.text}`).join("\n")}\n`;

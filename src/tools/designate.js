@@ -1,4 +1,5 @@
 // Tools: designate.
+import { cameraTo } from "../camera.js";
 import { server, tool, luaTool, quickfort, text, fail, json, coord, optCoord, DIG_KEYS, z, command, lua, luaFile, writeBlueprint } from "../core.js";
 
 tool("df_dig", "Designate a rectangle for digging (or channel/stairs/ramp/chop/gather/smooth/undesignate). x1,y1 to x2,y2 inclusive on level z. levels>1 repeats the same rectangle DOWNWARD (useful for updown_stair shafts). Unrevealed tiles can be designated.",
@@ -36,6 +37,7 @@ tool("df_dig", "Designate a rectangle for digging (or channel/stairs/ramp/chop/g
       return text(JSON.stringify(value));
     }
     const out = await quickfort("dig", [`${DIG_KEYS[a.kind]}(${w}x${h})`], x, y, a.z, extra);
+    await cameraTo(x + (w >> 1), y + (h >> 1), a.z, `dig ${a.kind} at ${x},${y},${a.z}`);
     // verify: count tiles in the area that now actually carry a designation of this kind
     const field = a.kind === "smooth" ? "smooth" : "dig";
     const { value: v } = await lua(
@@ -65,6 +67,7 @@ tool("df_build", "Place a building with a quickfort #build key (see df_help). Mu
     let cell = a.key;
     if (a.name) cell += `{name="${a.name.replace(/"/g, "")}"}`;
     if (a.w || a.h) cell += `(${a.w ?? 1}x${a.h ?? 1})`;
+    await cameraTo(a.x, a.y, a.z, `build ${a.key} at ${a.x},${a.y},${a.z}`);
     return text(await quickfort("build", [cell], a.x, a.y, a.z));
   });
 
@@ -74,6 +77,7 @@ tool("df_stockpile", "Create a stockpile rectangle. type is one or more #place l
   async (a) => {
     let cell = a.type;
     if (a.name) cell += `{name="${a.name.replace(/"/g, "")}"}`;
+    await cameraTo(a.x + (a.w >> 1), a.y + (a.h >> 1), a.z, `stockpile at ${a.x},${a.y},${a.z}`);
     return text(await quickfort("place", [`${cell}(${a.w}x${a.h})`], a.x, a.y, a.z));
   });
 
@@ -86,6 +90,7 @@ tool("df_zone", "Create a zone rectangle. type: m meeting area, b bedroom, h din
     if (a.name) props.push(`name="${a.name.replace(/"/g, "")}"`);
     if (a.location) props.push(`location=${a.location}`);
     const cell = a.type + (props.length ? `{${props.join(" ")}}` : "") + `(${a.w}x${a.h})`;
+    await cameraTo(a.x + (a.w >> 1), a.y + (a.h >> 1), a.z, `zone at ${a.x},${a.y},${a.z}`);
     return text(await quickfort("zone", [cell], a.x, a.y, a.z));
   });
 

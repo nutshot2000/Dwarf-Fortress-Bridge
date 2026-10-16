@@ -12,7 +12,7 @@ Each tool call writes a short Lua chunk and runs it with `dfhack-run lua -f`. Th
 
 If DF/DFHack aren't in `D:\SteamLibrary`, set `DF_DIR` and `DFHACK_DIR`.
 
-## Tools (49)
+## Tools (50)
 
 | Group | Tools |
 |---|---|
@@ -24,7 +24,7 @@ If DF/DFHack aren't in `D:\SteamLibrary`, set `DF_DIR` and `DFHACK_DIR`.
 | Defence | `df_military` (`equip`) `df_schedule` `df_burrow` `df_levers` |
 | Trade | `df_trade` |
 | Time | `df_wait` `df_pause` `df_resume` `df_save` |
-| UI | `df_ui` `df_screen` `df_view` |
+| UI | `df_camera` `df_ui` `df_screen` `df_view` |
 | Expert | `df_auto` `df_cmd` `df_lua` `df_help` |
 
 ### How a turn works
@@ -33,6 +33,7 @@ If DF/DFHack aren't in `D:\SteamLibrary`, set `DF_DIR` and `DFHACK_DIR`.
 
 - **Watchdog.** `df_wait` stops early, and says why, when a hostile becomes visible, a citizen dies or leaves, a strange mood starts or a caravan arrives. `on_threat=alert` also sends civilians into a burrow and puts squads on Ready.
 - **Upkeep.** `df_upkeep` keeps drink (per dwarf), empty barrels/pots, spare beds/doors/cabinets/chests, goblets, soap (with its lye and ash chain) and fuel topped up. It only queues the shortfall and never duplicates a running order. Targets are saved per fort (`action=set`).
+- **Camera director.** For a player who is watching: during `df_wait` the view jumps to real fights, tracks visible hostiles and shows arrivals, deaths, births, artifacts and moods; it also goes to wherever Claude digs or builds. `df_camera follow` keeps the view on one dwarf or creature, `df_camera off` leaves the view alone.
 - **Self-checking actions.** `df_dig` reports how many tiles actually got designated. `df_military uniform` re-equips the squad straight away. Kill orders warn when the target isn't hostile.
 
 ## Notes from playing (v50 quirks the tools handle)
@@ -53,4 +54,5 @@ If DF/DFHack aren't in `D:\SteamLibrary`, set `DF_DIR` and `DFHACK_DIR`.
 
 - Code: `src/core.js` (server, tool registration, helpers) and `src/tools/*.js` (one file per area); the Lua for each tool is in `lua/`.
 - Try one tool: `node scripts/call.mjs df_look "{\"radius\":20}"`
+- Several calls in one server session (camera state lives in the server): `node scripts/session.mjs '[["df_camera",{"action":"follow","name":"Urist"}],["df_wait",{"days":1}]]'`
 - Smoke test against the running game (read-only, changes nothing): `node scripts/smoke.mjs`; `--offline` only checks that every tool registers.

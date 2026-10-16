@@ -1,10 +1,14 @@
 // Tools: misc.
+import { camera, cameraTo } from "../camera.js";
 import { server, tool, luaTool, quickfort, text, fail, json, coord, optCoord, DIG_KEYS, z, command, lua, luaFile, writeBlueprint } from "../core.js";
 
 tool("df_view", "Move the player's camera to x,y,z so they can see what you are looking at.",
   { x: coord, y: coord, z: coord },
   async (a) => {
-    await lua(`dfhack.gui.revealInDwarfmodeMap(xyz2pos(ARGS.x, ARGS.y, ARGS.z), true, true) emit(true)`, a);
+    const prev = camera.mode;
+    if (prev === "off") camera.mode = "auto";
+    await cameraTo(a.x, a.y, a.z);
+    camera.mode = prev;
     return text(`Camera centred on ${a.x},${a.y},${a.z}.`);
   });
 
@@ -87,4 +91,34 @@ tool("df_ui", "Drive the game's own panels reliably. panels: which v50 panels ar
       return value?.selected ? text(`Squad ${a.squad_id} ticked; its order buttons (kill, move, patrol, equip, schedule) are showing.`)
         : fail(`Squad ${a.squad_id} is not in the Squads panel`);
     }
+  });
+
+tool("df_camera", "Camera director for a player who is watching. mode=auto (default): during df_wait the view jumps to fights with real injuries, tracks visible hostiles, shows arrivals, deaths, births, artifacts and moods, and also goes to where you dig or build. mode=follow with unit_id or name: keep the view on one dwarf or creature (e.g. the soldier about to fight). mode=off: never move the player's view. goto x,y,z: look somewhere once. status: current mode and subject.",
+  { action: z.enum(["status", "auto", "follow", "off", "goto"]).default("status"),
+    unit_id: z.number().int().optional(), name: z.string().optional(), x: optCoord, y: optCoord, z: optCoord },
+  async (a) => {
+    if (a.action === "status") return text(json({ mode: camera.mode, following: camera.followId, subject: camera.subject, last: camera.last }));
+    if (a.action === "off" || a.action === "auto") {
+      camera.mode = a.action; camera.followId = null; camera.subject = null;
+      return text(`Camera ${a.action === "off" ? "off: the view stays where the player puts it" : "on auto: it will show the action during waits"}.`);
+    }
+    if (a.action === "goto") {
+      if (a.x === undefined) return fail("goto needs x,y,z");
+      const prev = camera.mode; if (prev === "off") camera.mode = "auto";
+      await cameraTo(a.x, a.y, a.z); camera.mode = prev;
+      return text(`Looking at ${a.x},${a.y},${a.z}.`);
+    }
+    // follow: by id or by (part of) a name
+    const { value: u } = await lua(
+      `local want, name = ${a.unit_id ?? -1}, ${JSON.stringify((a.name ?? "").toLowerCase())}
+       for _, u in ipairs(df.global.world.units.active) do
+         if not dfhack.units.isDead(u) and (u.id == want or (name ~= '' and unit_name(u):lower():find(name, 1, true))) then
+           emit({id = u.id, label = unit_name(u), x = u.pos.x, y = u.pos.y, z = u.pos.z}) return
+         end
+       end
+       emit({})`);
+    if (!u?.id) return fail("No such living unit");
+    camera.mode = "follow"; camera.followId = u.id;
+    await cameraTo(u.x, u.y, u.z, `following ${u.label}`);
+    return text(`Following ${u.label}; the view tracks them during df_wait. df_camera auto to go back to the director.`);
   });

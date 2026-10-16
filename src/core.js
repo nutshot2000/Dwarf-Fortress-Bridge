@@ -27,6 +27,8 @@ Animals: df_animals (pastures, slaughter, training). df_standing (standing order
 Emergencies: df_burrow alert_on burrow=Safety keeps civilians inside; alert_off afterwards.
 Trade: df_trade (caravans, send goods to depot, select on the open trade screen). df_justice (crimes).
 Defence: df_levers (link/pull), df_military uniform/train/barracks, df_schedule (monthly orders, patrol routes, alert switch: alert ready when attacked). Staff: df_location (hospital doctors, tavern keeper/performers). df_mood for strange moods. df_pile (stockpile presets and links), df_kitchen, df_auto (automation plugins).
+Camera: the player is watching. df_camera (auto by default) moves their view to the action during df_wait;
+use df_camera follow name=... to show them a dwarf or creature you are about to send into action.
 Screen: df_ui opens/closes v50 panels, presses buttons and ticks squads; df_screen read/find/click/key for anything else.
 Panels (trade, squads, petitions) ignore Esc from scripts and some freeze time: df_ui close.
 Diagnosis: df_threats (hostiles, cursed units, killers), df_items (where something is and why it is unused),
