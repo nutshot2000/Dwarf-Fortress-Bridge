@@ -120,9 +120,13 @@ if action == 'equip' then
     local m = dfhack.matinfo.decode(it)
     return m and m.material and m.material.flags.IS_METAL
   end
-  local function fits(sp, it)
-    if it.flags.forbid or it.flags.trader or it.flags.in_job or it.flags.removed then return false end
-    if it.flags.in_inventory then return false end
+  local function fits(sp, it, u)
+    if it.flags.forbid or it.flags.trader or it.flags.removed then return false end
+    if it.flags.in_inventory then
+      -- only gear this soldier is already carrying may be (re)assigned to them
+      local holder = dfhack.items.getHolderUnit(it)
+      if not (holder and u and holder.id == u.id) then return false end
+    elseif it.flags.in_job then return false end
     if sp.item_subtype >= 0 and it:getSubtype() ~= sp.item_subtype then return false end
     if sp.mattype >= 0 and (it:getMaterial() ~= sp.mattype or it:getMaterialIndex() ~= sp.matindex) then return false end
     if df.item_type[sp.item_type] == 'WEAPON' then
@@ -150,8 +154,17 @@ if action == 'equip' then
           while #sp.assigned < want do
             -- search every item of the type: freed gear can be missing from the unassigned index
             local pick
-            for _, it in ipairs(df.global.world.items.other[df.item_type[sp.item_type]]) do
-              if not taken[it.id] and fits(sp, it) then pick = it break end
+            -- prefer what the soldier already wears, then anything free
+            if u then
+              for _, inv in ipairs(u.inventory) do
+                local it = inv.item
+                if it:getType() == sp.item_type and not taken[it.id] and fits(sp, it, u) then pick = it break end
+              end
+            end
+            if not pick then
+              for _, it in ipairs(df.global.world.items.other[df.item_type[sp.item_type]]) do
+                if not taken[it.id] and fits(sp, it, u) then pick = it break end
+              end
             end
             if not pick then break end
             local id = pick.id
@@ -257,6 +270,14 @@ if action == 'kill' then
   o.title = 'Kill'
   o.year, o.year_tick = df.global.cur_year, df.global.cur_year_tick
   sq.orders:insert('#', o)
-  emit({ok = true, squad = squad_info(sq)}) return
+  -- soldiers ignore targets the game does not count as hostile (werebeasts in human form, visitors)
+  local calm = {}
+  for _, id in ipairs(o.units) do
+    local t = df.unit.find(id)
+    if t and not dfhack.units.isDanger(t) then table.insert(calm, unit_name(t)) end
+  end
+  emit({ok = true, squad = squad_info(sq), warning = #calm > 0 and
+    ('Not hostile right now, soldiers will ignore the order: ' .. table.concat(calm, ', ') ..
+     '. Station the squad nearby instead and it will fight once the target turns hostile.') or nil}) return
 end
 emit({error = 'Unknown action ' .. action})
