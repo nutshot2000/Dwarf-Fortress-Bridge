@@ -423,7 +423,7 @@ tool("df_trade", "Trading. status: caravans on the map, depots, broker, whether 
 tool("df_justice", "Crimes involving the fort: type, criminal, accused, victim, witnesses, punishment. Use df_cmd 'justice' for convicts serving sentences and 'justice pardon --unit <id>' to pardon.",
   {}, () => luaTool("justice"));
 
-tool("df_petition", "Petitions (residency, citizenship, temples/guildhalls). list: pending petitions with who asks, race, profession and age. approve / deny: answer the oldest pending one through the game's Petitions screen (the same buttons a player clicks).",
+tool("df_petition", "Petitions (residency, citizenship, temples/guildhalls). list: pending petitions with who asks, race, profession, age, syndromes and a CURSED warning for disguised werebeasts/vampires. approve / deny: answer the oldest pending one through the game's Petitions screen (the same buttons a player clicks).",
   { action: z.enum(["list", "approve", "deny"]).default("list") },
   async (a) => {
     const { value: list } = await lua(
@@ -435,8 +435,14 @@ tool("df_petition", "Petitions (residency, citizenship, temples/guildhalls). lis
          local u = hf and df.unit.find(hf.unit_id)
          local det = {}
          for _, d in ipairs(ag and ag.details or {}) do det[#det + 1] = df.agreement_details_type[d.type] end
+         -- vet for disguised night creatures: werebeasts and vampires carry a syndrome / curse record
+         local syn = {}
+         if u then for _, sa in ipairs(u.syndromes.active) do local sy = df.syndrome.find(sa.type) syn[#syn + 1] = sy and sy.syn_name or '?' end end
+         local cursed = hf and try(function() return hf.info.curse ~= nil end, false) or false
+         local race = hf and df.creature_raw.find(hf.race).creature_id
          r[#r + 1] = {id = id, who = u and unit_name(u) or (hf and dfhack.df2utf(dfhack.translation.translateName(hf.name, true))) or '?',
-           race = hf and df.creature_raw.find(hf.race).creature_id, age = u and math.floor(dfhack.units.getAge(u)), wants = det}
+           race = race, age = u and math.floor(dfhack.units.getAge(u)), wants = det, syndromes = syn,
+           warning = (cursed or (race or ''):find('NIGHT_CREATURE')) and 'CURSED: likely a werebeast or vampire, deny' or nil}
        end
        emit(r)`);
     if (a.action === "list") return text(JSON.stringify({ petitions: list ?? [] }, null, 1));
