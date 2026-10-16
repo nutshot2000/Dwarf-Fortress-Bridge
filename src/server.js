@@ -192,9 +192,28 @@ tool("df_noble", "Fort positions. action=list shows every position and holder. a
   (a) => luaTool("noble", a));
 
 tool("df_labor", "Labors and work details. action=list shows work details (members, labors) and every citizen's enabled labors. enable/disable toggle labors (e.g. MINE, CUTWOOD, HAUL_FOOD, BREWER, COOK, CARPENTER, MASON, PLANT) for unit_id. detail_add/detail_remove put unit_id in a named work detail (e.g. 'Miners') and apply its labors.",
-  { action: z.enum(["list", "enable", "disable", "detail_add", "detail_remove"]).default("list"),
+  { action: z.enum(["list", "enable", "disable", "detail_add", "detail_remove", "apply"]).default("list"),
     unit_id: z.number().int().optional(), labors: z.array(z.string()).optional(), detail: z.string().optional() },
-  (a) => luaTool("labor", a));
+  async (a) => {
+    if (a.action !== "apply") {
+      const res = await luaTool("labor", a);
+      if (res.isError || !a.action.startsWith("detail")) return res;
+    }
+    // The game only re-applies a work detail (labors AND tool assignment: picks/axes) when its mode is
+    // changed in the Labor screen. Replay that: open Labor, select the detail, flip mode away and back.
+    const scr = (args) => luaFile("screen", args);
+    const detail = a.detail || "Miners";
+    await scr({ action: "key", keys: ["D_LOCATIONS"] });
+    await scr({ action: "click", text: "Labor", occurrence: 1 });
+    const { value: hits } = await scr({ action: "find", text: detail });
+    const row = (hits?.hits ?? []).sort((p, q) => p.x - q.x)[0];
+    if (!row) { await scr({ action: "key", keys: ["LEAVESCREEN"] }); return fail(`work detail "${detail}" not found on the Labor screen`); }
+    await scr({ action: "click", x: row.x + 1, y: row.y });
+    await scr({ action: "click", text: "Nobody does this" });
+    await scr({ action: "click", text: "Only selected do this" });
+    await scr({ action: "key", keys: ["LEAVESCREEN"] });
+    return text(`Re-applied work detail "${detail}" through the Labor screen (labors and tool assignment updated).`);
+  });
 
 tool("df_rooms", "Zones. action=list shows all zones with owners. action=assign gives zone_id to unit_id; unassign clears the owner. action=audit checks EVERY zone against the wiki requirements (required furniture per zone type, owners, overlaps that zero room value, room quality rank, tavern/temple/hospital/library needs incl. dance floor and stocked goblets/instruments/supplies, staff) and every noble's room demands. Run audit after building or changing rooms.",
   { action: z.enum(["list", "assign", "unassign", "audit"]).default("list"), zone_id: z.number().int().optional(), unit_id: z.number().int().optional() },
