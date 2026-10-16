@@ -86,7 +86,8 @@ if action == 'link' then
   dfhack.job.attachJobItem(job, mechs[1], df.job_role_type.LinkToTrigger, -1, -1)
   dfhack.job.attachJobItem(job, mechs[2], df.job_role_type.LinkToTarget, -1, -1)
   dfhack.job.checkBuildingsNow()
-  emit({ok = true, queued = 'Link ' .. bname(lever) .. ' -> ' .. bname(target), jobs = pending(lever)}) return
+  emit({ok = true, queued = 'Link ' .. bname(lever) .. ' -> ' .. bname(target), jobs = pending(lever),
+    warning = 'Once linked, a door or hatch is locked and only the lever moves it. Pull the lever to open it, or dwarves on either side get cut off.'}) return
 end
 
 if action == 'pull' then
