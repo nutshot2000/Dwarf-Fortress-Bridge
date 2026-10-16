@@ -215,7 +215,7 @@ tool("df_labor", "Labors and work details. action=list shows work details (membe
     return text(`Re-applied work detail "${detail}" through the Labor screen (labors and tool assignment updated).`);
   });
 
-tool("df_rooms", "Zones. action=list shows all zones with owners. action=assign gives zone_id to unit_id; unassign clears the owner. action=audit checks EVERY zone against the wiki requirements (required furniture per zone type, owners, overlaps that zero room value, room quality rank, tavern/temple/hospital/library needs incl. dance floor and stocked goblets/instruments/supplies, staff) and every noble's room demands. Run audit after building or changing rooms.",
+tool("df_rooms", "Zones. action=list shows all zones with owners. action=assign gives zone_id to unit_id; unassign clears the owner. action=audit checks EVERY zone against the wiki requirements (required furniture per zone type, owners, overlaps that zero room value, room quality rank, tavern/temple/hospital/library needs incl. dance floor and stocked goblets/instruments/supplies, staff) , every noble's room demands, and untidy stockpiles (fragmented, stray, on stairs). Run audit after building or changing rooms.",
   { action: z.enum(["list", "assign", "unassign", "audit"]).default("list"), zone_id: z.number().int().optional(), unit_id: z.number().int().optional() },
   (a) => (a.action === "audit" ? luaTool("audit", a) : luaTool("rooms", a)));
 

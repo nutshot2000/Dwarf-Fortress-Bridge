@@ -248,6 +248,31 @@ for _, z in ipairs(zones) do
     ok = ok, missing = missing, warnings = warn})
 end
 
+-- tidiness: stockpiles should be full rectangles, not stray scraps, not on stairs
+local piles = {}
+for _, s in ipairs(df.global.world.buildings.other.STOCKPILE) do
+  local area = (s.x2 - s.x1 + 1) * (s.y2 - s.y1 + 1)
+  local n, stairs = 0, 0
+  for x = s.x1, s.x2 do
+    for y = s.y1, s.y2 do
+      if dfhack.buildings.containsTile(s, x, y) then
+        n = n + 1
+        local tt = dfhack.maps.getTileType(x, y, s.z)
+        local sh = tt and df.tiletype_shape[df.tiletype.attrs[tt].shape]
+        if sh and sh:find('STAIR') then stairs = stairs + 1 end
+      end
+    end
+  end
+  local issues = {}
+  if n < area then table.insert(issues, ('fragmented: %d of %d tiles in its rectangle'):format(n, area)) end
+  if n < 4 and not (s.name or ''):lower():find('drink') then table.insert(issues, 'stray tiny pile (' .. n .. ' tiles)') end
+  if stairs > 0 then table.insert(issues, 'covers ' .. stairs .. ' stair tile(s)') end
+  if #issues > 0 then
+    table.insert(piles, {id = s.id, name = s.name ~= '' and dfhack.df2utf(s.name) or nil,
+      at = ('%d,%d,%d'):format(s.x1, s.y1, s.z), issues = issues})
+  end
+end
+
 -- noble room demands
 local nobles = {}
 local ent = df.global.plotinfo.main.fortress_entity
@@ -283,5 +308,5 @@ for _, a in ipairs(ent.positions.assignments) do
   end
 end
 
-emit({zones = report, nobles = nobles,
+emit({zones = report, nobles = nobles, untidy_stockpiles = piles,
   rules = 'Overlapping zones are valued at 0 (locations keep their value). Quality ranks: Meager 0, Modest 100, (plain) 250, Decent 500, Fine 1000, Great 1500, Grand 2500, Royal 10000.'})
