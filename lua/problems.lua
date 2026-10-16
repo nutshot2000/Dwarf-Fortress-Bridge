@@ -27,7 +27,7 @@ elseif food < pop * 5 then add('medium', ('Food low: %d for %d dwarves.'):format
 -- moods, stress, needs
 for _, u in ipairs(cits) do
   local name = unit_name(u)
-  if u.mood >= 0 then
+  if u.mood >= 0 and df.mood_type[u.mood] ~= 'Baby' then
     local m = df.mood_type[u.mood]
     local sev = (m == 'Berserk' or m == 'Melancholy' or m == 'Traumatized' or m == 'Possessed') and 'high' or 'medium'
     add(sev, ('%s is in a %s mood%s.'):format(name, m,
