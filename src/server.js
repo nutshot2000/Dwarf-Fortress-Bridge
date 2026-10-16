@@ -402,6 +402,38 @@ tool("df_trade", "Trading. status: caravans on the map, depots, broker, whether 
 tool("df_justice", "Crimes involving the fort: type, criminal, accused, victim, witnesses, punishment. Use df_cmd 'justice' for convicts serving sentences and 'justice pardon --unit <id>' to pardon.",
   {}, () => luaTool("justice"));
 
+tool("df_petition", "Petitions (residency, citizenship, temples/guildhalls). list: pending petitions with who asks, race, profession and age. approve / deny: answer the oldest pending one through the game's Petitions screen (the same buttons a player clicks).",
+  { action: z.enum(["list", "approve", "deny"]).default("list") },
+  async (a) => {
+    const { value: list } = await lua(
+      `local r = {}
+       for _, id in ipairs(df.global.plotinfo.petitions) do
+         local ag = df.agreement.find(id)
+         local hid = ag and ag.parties[0].histfig_ids[0]
+         local hf = hid and df.historical_figure.find(hid)
+         local u = hf and df.unit.find(hf.unit_id)
+         local det = {}
+         for _, d in ipairs(ag and ag.details or {}) do det[#det + 1] = df.agreement_details_type[d.type] end
+         r[#r + 1] = {id = id, who = u and unit_name(u) or (hf and dfhack.df2utf(dfhack.translation.translateName(hf.name, true))) or '?',
+           race = hf and df.creature_raw.find(hf.race).creature_id, age = u and math.floor(dfhack.units.getAge(u)), wants = det}
+       end
+       emit(r)`);
+    if (a.action === "list") return text(JSON.stringify({ petitions: list ?? [] }, null, 1));
+    if (!list?.length) return fail("No pending petitions");
+    await luaFile("screen", { action: "close" });
+    await luaFile("screen", { action: "click", text: "PETITIONS" });
+    const { value: f } = await luaFile("screen", { action: "find", text: "Deny" });
+    const deny = (f?.hits ?? [])[0];
+    if (!deny) { await luaFile("screen", { action: "close" }); return fail("Petition buttons not found on screen"); }
+    // the buttons sit side by side: [ Approve ][ Deny ]
+    const x = a.action === "deny" ? deny.x + 1 : deny.x - 9;
+    await luaFile("screen", { action: "click", x, y: deny.y });
+    const { value: left } = await lua(`emit(#df.global.plotinfo.petitions)`);
+    await luaFile("screen", { action: "close" });
+    const ok = left < list.length;
+    return text(`${ok ? (a.action === "deny" ? "Denied" : "Approved") : "No change for"}: ${list[0].who} (${(list[0].wants ?? []).join(", ")}). Pending now: ${left}.`);
+  });
+
 tool("df_screen", "The game's UI as text, plus input. close: shut any open v50 panel (trade, squads, petitions, building sheets...); they ignore Esc from scripts and some freeze time. read: the screen as numbered text lines (graphics-only map cells are blank; region via x1,y1,x2,y2) and the focus string. find: grid coordinates of text. key: press interface keys (LEAVESCREEN = Esc, SELECT = Enter, STANDARDSCROLL_UP/DOWN, CUSTOM_* letters). click: left-click at x,y or on a text label (e.g. text='Okay', occurrence=n); right=true for right-click. Use it for pop-ups, the trade screen and anything without a dedicated tool; read again after acting.",
   { action: z.enum(["read", "find", "key", "click", "close"]).default("read"), text: z.string().optional(),
     keys: z.array(z.string()).optional(), x: optCoord, y: optCoord, occurrence: z.number().int().min(1).optional(),
