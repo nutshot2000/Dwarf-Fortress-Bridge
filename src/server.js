@@ -118,6 +118,27 @@ tool("df_dig", "Designate a rectangle for digging (or channel/stairs/ramp/chop/g
     const extra = [];
     if (a.levels > 1) extra.push("-r", `down,${a.levels}`);
     if (a.priority) extra.push("-p", String(a.priority));
+    if (a.kind === "engrave") {
+      // quickfort's engrave key reports success but leaves no designation in v50; set it the way the game does
+      // (only smoothed tiles can be engraved: smooth first, engrave once smoothing is done)
+      const { value } = await lua(
+        `local n, rough = 0, 0
+         for z = ${a.z}, ${a.z} - ${(a.levels ?? 1) - 1}, -1 do
+           for x = ${x}, ${x + w - 1} do for y = ${y}, ${y + h - 1} do
+             local tt = dfhack.maps.getTileType(x, y, z)
+             if tt then
+               local at = df.tiletype.attrs[tt]
+               if at.special == df.tiletype_special.SMOOTH then
+                 dfhack.maps.getTileFlags(x, y, z).smooth = 2
+                 dfhack.maps.getTileBlock(x, y, z).flags.designated = true
+                 n = n + 1
+               elseif at.shape == df.tiletype_shape.WALL or at.shape == df.tiletype_shape.FLOOR then rough = rough + 1 end
+             end
+           end end
+         end
+         emit({engrave_designated = n, not_smoothed_yet = rough})`);
+      return text(JSON.stringify(value));
+    }
     return text(await quickfort("dig", [`${DIG_KEYS[a.kind]}(${w}x${h})`], x, y, a.z, extra));
   });
 
