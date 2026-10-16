@@ -23,7 +23,7 @@ df_rooms (assign bedrooms/offices), df_military (squads: create, add, station, k
 Animals: df_animals (pastures, slaughter, training). df_standing (standing orders). df_jobs (all tasks).
 Emergencies: df_burrow alert_on burrow=Safety keeps civilians inside; alert_off afterwards.
 Trade: df_trade (caravans, send goods to depot, select on the open trade screen). df_justice (crimes).
-Defence: df_levers (link/pull), df_military uniform/train/barracks. df_mood for strange moods. df_pile (stockpile presets and links), df_kitchen, df_auto (automation plugins).
+Defence: df_levers (link/pull), df_military uniform/train/barracks, df_schedule (monthly orders, patrol routes, alert switch: alert ready when attacked). Staff: df_location (hospital doctors, tavern keeper/performers). df_mood for strange moods. df_pile (stockpile presets and links), df_kitchen, df_auto (automation plugins).
 Screen: df_screen read/find/click/key handles pop-ups and any screen without a tool; the game pauses while menus are open.
 Inventory: df_stocks. df_lua runs raw DFHack Lua (call emit(v) to return data). Save with df_save before risky moves.`;
 
@@ -343,6 +343,21 @@ tool("df_auto", `Fort automation plugins. No args: status of each. enable / disa
     const out = await command(a.action, [a.plugin]);
     return text(out.trim() || `${a.action}d ${a.plugin}`);
   });
+
+tool("df_schedule", "Military schedules and alerts. Each squad has one schedule per alert routine (Off duty, Staggered training, Constant training, Ready), with orders per month. list: schedules (squad_id/routine to filter). set: for squad_id + routine, set months (list of month names, or omit for all) to order train | patrol (route_id) | defend (burrow name or id) | station (x,y,z) | off, with min_count soldiers (default all). alert: switch EVERY squad to a routine (e.g. 'ready' when under attack, 'staggered' after). routes / add_point (name,x,y,z) / add_route (name, point_ids) manage patrol waypoints.",
+  { action: z.enum(["list", "set", "alert", "routes", "add_point", "add_route"]).default("list"),
+    squad_id: z.number().int().optional(), routine: z.union([z.string(), z.number().int()]).optional(),
+    months: z.array(z.string()).optional(), order: z.enum(["train", "patrol", "defend", "station", "off"]).optional(),
+    route_id: z.number().int().optional(), burrow: z.union([z.string(), z.number().int()]).optional(),
+    min_count: z.number().int().min(1).optional(), name: z.string().optional(),
+    point_ids: z.array(z.number().int()).optional(), point_id: z.number().int().optional(),
+    x: optCoord, y: optCoord, z: optCoord },
+  (a) => luaTool("schedule", a));
+
+tool("df_location", "Locations and their occupations. list: taverns, hospitals, temples, libraries, guildhalls with their zones and occupation slots (create a location with df_zone location=...). assign: give unit_id an occupation at location_id: DOCTOR, DIAGNOSTICIAN, SURGEON, BONE_DOCTOR (hospital), TAVERN_KEEPER, PERFORMER (tavern), SCHOLAR, SCRIBE (library). remove: clear unit_id (or occupation_id) from location_id.",
+  { action: z.enum(["list", "assign", "remove"]).default("list"), location_id: z.number().int().optional(),
+    unit_id: z.number().int().optional(), occupation: z.string().optional(), occupation_id: z.number().int().optional() },
+  (a) => luaTool("location", a));
 
 // ---------- time ----------
 async function tick() {
