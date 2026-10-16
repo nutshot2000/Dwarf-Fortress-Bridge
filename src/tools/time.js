@@ -1,4 +1,5 @@
 // Tools: time.
+import { runUpkeep } from "./production.js";
 import { server, tool, luaTool, quickfort, text, fail, json, coord, optCoord, DIG_KEYS, z, command, lua, luaFile, writeBlueprint } from "../core.js";
 
 // One heartbeat per poll: the clock plus the watchdog counters (visible hostiles, active moods, caravans).
@@ -45,9 +46,10 @@ async function dismissPopup() {
   return { n, text: txt, after: await count() };
 }
 
-tool("df_wait", "Unpause and let the game run for a number of in-game days (1 day = 1200 ticks), then pause again and report new announcements. Stops early if the game pauses itself, and (watch, default on) the moment a hostile becomes visible, a citizen dies or leaves, a strange mood starts or a caravan arrives, so nothing happens unseen. on_threat=alert also turns on the civilian alert (burrow, default Inside) and puts squads on Ready when a hostile shows up. Announcement popups are clicked away. Capped at ~50 s real time per call.",
+tool("df_wait", "Unpause and let the game run for a number of in-game days (1 day = 1200 ticks), then pause again and report new announcements. Stops early if the game pauses itself, and (watch, default on) the moment a hostile becomes visible, a citizen dies or leaves, a strange mood starts or a caravan arrives, so nothing happens unseen. on_threat=alert also turns on the civilian alert (burrow, default Inside) and puts squads on Ready when a hostile shows up. upkeep=true tops up stocks (df_upkeep apply) afterwards. Announcement popups are clicked away. Capped at ~50 s real time per call.",
   { days: z.number().min(0.1).max(28).default(1), watch: z.boolean().default(true),
-    on_threat: z.enum(["stop", "alert"]).default("stop"), burrow: z.string().default("Inside") },
+    on_threat: z.enum(["stop", "alert"]).default("stop"), burrow: z.string().default("Inside"),
+    upkeep: z.boolean().default(false) },
   async (a) => {
     const start = await tick();
     if (start.abs === undefined) return fail("No game state");
@@ -123,6 +125,11 @@ tool("df_wait", "Unpause and let the game run for a number of in-game days (1 da
     if (rest.length) out += `Other:\n${rest.slice(-20).map((m) => `- ${m.text}`).join("\n")}\n`;
     if (sparring > 0) out += `(${sparring} combat/sparring lines omitted)\n`;
     if (!all.length) out += "No new announcements.";
+    if (a.upkeep) {
+      const u = await runUpkeep("apply");
+      const queued = u.split("\n").filter((l) => l.includes("-> queued"));
+      out += "\n" + (queued.length ? `Upkeep queued:\n${queued.join("\n")}` : "Upkeep: all stocks on target.");
+    }
     return text(out.trim());
   });
 
