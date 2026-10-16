@@ -373,8 +373,8 @@ tool("df_schedule", "Military schedules and alerts. Each squad has one schedule 
     x: optCoord, y: optCoord, z: optCoord },
   (a) => luaTool("schedule", a));
 
-tool("df_location", "Locations and their occupations. list: taverns, hospitals, temples, libraries, guildhalls with their zones and occupation slots (create a location with df_zone location=...). assign: give unit_id an occupation at location_id: DOCTOR, DIAGNOSTICIAN, SURGEON, BONE_DOCTOR (hospital), TAVERN_KEEPER, PERFORMER (tavern), SCHOLAR, SCRIBE (library). remove: clear unit_id (or occupation_id) from location_id.",
-  { action: z.enum(["list", "assign", "remove"]).default("list"), location_id: z.number().int().optional(),
+tool("df_location", "Locations and their occupations. list: taverns, hospitals, temples, libraries, guildhalls with their zones and occupation slots (create a location with df_zone location=...). assign: give unit_id an occupation at location_id: DOCTOR, DIAGNOSTICIAN, SURGEON, BONE_DOCTOR (hospital), TAVERN_KEEPER, PERFORMER (tavern), SCHOLAR, SCRIBE (library). remove: clear unit_id (or occupation_id) from location_id. attach: put location_id on zone_id (a purpose-built room), detach_others=true to release its old zones; keeps name and staff.",
+  { action: z.enum(["list", "assign", "remove", "attach"]).default("list"), location_id: z.number().int().optional(), zone_id: z.number().int().optional(), detach_others: z.boolean().optional(),
     unit_id: z.number().int().optional(), occupation: z.string().optional(), occupation_id: z.number().int().optional() },
   (a) => luaTool("location", a));
 

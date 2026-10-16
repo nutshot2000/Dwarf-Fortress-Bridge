@@ -56,6 +56,24 @@ local function detach(o)
   o.histfig_id = -1
 end
 
+if action == 'attach' then
+  -- move/extend a location onto zone_id (e.g. a new purpose-built room). detach_others=true
+  -- releases every other zone from it, keeping the location, its name and staff.
+  local z = df.building.find(ARGS.zone_id or -1)
+  if not z or not df.building_civzonest:is_instance(z) then emit({error = 'No zone ' .. tostring(ARGS.zone_id)}) return end
+  if ARGS.detach_others then
+    for _, other in ipairs(df.global.world.buildings.other.ANY_ZONE) do
+      if other.location_id == loc.id and other.id ~= z.id then other.location_id = -1 end
+    end
+    loc.contents.building_ids:resize(0)
+  end
+  z.location_id = loc.id
+  local has = false
+  for _, id in ipairs(loc.contents.building_ids) do if id == z.id then has = true end end
+  if not has then loc.contents.building_ids:insert('#', z.id) end
+  emit({ok = true, location = lname(loc), zones = zones_of(loc)}) return
+end
+
 if action == 'assign' then
   local otype = df.occupation_type[(ARGS.occupation or ''):upper()]
   if not otype then emit({error = 'occupation must be one of TAVERN_KEEPER, PERFORMER, SCHOLAR, SCRIBE, DOCTOR, DIAGNOSTICIAN, SURGEON, BONE_DOCTOR'}) return end
