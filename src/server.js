@@ -165,14 +165,15 @@ const WOOD_JOBS = /^(ConstructBed|MakeBarrel|ConstructChest|ConstructBin|MakeBuc
 const STONE_JOBS = /^(ConstructTable|ConstructThrone|ConstructDoor|ConstructStatue|ConstructSlab|ConstructQuern|ConstructMillstone|MakeGoblet|MakeCrafts|ConstructBlocks|ConstructBox|ConstructMechanisms)$/;
 const CATEGORY_MATS = ["wood", "plant", "cloth", "silk", "leather", "bone", "shell", "yarn", "tooth", "horn", "pearl", "soap"];
 
-tool("df_order", "Queue a manager work order (needs a MANAGER; df_noble repair if the game says one is required). job is a df.job_type name, e.g. ConstructBed, MakeBarrel, ConstructTable, ConstructThrone, ConstructDoor, BrewDrink, PrepareMeal, ConstructBlocks. material: wood, stone, bone, leather, cloth, ... (defaults: wood for carpenter jobs, stone for mason jobs). repeat: daily/weekly/monthly/seasonally/yearly. Brewing, cooking and many crafts are reactions: pass reaction instead of job (BREW_DRINK_FROM_PLANT, BREW_DRINK_FROM_PLANT_GROWTH, MAKE_SOAP...). Omit job to list orders. df_cmd 'workorder -l <filter>' lists job names.",
-  { job: z.string().optional(), reaction: z.string().optional(), amount: z.number().int().min(1).max(1000).optional(), material: z.string().optional(),
+tool("df_order", "Queue a manager work order (needs a MANAGER; df_noble repair if the game says one is required). job is a df.job_type name, e.g. ConstructBed, MakeBarrel, ConstructTable, ConstructThrone, ConstructDoor, BrewDrink, PrepareMeal, ConstructBlocks. material: wood, stone, bone, leather, cloth, ... (defaults: wood for carpenter jobs, stone for mason jobs). repeat: daily/weekly/monthly/seasonally/yearly. Metal gear: job MakeArmor/MakeHelm/MakePants/MakeGloves/MakeShoes/MakeShield/MakeWeapon with item_subtype (ITEM_ARMOR_BREASTPLATE, ITEM_ARMOR_MAIL_SHIRT, ITEM_HELM_HELM, ITEM_PANTS_GREAVES, ITEM_GLOVES_GAUNTLETS, ITEM_SHOES_BOOTS, ITEM_SHIELD_SHIELD, ITEM_WEAPON_AXE_BATTLE, ITEM_WEAPON_SPEAR, ITEM_WEAPON_PICK...) and material INORGANIC:IRON. Brewing, cooking and many crafts are reactions: pass reaction instead of job (BREW_DRINK_FROM_PLANT, BREW_DRINK_FROM_PLANT_GROWTH, MAKE_SOAP...). Omit job to list orders. df_cmd 'workorder -l <filter>' lists job names.",
+  { job: z.string().optional(), reaction: z.string().optional(), item_subtype: z.string().optional(), amount: z.number().int().min(1).max(1000).optional(), material: z.string().optional(),
     repeat: z.enum(["daily", "weekly", "monthly", "seasonally", "yearly"]).optional() },
   async (a) => {
     if (a.reaction) { a.job = "CustomReaction"; }
     if (!a.job) return luaTool("orders");
     const order = { job: a.job, amount_total: a.amount ?? 1 };
     if (a.reaction) order.reaction = a.reaction.toUpperCase();
+    if (a.item_subtype) order.item_subtype = a.item_subtype.toUpperCase();
     const mat = (a.material || (WOOD_JOBS.test(a.job) ? "wood" : STONE_JOBS.test(a.job) ? "stone" : "")).toLowerCase();
     if (CATEGORY_MATS.includes(mat)) order.material_category = [mat];
     else if (mat === "stone" || mat === "rock") order.material = "INORGANIC";
