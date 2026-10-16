@@ -420,8 +420,8 @@ tool("df_levers", "Levers and mechanisms. list: levers (state, what each is link
 tool("df_mood", "Strange moods: which dwarf is in a mood, which workshop they claimed, and exactly which items they still need (runs DFHack showmood). Provide the materials quickly or the dwarf goes insane.",
   {}, async () => text((await command("showmood")).trim() || "No dwarf is in a strange mood."));
 
-tool("df_dump", "Clear loose clutter (boulders by default) out of rooms: mark items on levels z (or z1..z2), optionally inside x1,y1..x2,y2, for dumping; dwarves haul them to a garbage dump zone (df_zone type d; a dump has no per-tile limit, so a small dump next to a mason's workshop keeps stone tidy and handy). Items already in stockpiles or dumps are skipped. count first, unmark to undo. types: df.items.other names, e.g. BOULDER, WOOD, BAR.",
-  { action: z.enum(["count", "mark", "unmark"]).default("count"), z: optCoord, z1: optCoord, z2: optCoord,
+tool("df_dump", "Clear loose clutter (boulders by default) out of rooms: mark items on levels z (or z1..z2), optionally inside x1,y1..x2,y2, for dumping; dwarves haul them to a garbage dump zone (df_zone type d; no per-tile limit). WARNING: the game FORBIDS items once they land in a dump, so dumped stone/ore is unusable until you run action=unforbid (clears forbid on everything in dump zones; they stay put but masons/smelters can use them). Items already in stockpiles or dumps are skipped. count first, unmark to undo. types: df.items.other names, e.g. BOULDER, WOOD, BAR.",
+  { action: z.enum(["count", "mark", "unmark", "unforbid"]).default("count"), z: optCoord, z1: optCoord, z2: optCoord,
     x1: optCoord, y1: optCoord, x2: optCoord, y2: optCoord, types: z.array(z.string()).optional() },
   (a) => luaTool("dump", a));
 

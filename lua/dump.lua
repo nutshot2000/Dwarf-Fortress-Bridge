@@ -3,6 +3,21 @@
 if not need_map() then return end
 local action = ARGS.action or 'count'
 local types = ARGS.types or {'BOULDER'}
+if action == 'unforbid' then
+  -- the game forbids whatever lands in a dump; make it usable again (it is not re-hauled)
+  local n = 0
+  for _, it in ipairs(df.global.world.items.other.IN_PLAY) do
+    if it.flags.forbid and it.flags.on_ground then
+      local x, y, z = dfhack.items.getPosition(it)
+      for _, d in ipairs(df.global.world.buildings.other.ACTIVITY_ZONE) do
+        if x and d.type == df.civzone_type.Dump and d.z == z and x >= d.x1 and x <= d.x2 and y >= d.y1 and y <= d.y2 then
+          it.flags.forbid = false it.flags.dump = false n = n + 1 break
+        end
+      end
+    end
+  end
+  emit({action = action, unforbidden = n}) return
+end
 local z1 = ARGS.z1 or ARGS.z
 local z2 = ARGS.z2 or ARGS.z or z1
 if not z1 then emit({error = 'give z, or z1 and z2'}) return end
@@ -55,5 +70,7 @@ end
 local out = {action = action, items = changed, by_z = by_z, skipped_stored = skipped, dump_zones = dumps}
 if action == 'mark' and #dumps == 0 then
   out.warning = 'No garbage dump zone: make one (df_zone type d) or the marked items stay put.'
+elseif action == 'mark' then
+  out.note = 'Dumped items arrive forbidden: run action=unforbid once hauling is done to make them usable.'
 end
 emit(out)
