@@ -166,7 +166,7 @@ if action == 'station' then
 end
 if action == 'kill' then
   local o = df.squad_order_kill_listst:new()
-  for _, id in ipairs(ARGS.unit_ids or {}) do
+  for _, id in ipairs(ARGS.unit_ids or (ARGS.unit_id and {ARGS.unit_id}) or {}) do
     local t = df.unit.find(id)
     if t then
       o.units:insert('#', id)
