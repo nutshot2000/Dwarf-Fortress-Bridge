@@ -1,5 +1,5 @@
 // Tools: misc.
-import { camera, cameraTo } from "../camera.js";
+import { camera, cameraTo, savePrefs, CATEGORIES } from "../camera.js";
 import { server, tool, luaTool, quickfort, text, fail, json, coord, optCoord, DIG_KEYS, z, command, lua, luaFile, writeBlueprint } from "../core.js";
 
 tool("df_view", "Move the player's camera to x,y,z so they can see what you are looking at.",
@@ -93,20 +93,35 @@ tool("df_ui", "Drive the game's own panels reliably. panels: which v50 panels ar
     }
   });
 
-tool("df_camera", "Camera director for a player who is watching. mode=auto (default): during df_wait the view jumps to fights with real injuries, tracks visible hostiles, shows arrivals, deaths, births, artifacts and moods, and also goes to where you dig or build. mode=follow with unit_id or name: keep the view on one dwarf or creature (e.g. the soldier about to fight). mode=off: never move the player's view. goto x,y,z: look somewhere once. status: current mode and subject.",
-  { action: z.enum(["status", "auto", "follow", "off", "goto"]).default("status"),
-    unit_id: z.number().int().optional(), name: z.string().optional(), x: optCoord, y: optCoord, z: optCoord },
+tool("df_camera", "Camera director for a player who is watching. auto (default): during df_wait the view goes to real fights, tracks visible hostiles, shows news (arrivals, births, artifacts, masterworks, moods) and, when nothing is happening, tours the most interesting activity (skilled crafters, moods, digging, performances, training), weighted by the player's taste. like/dislike/never categories (" + CATEGORIES.join(", ") + ") to tune it (saved per fort); prefs shows them, reset_prefs clears. tour=false keeps the view still in quiet moments. follow unit_id|name: stay on one dwarf or creature. goto x,y,z: look somewhere once. caption: a line shown in the game's announcements with goto/follow, so the player knows what they are about to see. off: never move the view.",
+  { action: z.enum(["status", "auto", "follow", "off", "goto", "like", "dislike", "never", "prefs", "reset_prefs"]).default("status"),
+    unit_id: z.number().int().optional(), name: z.string().optional(), x: optCoord, y: optCoord, z: optCoord,
+    categories: z.array(z.string()).optional(), tour: z.boolean().optional(), caption: z.string().optional() },
   async (a) => {
-    if (a.action === "status") return text(json({ mode: camera.mode, following: camera.followId, subject: camera.subject, last: camera.last }));
+    if (a.tour !== undefined) camera.tour = a.tour;
+    const prefsText = () => CATEGORIES.map((c) => `${c}=${camera.prefs[c] ?? 1}`).join(", ");
+    if (a.action === "status") return text(json({ mode: camera.mode, tour: camera.tour, following: camera.followId,
+      subject: camera.subject, prefs: prefsText() }));
+    if (a.action === "prefs") return text(`Camera preferences (1 neutral, 2.5 like, 0.2 dislike, 0 never): ${prefsText()}; tour ${camera.tour ? "on" : "off"}.`);
+    if (a.action === "reset_prefs") { camera.prefs = {}; savePrefs(); return text("Camera preferences reset to neutral."); }
+    if (["like", "dislike", "never"].includes(a.action)) {
+      const bad = (a.categories ?? []).filter((c) => !CATEGORIES.includes(c));
+      if (!a.categories?.length || bad.length) return fail(`categories must be from: ${CATEGORIES.join(", ")}`);
+      for (const c of a.categories) camera.prefs[c] = { like: 2.5, dislike: 0.2, never: 0 }[a.action];
+      savePrefs();
+      return text(`Camera will ${a.action === "like" ? "favour" : a.action === "dislike" ? "rarely show" : "never show"}: ${a.categories.join(", ")}. Now: ${prefsText()}`);
+    }
     if (a.action === "off" || a.action === "auto") {
       camera.mode = a.action; camera.followId = null; camera.subject = null;
-      return text(`Camera ${a.action === "off" ? "off: the view stays where the player puts it" : "on auto: it will show the action during waits"}.`);
+      return text(`Camera ${a.action === "off" ? "off: the view stays where the player puts it" : `on auto${camera.tour ? " with tours in quiet moments" : ""}`}.`);
     }
     if (a.action === "goto") {
       if (a.x === undefined) return fail("goto needs x,y,z");
       const prev = camera.mode; if (prev === "off") camera.mode = "auto";
-      await cameraTo(a.x, a.y, a.z); camera.mode = prev;
-      return text(`Looking at ${a.x},${a.y},${a.z}.`);
+      await cameraTo(a.x, a.y, a.z, a.caption, a.caption); camera.mode = prev;
+      // hold the shot so the director does not cut away at once
+      camera.subject = { kind: "news", cat: "news", label: a.caption ?? "goto" }; camera.lastSwitch = Date.now();
+      return text(`Looking at ${a.x},${a.y},${a.z}${a.caption ? ` (caption shown: ${a.caption})` : ""}.`);
     }
     // follow: by id or by (part of) a name
     const { value: u } = await lua(
@@ -119,6 +134,6 @@ tool("df_camera", "Camera director for a player who is watching. mode=auto (defa
        emit({})`);
     if (!u?.id) return fail("No such living unit");
     camera.mode = "follow"; camera.followId = u.id;
-    await cameraTo(u.x, u.y, u.z, `following ${u.label}`);
+    await cameraTo(u.x, u.y, u.z, `following ${u.label}`, a.caption);
     return text(`Following ${u.label}; the view tracks them during df_wait. df_camera auto to go back to the director.`);
   });
