@@ -1,6 +1,6 @@
 -- Interesting things happening right now, for the camera tour in quiet moments.
 -- Each scene: category (matches the player's preferences), a label, a unit to follow and a base score.
--- Categories: crafting, building, military, farming, animals, social, kids, visitors, mood, nobles.
+-- Categories: crafting, building, military, farming, animals, social, kids, visitors, mood, diplomacy.
 if not need_map() then return end
 
 local CAT = {}
@@ -15,7 +15,7 @@ cat({'StrangeMoodCrafter', 'StrangeMoodJeweller', 'StrangeMoodForge', 'StrangeMo
      'StrangeMoodMechanics', 'StrangeMoodBrooding', 'StrangeMoodFell'}, 'mood', 4.0)
 -- anything else done at a workshop counts as crafting
 local IGNORE = {Sleep = 1, Eat = 1, Drink = 1, DrinkItem = 1, CleanSelf = 1, Rest = 1, StoreItemInStockpile = 1,
-  StoreItemInBag = 1, StoreItemInBin = 1, StoreItemInVehicle = 1, StoreItemInLocation = 1, PickupEquipment = 1,
+  StoreItemInBag = 1, TradeAtDepot = 1, StoreItemInBin = 1, StoreItemInVehicle = 1, StoreItemInLocation = 1, PickupEquipment = 1,
   BringItemToDepot = 1, Clean = 1, CleanPatient = 1, RecoverWounded = 1, GetProvisions = 1}
 
 local function best_skill(u)
@@ -51,6 +51,26 @@ for _, u in ipairs(citizens()) do
   end
   if dfhack.units.isNoble and dfhack.units.isNoble(u) and jt then
     scenes[#scenes].score = scenes[#scenes].score + 0.3
+  end
+end
+-- diplomacy: the broker trading at the depot, nobles in a meeting with a diplomat, merchants at the depot
+for _, u in ipairs(citizens()) do
+  local j = u.job.current_job
+  if j and df.job_type[j.job_type] == 'TradeAtDepot' then
+    add('diplomacy', 3.0, u, unit_name(u):match('^[^,]+') .. ' trading at the depot')
+  end
+  for _, r in ipairs(u.specific_refs) do
+    if r.type == df.specific_ref_type.ACTIVITY and try(function() return r.data.activity.unit_noble == u.id end, false) then
+      add('diplomacy', 3.2, u, unit_name(u):match('^[^,]+') .. ' in a meeting with a visiting diplomat')
+    end
+  end
+end
+local merchants = 0
+for _, u in ipairs(df.global.world.units.active) do
+  if merchants < 2 and dfhack.units.isActive(u) and not dfhack.units.isDead(u) and u.flags1.merchant
+     and not dfhack.maps.getTileFlags(u.pos).hidden then
+    merchants = merchants + 1
+    add('diplomacy', 2.4, u, unit_name(u):match('^[^,]+') .. ' (merchant) with the caravan')
   end
 end
 -- visitors (bards, scholars, mercenaries) in and around the fort

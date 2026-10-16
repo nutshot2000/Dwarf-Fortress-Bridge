@@ -10,7 +10,7 @@ import path from "node:path";
 import { lua, luaFile, DF_DIR } from "./dfhack.js";
 
 export const CATEGORIES = ["fights", "hostiles", "crafting", "building", "military", "farming", "animals", "social",
-  "kids", "visitors", "mood", "news"];
+  "kids", "visitors", "mood", "diplomacy", "news"];
 const PREFS_FILE = path.join(DF_DIR, "dfhack-config", "df-bridge", "camera.json");
 
 export const camera = {
@@ -47,9 +47,12 @@ export async function cameraTo(x, y, z, why, caption) {
 const SCAN = (since, followId) => `
   local HURT = {'struck down', 'severed', 'mangled', 'torn', 'shattered', 'killed', 'dead', 'unconscious', 'bleeding', 'falls over'}
   local NEWS = {
+    {'caravan from', 'diplomacy'}, {'meets with', 'diplomacy'},
     {'masterpiece', 'crafting'}, {'has created', 'crafting'}, {'mysterious construction', 'mood'}, {'taken by a', 'mood'},
     {'withdraws from society', 'mood'}, {'possessed', 'mood'}, {'given birth', 'kids'}, {'arrived', 'visitors'},
     {'has come', 'hostiles'}, {'thief', 'hostiles'}, {'ambush', 'hostiles'}, {'siege', 'hostiles'},
+    {'caravan', 'diplomacy'}, {'merchant', 'diplomacy'}, {'diplomat', 'diplomacy'}, {'liaison', 'diplomacy'},
+    {'meets with', 'diplomacy'}, {'treasurer', 'diplomacy'}, {'petition', 'diplomacy'}, {'trade', 'diplomacy'},
     {'found dead', 'news'}, {'has been', 'news'}, {'struck', 'news'}, {'is visiting', 'visitors'}}
   local out = {}
   for _, u in ipairs(df.global.world.units.active) do
