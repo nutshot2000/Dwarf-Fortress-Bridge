@@ -196,9 +196,9 @@ tool("df_labor", "Labors and work details. action=list shows work details (membe
     unit_id: z.number().int().optional(), labors: z.array(z.string()).optional(), detail: z.string().optional() },
   (a) => luaTool("labor", a));
 
-tool("df_rooms", "Zones. action=list shows all zones (bedrooms, dining halls, offices, pastures...) with owners. action=assign gives zone_id to unit_id; unassign clears the owner.",
-  { action: z.enum(["list", "assign", "unassign"]).default("list"), zone_id: z.number().int().optional(), unit_id: z.number().int().optional() },
-  (a) => luaTool("rooms", a));
+tool("df_rooms", "Zones. action=list shows all zones with owners. action=assign gives zone_id to unit_id; unassign clears the owner. action=audit checks EVERY zone against the wiki requirements (required furniture per zone type, owners, overlaps that zero room value, room quality rank, tavern/temple/hospital/library needs incl. dance floor and stocked goblets/instruments/supplies, staff) and every noble's room demands. Run audit after building or changing rooms.",
+  { action: z.enum(["list", "assign", "unassign", "audit"]).default("list"), zone_id: z.number().int().optional(), unit_id: z.number().int().optional() },
+  (a) => (a.action === "audit" ? luaTool("audit", a) : luaTool("rooms", a)));
 
 tool("df_crop", "Farming. action=list shows farm plots with crops per season and seeds in stock (with underground/surface and growing seasons). action=set makes plot_id grow plant (id or name, e.g. 'plump helmet', or 'fallow') in the given seasons (default all four).",
   { action: z.enum(["list", "set"]).default("list"), plot_id: z.number().int().optional(), plant: z.string().optional(),
