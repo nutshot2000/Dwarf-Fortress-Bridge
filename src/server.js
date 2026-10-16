@@ -408,7 +408,7 @@ tool("df_location", "Locations and their occupations. list: taverns, hospitals, 
 async function tick() {
   const { value } = await lua(
     `local r = df.global.world.status.reports
-     emit({abs = df.global.cur_year * 403200 + df.global.cur_year_tick, paused = df.global.pause_state,
+     emit({abs = df.global.cur_year * 403200 + df.global.cur_year_tick, paused = df.global.pause_state, pop = #citizens(),
            last = #r > 0 and r[#r-1].id or -1})`);
   return value;
 }
@@ -445,6 +445,11 @@ tool("df_wait", "Unpause and let the game run for a number of in-game days (1 da
     const rest = all.filter((m) => !imp.includes(m) && !/lightly tapping|strikes at|parried|deflected|rolls away|no longer stunned|is knocked over|punches|kicks|scratches|bites|grabs|releases the grip/i.test(m.text));
     const sparring = all.length - imp.length - rest.length;
     let out = `Ran ${ran.toFixed(2)} days in ${((Date.now() - t0) / 1000).toFixed(0)}s: ${reason}. Paused.\n`;
+    // Migrant waves arrive as a big popup, not a regular report, so also compare the population.
+    if (now.pop !== undefined && start.pop !== undefined && now.pop !== start.pop) {
+      const d = now.pop - start.pop;
+      imp.unshift({ text: `Population ${start.pop} -> ${now.pop} (${d > 0 ? `+${d}: migrants or births` : `${d}: deaths or departures`}). Check df_units and bedrooms.` });
+    }
     if (imp.length) out += `IMPORTANT:\n${imp.map((m) => `! ${m.text}`).join("\n")}\n`;
     if (rest.length) out += `Other:\n${rest.slice(-20).map((m) => `- ${m.text}`).join("\n")}\n`;
     if (sparring > 0) out += `(${sparring} combat/sparring lines omitted)\n`;
