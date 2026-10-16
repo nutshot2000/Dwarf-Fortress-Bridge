@@ -60,6 +60,8 @@ if action == 'send' then
     local ok = (ARGS.item_ids == nil) and text ~= ''
     if ARGS.item_ids then for _, id in ipairs(ARGS.item_ids) do if id == it.id then ok = true end end end
     if ok and text ~= '' then ok = dfhack.items.getReadableDescription(it):lower():find(text, 1, true) ~= nil end
+    -- never send artifacts by search: losing one angers its owner, its god or a noble (item_ids still allowed)
+    if ok and it.flags.artifact and not ARGS.item_ids then ok = false end
     if ok and tradeable(it, depot) then
       it.flags.forbid = false
       dfhack.items.markForTrade(it, depot)
