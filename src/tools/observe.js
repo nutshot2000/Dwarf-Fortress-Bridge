@@ -1,5 +1,5 @@
 // Tools: observe.
-import { server, tool, luaTool, quickfort, text, fail, json, coord, optCoord, DIG_KEYS, z, command, lua, luaFile, writeBlueprint } from "../core.js";
+import { tool, luaTool, text, fail, optCoord, z, luaFile } from "../core.js";
 
 tool("df_status", "Fort overview: date, pause state, population, idle/stressed counts, food/drink/wood/stone stocks, hostiles, map size and the player's current view.",
   {}, () => luaTool("status"));

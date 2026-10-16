@@ -1,5 +1,5 @@
 // Tools: military.
-import { server, tool, luaTool, quickfort, text, fail, json, coord, optCoord, DIG_KEYS, z, command, lua, luaFile, writeBlueprint } from "../core.js";
+import { tool, luaTool, text, fail, json, optCoord, z, luaFile } from "../core.js";
 
 tool("df_military", "Squads. list: squads, members, orders and leader positions. create: make a squad led by the holder of position (default MILITIA_COMMANDER; appoint with df_noble first). add/remove: unit_id into squad_id / out of its squad. uniform: apply a uniform template (template = name or id, e.g. 'melee, leather armor', 'melee, metal armor', 'crossbows, leather armor') to every position of squad_id (re-applying wipes existing assignments; run equip after). equip: assign free matching gear to every empty uniform slot (use when soldiers stay unequipped although gear exists). train: routine off|staggered|constant|ready. barracks: assign zone_id (a type B zone) for training (sleep=true to also sleep there). station: send squad_id to x,y,z. kill: attack unit_ids (soldiers only act on targets the game counts as hostile: a werebeast in human form or a peaceful visitor is ignored; station the squad nearby instead). cancel: clear squad_id's orders.",
   { action: z.enum(["list", "create", "add", "remove", "uniform", "equip", "train", "barracks", "station", "kill", "cancel"]).default("list"),

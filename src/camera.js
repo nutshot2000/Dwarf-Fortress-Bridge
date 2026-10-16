@@ -72,7 +72,7 @@ const SCAN = (since, followId) => `
       local low = t:lower()
       local score, c = 0, nil
       for _, w in ipairs(HURT) do if low:find(w, 1, true) then score, c = 3, 'fights' end end
-      if score == 0 and out.hostile and df.announcement_type[rep.type]:find('COMBAT') then score, c = 3, 'fights' end
+      if score == 0 and out.hostile and (df.announcement_type[rep.type] or ''):find('COMBAT') then score, c = 3, 'fights' end
       if score == 0 then for _, w in ipairs(NEWS) do if low:find(w[1], 1, true) then score, c = 2, w[2] break end end end
       if score > 0 and (not best or score > best.score) then best = {x = rep.pos.x, y = rep.pos.y, z = rep.pos.z, text = t, score = score, cat = c} end
     end

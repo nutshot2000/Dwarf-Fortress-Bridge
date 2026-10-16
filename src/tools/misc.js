@@ -1,6 +1,6 @@
 // Tools: misc.
 import { camera, cameraTo, savePrefs, CATEGORIES } from "../camera.js";
-import { server, tool, luaTool, quickfort, text, fail, json, coord, optCoord, DIG_KEYS, z, command, lua, luaFile, writeBlueprint } from "../core.js";
+import { tool, luaTool, text, fail, json, coord, optCoord, z, command, lua, luaFile } from "../core.js";
 
 tool("df_view", "Move the player's camera to x,y,z so they can see what you are looking at.",
   { x: coord, y: coord, z: coord },
@@ -37,12 +37,13 @@ Furnaces: ew wood furnace, es smelter, eg glass furnace, ek kiln (el/ea/en magma
 Area (top-left + w,h): p farm plot, o paved road, O dirt road, Cw wall, CW reinforced wall, Cf floor, Cr ramp,
 Cu/Cd/Cx stairs, CF fortification
 DIG KINDS (df_dig): dig, channel, up_stair, down_stair, updown_stair, ramp, remove_stairs, chop, gather, smooth,
-engrave, fortify, undesignate
+engrave (smooth first; df_dig verifies), fortify, undesignate
 FIRST-YEAR CHECKLIST: 1) dig an updown stair shaft down 2-5 levels into stone near the wagon
 2) dig a work area + storage room 3) stockpiles: food(f), wood(w), stone(s) near the entrance; 4) carpenter wc,
-mason wm, still wl, kitchen wz, farmer ww 5) underground farm plots on soil (plant plump helmets: df_lua or in-game)
-6) beds: MakeBed orders + bedroom/dormitory zone 7) dining hall: tables+chairs + zone h 8) meeting area zone
-9) BrewDrink orders keep drink > 5 per dwarf 10) trade depot D, basic defence (door + hatch, or a drawbridge g).`;
+mason wm, still wl, kitchen wz, farmer ww 5) underground farm plots on soil, then set crops with df_crop
+6) beds: ConstructBed orders, then bedrooms (df_rooms bedroom_wing) 7) dining hall: tables+chairs + zone h 8) meeting area zone
+9) drink > 5 per dwarf: df_order reaction=BREW_DRINK_FROM_PLANT, or let df_upkeep keep it topped up
+10) trade depot D, basic defence (door + hatch, or a drawbridge g), a squad (df_military), then df_wait upkeep=true.`;
 
 // ---------- df_ui: one place that knows the v50 panels ----------
 // Hotkeys that open each info panel (these screens only populate their lists when opened this way).

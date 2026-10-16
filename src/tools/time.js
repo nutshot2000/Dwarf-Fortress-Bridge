@@ -1,7 +1,7 @@
 // Tools: time.
 import { runUpkeep } from "./production.js";
 import { camera, directorReset, directorStep } from "../camera.js";
-import { server, tool, luaTool, quickfort, text, fail, json, coord, optCoord, DIG_KEYS, z, command, lua, luaFile, writeBlueprint } from "../core.js";
+import { tool, luaTool, text, fail, z, lua, luaFile } from "../core.js";
 
 // One heartbeat per poll: the clock plus the watchdog counters (visible hostiles, active moods, caravans).
 async function tick() {

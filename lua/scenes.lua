@@ -49,8 +49,9 @@ for _, u in ipairs(citizens()) do
     elseif not dfhack.units.isAdult(u) then add('kids', 1.0, u, name .. ' playing')
     end
   end
-  if dfhack.units.isNoble and dfhack.units.isNoble(u) and jt then
-    scenes[#scenes].score = scenes[#scenes].score + 0.3
+  local last = scenes[#scenes]
+  if last and last.id == u.id and dfhack.units.isNoble and dfhack.units.isNoble(u) then
+    last.score = last.score + 0.3
   end
 end
 -- diplomacy: the broker trading at the depot, nobles in a meeting with a diplomat, merchants at the depot

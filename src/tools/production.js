@@ -2,7 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { DF_DIR } from "../dfhack.js";
-import { server, tool, luaTool, quickfort, text, fail, json, coord, optCoord, DIG_KEYS, z, command, lua, luaFile, writeBlueprint } from "../core.js";
+import { tool, luaTool, text, fail, z, command, lua, luaFile } from "../core.js";
 
 // Orders without a material never get dispatched (the game's own UI always sets one), so pick a
 // sensible default per job and let the caller override it.
@@ -30,6 +30,7 @@ tool("df_order", "Queue a manager work order (needs a MANAGER; df_noble repair i
            end
          end
          emit({error = 'no order ' .. id})`);
+      if (value?.error) return fail(value.error);
       return text(JSON.stringify(value, null, 1));
     }
     if (a.reaction) { a.job = "CustomReaction"; }

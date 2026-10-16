@@ -1,5 +1,5 @@
 // Tools: fort.
-import { server, tool, luaTool, quickfort, text, fail, json, coord, optCoord, DIG_KEYS, z, command, lua, luaFile, writeBlueprint } from "../core.js";
+import { tool, luaTool, quickfort, text, fail, optCoord, DIG_KEYS, z, command, lua, luaFile } from "../core.js";
 
 tool("df_unit", "Detailed view of one unit: unmet needs, recent emotions, wounds, inventory, all skills, enabled labors.",
   { unit_id: z.number().int() }, (a) => luaTool("unit", a));

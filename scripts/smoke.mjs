@@ -14,7 +14,8 @@ const READ_ONLY = [
   ["df_trade", {}], ["df_justice", {}], ["df_mood", {}], ["df_levers", {}], ["df_workshop", { action: "list" }],
   ["df_labor", {}], ["df_petition", {}], ["df_dump", { z: 170 }], ["df_screen", { action: "read", y1: 0, y2: 2 }],
   ["df_threats", {}], ["df_items", { search: "barrel", limit: 3 }], ["df_squad_status", {}], ["df_upkeep", {}],
-  ["df_help", {}],
+  ["df_mood", { check: true }], ["df_camera", { action: "status" }], ["df_camera", { action: "prefs" }],
+  ["df_ui", { action: "panels" }], ["df_threats", { days: 30 }], ["df_help", {}],
 ];
 
 const offline = process.argv.includes("--offline");
