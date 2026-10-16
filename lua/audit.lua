@@ -152,6 +152,17 @@ local function staff(loc)
   return s
 end
 
+-- adults without a bedroom: a spare bedroom is only a problem while someone is unhoused
+local housed = {}
+for _, z in ipairs(zones) do
+  if df.civzone_type[z.type] == 'Bedroom' and z.assigned_unit_id >= 0 then housed[z.assigned_unit_id] = true end
+end
+local unhoused = {}
+for _, u in ipairs(citizens()) do
+  if dfhack.units.isAdult(u) and not housed[u.id] then table.insert(unhoused, unit_name(u)) end
+end
+local spare = {}
+
 local report = {}
 for _, z in ipairs(zones) do
   local t = df.civzone_type[z.type]
@@ -170,7 +181,9 @@ for _, z in ipairs(zones) do
 
   if t == 'Bedroom' then
     need((c.Bed or 0) > 0, 'bed', 'a bed')
-    need(owner, 'owner: ' .. (owner and unit_name(owner) or ''), 'an owner (df_rooms assign)')
+    if owner then table.insert(ok, 'owner: ' .. unit_name(owner))
+    elseif #unhoused > 0 then table.insert(missing, 'an owner (df_rooms assign): ' .. #unhoused .. ' adults unhoused')
+    else table.insert(spare, z.name ~= '' and dfhack.df2utf(z.name) or ('zone ' .. z.id)) end
     if (c.Cabinet or 0) == 0 then table.insert(warn, 'no cabinet: clothes get scattered') end
     if (c.Box or 0) == 0 then table.insert(warn, 'no chest for belongings') end
   elseif t == 'Dormitory' then
@@ -309,4 +322,5 @@ for _, a in ipairs(ent.positions.assignments) do
 end
 
 emit({zones = report, nobles = nobles, untidy_stockpiles = piles,
+  spare_bedrooms = {count = #spare, rooms = spare}, unhoused_adults = unhoused,
   rules = 'Overlapping zones are valued at 0 (locations keep their value). Quality ranks: Meager 0, Modest 100, (plain) 250, Decent 500, Fine 1000, Great 1500, Grand 2500, Royal 10000.'})

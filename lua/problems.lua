@@ -30,9 +30,12 @@ for _, u in ipairs(cits) do
   if u.mood >= 0 and df.mood_type[u.mood] ~= 'Baby' then
     local m = df.mood_type[u.mood]
     local sev = (m == 'Berserk' or m == 'Melancholy' or m == 'Traumatized' or m == 'Possessed') and 'high' or 'medium'
-    add(sev, ('%s is in a %s mood%s.'):format(name, m,
-      (m == 'Fey' or m == 'Secretive' or m == 'Macabre' or m == 'Fell' or m == 'Possessed')
-        and ' (needs a free workshop and materials or will go insane)' or ''))
+    local j = u.job.current_job
+    local working = j and df.job_type[j.job_type]:find('^StrangeMood') ~= nil
+    add(working and 'low' or sev, ('%s is in a %s mood%s.'):format(name, m,
+      working and ' (working on the artifact; leave the workshop alone)'
+      or (m == 'Fey' or m == 'Secretive' or m == 'Macabre' or m == 'Fell' or m == 'Possessed')
+        and ' (needs a free workshop and materials or will go insane: see df_mood)' or ''))
   end
   local s = unit_stress(u)
   if s and s > 100000 then add('high', ('%s is badly stressed (%d).'):format(name, s))
@@ -66,6 +69,18 @@ if beds < pop then add(beds == 0 and 'medium' or 'low', ('Only %d beds for %d dw
 local stills = 0
 for _, b in ipairs(df.global.world.buildings.other.WORKSHOP_STILL or {}) do stills = stills + 1 end
 if stills == 0 then add('medium', 'No still built: dwarves need alcohol to work well.') end
+-- brewing needs an empty barrel or large pot per batch; food fills them up silently
+local empty = 0
+for _, it in ipairs(df.global.world.items.other.BARREL) do
+  if usable(it) and not it.flags.in_job and #dfhack.items.getContainedItems(it) == 0 then empty = empty + 1 end
+end
+for _, it in ipairs(df.global.world.items.other.TOOL) do
+  if usable(it) and not it.flags.in_job and it.subtype.id == 'ITEM_TOOL_LARGE_POT'
+     and #dfhack.items.getContainedItems(it) == 0 then empty = empty + 1 end
+end
+if stills > 0 and empty < 5 then
+  add(drink < pop * 5 and 'high' or 'medium', ('Only %d empty barrels/large pots: brewing stalls ("Needs empty food storage item"). Order MakeBarrel (wood) or rock large pots (MakeTool ITEM_TOOL_LARGE_POT).'):format(empty))
+end
 if (counts.FarmPlot or 0) == 0 then add('medium', 'No farm plots.') end
 if (counts.Table or 0) == 0 or (counts.Chair or 0) == 0 then add('low', 'No tables/chairs: dwarves will eat on the floor.') end
 
