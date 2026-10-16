@@ -90,6 +90,10 @@ tool("df_wait", "Unpause and let the game run for a number of in-game days (1 da
       if (now.paused) { reason = "game paused itself (check announcements)"; break; }
       if (Date.now() - lastMove > 6000) {
         reason = "time is not advancing - a game menu or dialog is probably open (ask the player to close it with Esc)";
+        const { value: op } = await lua(
+          `local r = {} for k, v in pairs(df.global.game.main_interface) do
+             local ok, o = pcall(function() return v.open end) if ok and o == true then r[#r + 1] = k end end emit(r)`);
+        if (op?.length) reason = `time is not advancing - panel(s) open: ${op.join(", ")} (df_ui close shuts them; they ignore Esc from scripts)`;
         // diplomacy meetings and other dialogs: show their text so the overseer can answer with df_screen
         const { value: sc } = await luaFile("screen", { action: "read" });
         if (sc?.focus?.some((f) => /Diplomacy|Petition|Mandate/.test(f))) {

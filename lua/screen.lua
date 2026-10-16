@@ -30,11 +30,13 @@ local function grid(x1, y1, x2, y2)
 end
 
 -- all occurrences of text (case-insensitive) as {x, y} of the first character
-local function find(text)
+-- exact = case-sensitive (buttons are capitalised: "Approve" vs "Do you approve this request?")
+local function find(text, exact)
   local hits = {}
-  local needle = text:lower()
+  local needle = exact and text or text:lower()
   for y = 0, H - 1 do
-    local line = row_text(y, 0, W - 1):lower()
+    local line = row_text(y, 0, W - 1)
+    if not exact then line = line:lower() end
     local s = 1
     while true do
       local i = line:find(needle, s, true)
@@ -91,7 +93,9 @@ end
 if action == 'click' then
   local x, y = ARGS.x, ARGS.y
   if ARGS.text then
-    local hits = find(ARGS.text)
+    -- prefer case-exact matches (the button), fall back to any case
+    local hits = find(ARGS.text, true)
+    if #hits == 0 then hits = find(ARGS.text) end
     local n = ARGS.occurrence or 1
     if not hits[n] then emit({error = 'Text "' .. ARGS.text .. '" not on screen (' .. #hits .. ' matches)', focus = focus()}) return end
     x, y = hits[n].x + math.floor(#ARGS.text / 2), hits[n].y

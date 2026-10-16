@@ -39,3 +39,52 @@ FIRST-YEAR CHECKLIST: 1) dig an updown stair shaft down 2-5 levels into stone ne
 mason wm, still wl, kitchen wz, farmer ww 5) underground farm plots on soil (plant plump helmets: df_lua or in-game)
 6) beds: MakeBed orders + bedroom/dormitory zone 7) dining hall: tables+chairs + zone h 8) meeting area zone
 9) BrewDrink orders keep drink > 5 per dwarf 10) trade depot D, basic defence (door + hatch, or a drawbridge g).`;
+
+// ---------- df_ui: one place that knows the v50 panels ----------
+// Hotkeys that open each info panel (these screens only populate their lists when opened this way).
+const PANELS = { squads: "D_SQUADS", units: "D_UNITLIST", tasks: "D_JOBLIST", locations: "D_LOCATIONS", labor: "D_LABOR",
+  orders: "D_ORDERS", nobles: "D_NOBLES", artifacts: "D_ARTLIST", world: "D_WORLD", justice: "D_JUSTICE", stocks: "D_STOCKS",
+  announcements: "D_ANNOUNCE", burrows: "D_BURROWS", hauling: "D_HAULING", zones: "D_CIVZONE", stockpiles: "D_STOCKPILES" };
+
+tool("df_ui", "Drive the game's own panels reliably. panels: which v50 panels are open (an open panel can freeze time). open panel=" + Object.keys(PANELS).join("|") + " (dismisses first-time help popups). press text=<button label>: click a visible button, case-exact match preferred (\"Approve\" not \"approve\"), occurrence=n for repeats. select_squad squad_id: tick the squad's checkbox in the Squads panel (shows its order buttons). close: shut every open panel (they ignore Esc sent from scripts). Prefer the dedicated tools; use this for screens they do not cover.",
+  { action: z.enum(["panels", "open", "press", "select_squad", "close"]).default("panels"),
+    panel: z.string().optional(), text: z.string().optional(), occurrence: z.number().int().min(1).optional(),
+    squad_id: z.number().int().optional() },
+  async (a) => {
+    const openPanels = async () => (await lua(
+      `local r = {} for k, v in pairs(df.global.game.main_interface) do
+         local ok, o = pcall(function() return v.open end) if ok and o == true then r[#r + 1] = k end end
+       emit({open = r, focus = dfhack.gui.getCurFocus(true)})`)).value;
+    if (a.action === "panels") return text(json(await openPanels()));
+    if (a.action === "close") return luaTool("screen", { action: "close" });
+    if (a.action === "press") {
+      if (!a.text) return fail("press needs text");
+      return luaTool("screen", { action: "click", text: a.text, occurrence: a.occurrence });
+    }
+    if (a.action === "open") {
+      const key = PANELS[(a.panel ?? "").toLowerCase()];
+      if (!key) return fail(`Unknown panel ${a.panel}; one of ${Object.keys(PANELS).join(", ")}`);
+      await luaFile("screen", { action: "close" });
+      await luaFile("screen", { action: "key", keys: [key] });
+      // first-time help boxes sit on top with an Okay button
+      const { value: f } = await luaFile("screen", { action: "find", text: "Okay" });
+      if (f?.hits?.length) await luaFile("screen", { action: "click", text: "Okay" });
+      return text(json(await openPanels()));
+    }
+    if (a.action === "select_squad") {
+      if (a.squad_id === undefined) return fail("select_squad needs squad_id");
+      await luaFile("screen", { action: "close" });
+      await luaFile("screen", { action: "key", keys: ["D_SQUADS"] });
+      const { value: f } = await luaFile("screen", { action: "find", text: "Okay" });
+      if (f?.hits?.length) await luaFile("screen", { action: "click", text: "Okay" });
+      const { value } = await lua(
+        `local s = df.global.game.main_interface.squads
+         local hit = false
+         for i, id in ipairs(s.squad_id) do
+           if id == ${a.squad_id} then s.squad_selected[i] = true hit = true else s.squad_selected[i] = false end
+         end
+         emit({selected = hit, open = s.open})`);
+      return value?.selected ? text(`Squad ${a.squad_id} ticked; its order buttons (kill, move, patrol, equip, schedule) are showing.`)
+        : fail(`Squad ${a.squad_id} is not in the Squads panel`);
+    }
+  });
