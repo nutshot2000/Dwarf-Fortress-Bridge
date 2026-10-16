@@ -343,8 +343,8 @@ tool("df_burrow", "Burrows and the civilian alert. list: burrows and alerts. cre
     unit_ids: z.array(z.number().int()).optional(), all_citizens: z.boolean().optional() },
   (a) => luaTool("burrow", a));
 
-tool("df_trade", "Trading. status: caravans on the map, depots, broker, whether the trade screen is open. send: mark goods to haul to the depot by search text (e.g. 'crafts', 'mug', 'leather') or item_ids, up to limit. With the in-game trade screen open: screen lists merchant and fort goods with values and indices; select / deselect toggle indices on side merchant|fort and report selected totals. request_broker: call the broker to the depot. open: open the trade screen once the broker is there. propose: press Trade (and confirm), returning the merchant reply and Value/Profit/Weight footer. close: leave the trade screen (Esc does not; time stays frozen while it is open). Merchants want a clear profit and refuse loads over their carrying weight.",
-  { action: z.enum(["status", "send", "request_broker", "open", "screen", "select", "deselect", "propose", "close"]).default("status"),
+tool("df_trade", "Trading. status: caravans on the map, depots, broker, whether the trade screen is open. send: mark goods to haul to the depot by search text (e.g. 'crafts', 'mug', 'leather') or item_ids, up to limit. With the in-game trade screen open: screen lists merchant and fort goods with values and indices; select / deselect toggle indices on side merchant|fort and report selected totals. request_broker: call the broker to the depot. request_anyone: let any dwarf trade (use when the broker is busy, e.g. stuck in a diplomat meeting). open: open the trade screen once the broker is there. propose: press Trade (and confirm), returning the merchant reply and Value/Profit/Weight footer. close: leave the trade screen (Esc does not; time stays frozen while it is open). Merchants want a clear profit and refuse loads over their carrying weight.",
+  { action: z.enum(["status", "send", "request_broker", "request_anyone", "open", "screen", "select", "deselect", "propose", "close"]).default("status"),
     search: z.string().optional(), item_ids: z.array(z.number().int()).optional(), limit: z.number().int().optional(),
     depot_id: z.number().int().optional(), side: z.enum(["merchant", "fort"]).optional(),
     indices: z.array(z.number().int()).optional(), show_contained: z.boolean().optional() },
@@ -364,14 +364,15 @@ tool("df_trade", "Trading. status: caravans on the map, depots, broker, whether 
       await lua(`local v=df.global.game.main_interface.view_sheets v.open=true v.active_sheet=df.view_sheet_type.BUILDING v.active_id=${depot.id} v.active_sub_tab=0 emit(true)`);
       return depot;
     };
-    if (a.action === "request_broker") {
+    if (a.action === "request_broker" || a.action === "request_anyone") {
       // The game only creates the broker's depot job when the button is clicked, not when the flag is set.
+      const anyone = a.action === "request_anyone";
       const depot = await openDepot();
       if (!depot) return fail("No trade depot");
-      await lua(`df.building.find(${depot.id}).trade_flags.trader_requested=false emit(true)`);
-      await luaFile("screen", { action: "click", text: "Broker requested at depot" });
+      await lua(`local f=df.building.find(${depot.id}).trade_flags f.trader_requested=false f.anyone_can_trade=false emit(true)`);
+      await luaFile("screen", { action: "click", text: anyone ? "Anyone requested at depot" : "Broker requested at depot" });
       await luaFile("screen", { action: "key", keys: ["LEAVESCREEN"] });
-      return text("Broker requested at the depot (via the depot button). Run df_wait until the broker arrives, then action=open.");
+      return text(`${anyone ? "Any dwarf" : "Broker"} requested at the depot (via the depot button). Run df_wait until they arrive, then action=open.`);
     }
     if (a.action === "open") {
       const depot = await openDepot();
