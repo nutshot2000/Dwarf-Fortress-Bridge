@@ -17,7 +17,31 @@ local function unlink(hf, asn_id)
   end
 end
 
+-- DF decides "is there a manager/broker/..." from fortress_entity.assignments_by_type[responsibility]
+-- (found by reverse engineering the "A manager is required" check: it is just that vector's size).
+-- The index can be empty or stale (it was empty on a fresh embark), so rebuild it from the assignments.
+local function rebuild_index()
+  local e = df.global.plotinfo.main.fortress_entity or ent
+  local pos = {}
+  for _, p in ipairs(e.positions.own) do pos[p.id] = p end
+  local abt = e.assignments_by_type
+  for r = 0, #df.entity_position_responsibility do pcall(function() abt[r]:resize(0) end) end
+  local n = 0
+  for _, a in ipairs(e.positions.assignments) do
+    local p = pos[a.position_id]
+    if p and a.histfig >= 0 then
+      for r, on in pairs(p.responsibilities) do
+        if on then abt[df.entity_position_responsibility[r]]:insert('#', a) n = n + 1 end
+      end
+    end
+  end
+  return n
+end
+
 local action = ARGS.action or 'list'
+if action == 'repair' then
+  emit({ok = true, indexed_responsibilities = rebuild_index()}) return
+end
 if action == 'list' then
   local out = {}
   for _, a in ipairs(ent.positions.assignments) do
@@ -64,7 +88,7 @@ if asn.histfig >= 0 then
   asn.histfig = -1
   asn.histfig2 = -1
 end
-if action == 'remove' then emit({ok = true, position = code, holder = nil}) return end
+if action == 'remove' then rebuild_index() emit({ok = true, position = code, holder = nil}) return end
 
 local u = df.unit.find(ARGS.unit_id or -1)
 if not u then emit({error = 'No unit ' .. tostring(ARGS.unit_id)}) return end
@@ -77,4 +101,5 @@ hf.entity_links:insert('#', {new = df.histfig_entity_link_positionst, entity_id 
   link_strength = 100, assignment_id = asn.id, assignment_vector_idx = asn_idx, entity_vector_idx = ent.id,
   start_year = df.global.cur_year})
 history('history_event_add_hf_entity_linkst', hf.id)
+rebuild_index()
 emit({ok = true, position = code, holder = unit_name(u)})

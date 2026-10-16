@@ -15,7 +15,7 @@ lowercase d h u j i r = pending dig designation, @ citizen, E hostile, a other c
 W workshop, S stockpile, P farm plot, B bed, D door, K table, C chair/box/cabinet, c unfinished building.
 Workshops are 3x3 and placed by their CENTRE tile; farm plots, stockpiles and zones take a top-left corner + size.
 Farm plots need soil/mud floor underground or any soil surface. Check df_help for building keys.
-Production: use df_workshop action=add (direct workshop tasks, works without a manager). Prefer native tasks
+Production: df_order (manager work orders; needs a MANAGER, run df_noble repair if orders never validate) or df_workshop action=add (direct workshop tasks, no manager needed). Prefer native tasks
 ("construct bed", "make barrel", "brew drink from plant") over "make wooden ..." reactions.
 Farm plots reset to fallow when construction finishes: set crops with df_crop AFTER the plot is built.
 People: df_unit (detail), df_labor (labors/work details), df_noble (appoint MANAGER, MILITIA_COMMANDER...),
@@ -157,20 +157,33 @@ tool("df_blueprint", "Apply a free-form quickfort blueprint. rows are CSV lines 
   async (a) => text(await quickfort(a.mode, a.rows, a.x, a.y, a.z, a.dry_run ? ["--dry-run"] : [])));
 
 // ---------- production ----------
-tool("df_order", "Queue a manager work order, e.g. job=BrewDrink amount=20, MakeBed 5, ConstructTable 4, MakeBarrel, ConstructBlocks. Omit job to list current orders. Use df_cmd 'workorder -l <filter>' to find job names.",
-  { job: z.string().optional(), amount: z.number().int().min(1).max(1000).optional() },
+// Orders without a material never get dispatched (the game's own UI always sets one), so pick a
+// sensible default per job and let the caller override it.
+const WOOD_JOBS = /^(ConstructBed|MakeBarrel|ConstructChest|ConstructBin|MakeBucket|ConstructCabinet|ConstructCoffin|ConstructWeaponRack|ConstructArmorStand|ConstructHatchCover|ConstructSplint|ConstructCrutch|MakeCage|MakeAnimalTrap|ConstructGrate|ConstructFloodgate)$/;
+const STONE_JOBS = /^(ConstructTable|ConstructThrone|ConstructDoor|ConstructStatue|ConstructSlab|ConstructQuern|ConstructMillstone|MakeGoblet|MakeCrafts|ConstructBlocks|ConstructBox)$/;
+const CATEGORY_MATS = ["wood", "plant", "cloth", "silk", "leather", "bone", "shell", "yarn", "tooth", "horn", "pearl", "soap"];
+
+tool("df_order", "Queue a manager work order (needs a MANAGER; df_noble repair if the game says one is required). job is a df.job_type name, e.g. ConstructBed, MakeBarrel, ConstructTable, ConstructThrone, ConstructDoor, BrewDrink, PrepareMeal, ConstructBlocks. material: wood, stone, bone, leather, cloth, ... (defaults: wood for carpenter jobs, stone for mason jobs). repeat: daily/weekly/monthly/seasonally/yearly. Omit job to list orders. df_cmd 'workorder -l <filter>' lists job names.",
+  { job: z.string().optional(), amount: z.number().int().min(1).max(1000).optional(), material: z.string().optional(),
+    repeat: z.enum(["daily", "weekly", "monthly", "seasonally", "yearly"]).optional() },
   async (a) => {
     if (!a.job) return luaTool("orders");
-    const out = await command("workorder", [a.job, String(a.amount ?? 1)]);
-    return text(out.trim() || `Queued ${a.amount ?? 1} x ${a.job}`);
+    const order = { job: a.job, amount_total: a.amount ?? 1 };
+    const mat = (a.material || (WOOD_JOBS.test(a.job) ? "wood" : STONE_JOBS.test(a.job) ? "stone" : "")).toLowerCase();
+    if (CATEGORY_MATS.includes(mat)) order.material_category = [mat];
+    else if (mat === "stone" || mat === "rock") order.material = "INORGANIC";
+    else if (mat) order.material = mat.toUpperCase();
+    if (a.repeat) order.frequency = a.repeat[0].toUpperCase() + a.repeat.slice(1);
+    const out = await command("workorder", [JSON.stringify(order)]);
+    return text((out.trim() || "Queued") + `\norder: ${JSON.stringify(order)}`);
   });
 
 // ---------- people & management ----------
 tool("df_unit", "Detailed view of one unit: unmet needs, recent emotions, wounds, inventory, all skills, enabled labors.",
   { unit_id: z.number().int() }, (a) => luaTool("unit", a));
 
-tool("df_noble", "Fort positions. action=list shows every position and holder. action=appoint gives position (e.g. MANAGER, BOOKKEEPER, BROKER, CHIEF_MEDICAL_DWARF, MILITIA_COMMANDER, SHERIFF) to unit_id; action=remove vacates it. A MANAGER is required before work orders run.",
-  { action: z.enum(["list", "appoint", "remove"]).default("list"), position: z.string().optional(), unit_id: z.number().int().optional() },
+tool("df_noble", "Fort positions. action=list shows every position and holder. action=appoint gives position (e.g. MANAGER, BOOKKEEPER, BROKER, CHIEF_MEDICAL_DWARF, MILITIA_COMMANDER, SHERIFF) to unit_id; action=remove vacates it. action=repair rebuilds the responsibility index DF uses to find its manager/broker (run it if the Work orders screen says a manager is required). A MANAGER is required before work orders run.",
+  { action: z.enum(["list", "appoint", "remove", "repair"]).default("list"), position: z.string().optional(), unit_id: z.number().int().optional() },
   (a) => luaTool("noble", a));
 
 tool("df_labor", "Labors and work details. action=list shows work details (members, labors) and every citizen's enabled labors. enable/disable toggle labors (e.g. MINE, CUTWOOD, HAUL_FOOD, BREWER, COOK, CARPENTER, MASON, PLANT) for unit_id. detail_add/detail_remove put unit_id in a named work detail (e.g. 'Miners') and apply its labors.",
