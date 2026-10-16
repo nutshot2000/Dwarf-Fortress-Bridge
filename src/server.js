@@ -5,7 +5,11 @@ import { server } from "./core.js";
 import "./tools/observe.js";
 import "./tools/designate.js";
 import "./tools/production.js";
-import "./tools/people.js";
+import "./tools/fort.js";
+import "./tools/military.js";
+import "./tools/stores.js";
+import "./tools/trade.js";
+import "./tools/screen.js";
 import "./tools/time.js";
 import "./tools/misc.js";
 

@@ -7,7 +7,10 @@ export { z, command, lua, luaFile, writeBlueprint };
 
 export const INSTRUCTIONS = `You are the overseer of a live Dwarf Fortress fort, acting through DFHack.
 Coordinates are map tiles: x east, y south, z UP (higher z = closer to the sky). Underground is lower z.
-Loop: df_alerts -> df_status -> df_problems -> df_look (around the area you will change) -> ONE action -> df_wait -> verify.
+Loop: df_status -> df_problems -> df_look (around the area you will change) -> ONE action -> df_wait upkeep=true -> verify.
+df_wait has a watchdog: it stops early when a hostile appears, a citizen dies, a mood starts or a caravan arrives, and says why.
+React to a WATCHDOG stop before waiting again (df_threats for danger, df_mood check=true for moods, df_trade for caravans).
+df_upkeep keeps drink, barrels, spare furniture, goblets, soap and fuel topped up; set its targets once per fort.
 Digging/building only designates work; dwarves do it while the game runs (df_wait).
 df_look glyphs: ? unrevealed, # stone wall, % soil wall, * ore/gem vein, . floor, , grass, ' ' open air,
 ^ ramp, v ramp top, < > X stairs up/down/both, T tree, o boulder, ~ deep water, 1-3 shallow water, ! magma,
@@ -24,7 +27,11 @@ Animals: df_animals (pastures, slaughter, training). df_standing (standing order
 Emergencies: df_burrow alert_on burrow=Safety keeps civilians inside; alert_off afterwards.
 Trade: df_trade (caravans, send goods to depot, select on the open trade screen). df_justice (crimes).
 Defence: df_levers (link/pull), df_military uniform/train/barracks, df_schedule (monthly orders, patrol routes, alert switch: alert ready when attacked). Staff: df_location (hospital doctors, tavern keeper/performers). df_mood for strange moods. df_pile (stockpile presets and links), df_kitchen, df_auto (automation plugins).
-Screen: df_screen read/find/click/key handles pop-ups and any screen without a tool; the game pauses while menus are open.
+Screen: df_ui opens/closes v50 panels, presses buttons and ticks squads; df_screen read/find/click/key for anything else.
+Panels (trade, squads, petitions) ignore Esc from scripts and some freeze time: df_ui close.
+Diagnosis: df_threats (hostiles, cursed units, killers), df_items (where something is and why it is unused),
+df_squad_status (gear worn vs assigned; df_military equip fixes empty slots), df_mood check=true (can the mood be satisfied?),
+df_petition (vets petitioners for curses). Kill orders only work on hostile targets.
 Inventory: df_stocks. df_lua runs raw DFHack Lua (call emit(v) to return data). Save with df_save before risky moves.`;
 
 export const server = new McpServer({ name: "dwarf-fortress", version: "0.1.0" }, { instructions: INSTRUCTIONS });
