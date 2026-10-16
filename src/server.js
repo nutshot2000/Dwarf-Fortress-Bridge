@@ -414,6 +414,11 @@ tool("df_levers", "Levers and mechanisms. list: levers (state, what each is link
 tool("df_mood", "Strange moods: which dwarf is in a mood, which workshop they claimed, and exactly which items they still need (runs DFHack showmood). Provide the materials quickly or the dwarf goes insane.",
   {}, async () => text((await command("showmood")).trim() || "No dwarf is in a strange mood."));
 
+tool("df_dump", "Clear loose clutter (boulders by default) out of rooms: mark items on levels z (or z1..z2), optionally inside x1,y1..x2,y2, for dumping; dwarves haul them to a garbage dump zone (df_zone type d; a dump has no per-tile limit, so a small dump next to a mason's workshop keeps stone tidy and handy). Items already in stockpiles or dumps are skipped. count first, unmark to undo. types: df.items.other names, e.g. BOULDER, WOOD, BAR.",
+  { action: z.enum(["count", "mark", "unmark"]).default("count"), z: optCoord, z1: optCoord, z2: optCoord,
+    x1: optCoord, y1: optCoord, x2: optCoord, y2: optCoord, types: z.array(z.string()).optional() },
+  (a) => luaTool("dump", a));
+
 tool("df_pile", "Stockpile settings and links. status: every stockpile with stats. presets: list settings presets (library/cat_food, library/booze, library/cat_stone, library/ironore, library/plants, ...; search filters the list). apply: import preset into pile_id (mode set = replace, enable = add, disable = remove; filter = comma-separated substrings to touch only matching items). links: show pile/workshop links. link / unlink: pile_id gives to workshop_id (direction give) or takes products from it (direction take).",
   { action: z.enum(["status", "presets", "apply", "links", "link", "unlink"]).default("status"),
     pile_id: z.number().int().optional(), preset: z.string().optional(), search: z.string().optional(),
