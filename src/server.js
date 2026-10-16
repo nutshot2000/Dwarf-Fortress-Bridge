@@ -272,11 +272,17 @@ tool("df_rooms", "Zones. action=list shows all zones with owners. action=assign 
       log.push(`furnish: door, bed, cabinet, chest placed in ${rooms.length * 2} rooms (they build as items exist)`);
     }
     if (a.phase === "zone") {
-      let n = 0;
+      let n = 0, made = 0;
       const names = [];
+      // re-running must not stack a second zone on a room that already has one (overlaps zero room value)
+      const { value: before } = await lua(
+        `local t = {} for _, z in ipairs(df.global.world.buildings.other.ACTIVITY_ZONE) do
+           if z.type == df.civzone_type.Bedroom and z.z == ${Z} then t[#t + 1] = z.x1 .. ',' .. z.y1 end end emit(t)`);
+      const existing = new Set(before ?? []);
       for (const x of rooms) for (const yy of [Y - 4, Y + 2]) {
         n++; const name = `Bedroom ${Z}-${n}`; names.push(name);
-        await quickfort("zone", [`b{name="${name}"}(3x3)`], x, yy, Z);
+        if (existing.has(`${x},${yy}`)) continue;
+        await quickfort("zone", [`b{name="${name}"}(3x3)`], x, yy, Z); made++;
       }
       // assign to adults without a bedroom
       const { value: zl } = await luaFile("rooms", { action: "list" });
@@ -288,7 +294,7 @@ tool("df_rooms", "Zones. action=list shows all zones with owners. action=assign 
       for (let i = 0; i < free.length && i < homeless.length; i++) {
         await luaFile("rooms", { action: "assign", zone_id: free[i].id, unit_id: homeless[i].id }); assigned++;
       }
-      log.push(`zone: ${names.length} bedroom zones; assigned ${assigned} to adults without a room`);
+      log.push(`zone: ${made} new of ${names.length} bedroom zones (existing kept); assigned ${assigned} to adults without a room`);
     }
     return text(log.join("\n") + "\nRun df_rooms action=audit afterwards.");
   });
@@ -599,7 +605,7 @@ tool("df_help", "Quickfort key reference and early-fort checklist.", {}, async (
 const HELP = `BUILD KEYS (df_build): b bed, c chair, t table, d door, h container/box, f cabinet, r weapon rack, a armor stand,
 n coffin, s statue, l well, H hatch, j cage, v restraint, A archery target, k vermin catcher, D trade depot (5x5)
 Workshops (3x3, centre tile): wc carpenter, wm stoneworker(mason), wl still, wz kitchen, ww farmer, wu butcher,
-wn tanner, we leatherworks, wr craftsdwarf, wf metalsmith (forge), wj jeweler, wt mechanic, wo loom, wk clothier,
+wn tanner, we leatherworks, ~c bookcase, wr craftsdwarf, wf metalsmith (forge), wj jeweler, wt mechanic, wo loom, wk clothier,
 wq quern, wM millstone, wb bowyer, wh fishery, wy ashery, wd dyer, wS soap maker, wp screw press, ws siege
 Furnaces: ew wood furnace, es smelter, eg glass furnace, ek kiln (el/ea/en magma versions)
 Area (top-left + w,h): p farm plot, o paved road, O dirt road, Cw wall, CW reinforced wall, Cf floor, Cr ramp,
