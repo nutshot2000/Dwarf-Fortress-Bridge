@@ -165,10 +165,28 @@ const WOOD_JOBS = /^(ConstructBed|MakeBarrel|ConstructChest|ConstructBin|MakeBuc
 const STONE_JOBS = /^(ConstructTable|ConstructThrone|ConstructDoor|ConstructStatue|ConstructSlab|ConstructQuern|ConstructMillstone|MakeGoblet|MakeCrafts|ConstructBlocks|ConstructBox|ConstructMechanisms)$/;
 const CATEGORY_MATS = ["wood", "plant", "cloth", "silk", "leather", "bone", "shell", "yarn", "tooth", "horn", "pearl", "soap"];
 
-tool("df_order", "Queue a manager work order (needs a MANAGER; df_noble repair if the game says one is required). job is a df.job_type name, e.g. ConstructBed, MakeBarrel, ConstructTable, ConstructThrone, ConstructDoor, BrewDrink, PrepareMeal, ConstructBlocks. material: wood, stone, bone, leather, cloth, ... (defaults: wood for carpenter jobs, stone for mason jobs). repeat: daily/weekly/monthly/seasonally/yearly. Metal gear: job MakeArmor/MakeHelm/MakePants/MakeGloves/MakeShoes/MakeShield/MakeWeapon with item_subtype (ITEM_ARMOR_BREASTPLATE, ITEM_ARMOR_MAIL_SHIRT, ITEM_HELM_HELM, ITEM_PANTS_GREAVES, ITEM_GLOVES_GAUNTLETS, ITEM_SHOES_BOOTS, ITEM_SHIELD_SHIELD, ITEM_WEAPON_AXE_BATTLE, ITEM_WEAPON_SPEAR, ITEM_WEAPON_PICK...) and material INORGANIC:IRON. Brewing, cooking and many crafts are reactions: pass reaction instead of job (BREW_DRINK_FROM_PLANT, BREW_DRINK_FROM_PLANT_GROWTH, MAKE_SOAP...). Omit job to list orders. df_cmd 'workorder -l <filter>' lists job names.",
+tool("df_order", "Queue a manager work order (needs a MANAGER; df_noble repair if the game says one is required). job is a df.job_type name, e.g. ConstructBed, MakeBarrel, ConstructTable, ConstructThrone, ConstructDoor, BrewDrink, PrepareMeal, ConstructBlocks. material: wood, stone, bone, leather, cloth, ... (defaults: wood for carpenter jobs, stone for mason jobs). repeat: daily/weekly/monthly/seasonally/yearly. Metal gear: job MakeArmor/MakeHelm/MakePants/MakeGloves/MakeShoes/MakeShield/MakeWeapon with item_subtype (ITEM_ARMOR_BREASTPLATE, ITEM_ARMOR_MAIL_SHIRT, ITEM_HELM_HELM, ITEM_PANTS_GREAVES, ITEM_GLOVES_GAUNTLETS, ITEM_SHOES_BOOTS, ITEM_SHIELD_SHIELD, ITEM_WEAPON_AXE_BATTLE, ITEM_WEAPON_SPEAR, ITEM_WEAPON_PICK...) and material INORGANIC:IRON. Brewing, cooking and many crafts are reactions: pass reaction instead of job (BREW_DRINK_FROM_PLANT, BREW_DRINK_FROM_PLANT_GROWTH, MAKE_SOAP...). Omit job to list orders; cancel_id removes an order (and its pending jobs). df_cmd 'workorder -l <filter>' lists job names.",
   { job: z.string().optional(), reaction: z.string().optional(), item_subtype: z.string().optional(), amount: z.number().int().min(1).max(1000).optional(), material: z.string().optional(),
-    repeat: z.enum(["daily", "weekly", "monthly", "seasonally", "yearly"]).optional() },
+    repeat: z.enum(["daily", "weekly", "monthly", "seasonally", "yearly"]).optional(),
+    cancel_id: z.number().int().optional() },
   async (a) => {
+    if (a.cancel_id !== undefined) {
+      const { value } = await lua(
+        `local id = ${a.cancel_id}
+         local orders = df.global.world.manager_orders.all
+         for i = #orders - 1, 0, -1 do
+           if orders[i].id == id then
+             local jobs = 0
+             for _, j in require('utils').listpairs(df.global.world.jobs.list) do
+               if j.order_id == id and not j.flags.working then dfhack.job.removeJob(j) jobs = jobs + 1 end
+             end
+             orders:erase(i)
+             emit({cancelled = id, jobs_removed = jobs}) return
+           end
+         end
+         emit({error = 'no order ' .. id})`);
+      return text(JSON.stringify(value, null, 1));
+    }
     if (a.reaction) { a.job = "CustomReaction"; }
     if (!a.job) return luaTool("orders");
     const order = { job: a.job, amount_total: a.amount ?? 1 };
@@ -469,6 +487,19 @@ async function tick() {
   return value;
 }
 const setPause = (p) => lua(`df.global.pause_state = ${p ? "true" : "false"} emit(true)`);
+// Announcement popups ("X has bestowed the name..." etc.) freeze the clock until clicked away.
+// Esc/Enter don't close them; clicking the on-screen Okay button does.
+async function dismissPopup() {
+  const count = async () => (await lua(`emit(#df.global.world.status.popups)`)).value ?? 0;
+  const n = await count();
+  if (!n) return { n: 0 };
+  const { value: txt } = await lua(`emit(dfhack.df2utf(try(function() return df.global.world.status.popups[0].text end, '?')))`);
+  const { value: f } = await luaFile("screen", { action: "find", text: "Okay" });
+  const hit = f?.hits?.[0];
+  if (hit) await luaFile("screen", { action: "click", x: hit.x + 1, y: hit.y });
+  await new Promise((r) => setTimeout(r, 300));
+  return { n, text: txt, after: await count() };
+}
 
 tool("df_wait", "Unpause and let the game run for a number of in-game days (1 day = 1200 ticks), then pause again and report new announcements. Stops early if the game pauses itself (sieges, moods, etc.). Capped at ~50 s real time per call.",
   { days: z.number().min(0.1).max(28).default(1) },
@@ -478,13 +509,24 @@ tool("df_wait", "Unpause and let the game run for a number of in-game days (1 da
     const target = start.abs + Math.round(a.days * 1200);
     await setPause(false);
     const t0 = Date.now();
-    let now = start, reason = "done";
+    let now = start, reason = "done", lastAbs = start.abs, lastMove = Date.now();
+    const popups = [];
     while (true) {
       await new Promise((r) => setTimeout(r, 700));
       now = await tick();
       if (now.abs >= target) break;
+      if (now.abs !== lastAbs) { lastAbs = now.abs; lastMove = Date.now(); }
+      if (now.paused || Date.now() - lastMove > 2500) {
+        const p = popups.length < 8 ? await dismissPopup() : { n: 0 };
+        if (p.n > 0 && p.after < p.n) {
+          popups.push(p.text);
+          await setPause(false);
+          lastMove = Date.now();
+          continue;
+        }
+      }
       if (now.paused) { reason = "game paused itself (check announcements)"; break; }
-      if (now.abs === start.abs && Date.now() - t0 > 6000) {
+      if (Date.now() - lastMove > 6000) {
         reason = "time is not advancing - a game menu or dialog is probably open (ask the player to close it with Esc)";
         break;
       }
@@ -497,8 +539,11 @@ tool("df_wait", "Unpause and let the game run for a number of in-game days (1 da
     // Events the overseer must react to are always listed first and never truncated.
     const IMPORTANT = /CARAVAN|MERCHANT|MIGRANT|SIEGE|AMBUSH|THIEF|INVASION|ENEMY|MEGABEAST|FORGOTTEN|TITAN|WEREBEAST|NIGHT_CREATURE|UNDEAD|MOOD|BERSERK|MADNESS|INSANE|TANTRUM|DEATH|DIED|KILLED|BIRTH|ARTIFACT|DIPLOMAT|LIAISON|NOBLE|PETITION|FLOOD|CAVE_IN|COLLAPSE|STRUCK|DEMAND|MANDATE|CITIZEN|ELECTION|ANIMAL_?ATTACK|INJUR|SCREAM/i;
     const IMPORTANT_TEXT = /caravan|merchants|migrant|siege|ambush|stolen|thief|snatcher|invad|attack|dead|died|killed|been slaughtered by|mood|berserk|insane|tantrum|withdraw|born|given birth|artifact|diplomat|liaison|petition|arrived|has become|struck|forgotten beast|titan|vampire|were/i;
-    const imp = all.filter((m) => IMPORTANT.test(m.type || "") || IMPORTANT_TEXT.test(m.text));
-    const rest = all.filter((m) => !imp.includes(m) && !/lightly tapping|strikes at|parried|deflected|rolls away|no longer stunned|is knocked over|punches|kicks|scratches|bites|grabs|releases the grip/i.test(m.text));
+    // Blow-by-blow combat lines (mostly squad sparring) are noise unless someone actually got hurt.
+    const COMBAT = /lightly tapping|misses the|charges at|collides with|strikes at|parried|deflected|rolls away|jumps away|attacks the .* but|no longer stunned|is knocked over|punches|kicks|scratches|bites|grabs|releases the grip/i;
+    const HURT = /dead|killed|struck down|severed|mangled|torn|shattered|unconscious|bleeding/i;
+    const imp = all.filter((m) => (IMPORTANT.test(m.type || "") || IMPORTANT_TEXT.test(m.text)) && !(COMBAT.test(m.text) && !HURT.test(m.text)));
+    const rest = all.filter((m) => !imp.includes(m) && !COMBAT.test(m.text));
     const sparring = all.length - imp.length - rest.length;
     let out = `Ran ${ran.toFixed(2)} days in ${((Date.now() - t0) / 1000).toFixed(0)}s: ${reason}. Paused.\n`;
     // Migrant waves arrive as a big popup, not a regular report, so also compare the population.
@@ -506,6 +551,7 @@ tool("df_wait", "Unpause and let the game run for a number of in-game days (1 da
       const d = now.pop - start.pop;
       imp.unshift({ text: `Population ${start.pop} -> ${now.pop} (${d > 0 ? `+${d}: migrants or births` : `${d}: deaths or departures`}). Check df_units and bedrooms.` });
     }
+    if (popups.length) out += `POPUPS (dismissed so time could run):\n${popups.map((t) => `! ${t}`).join("\n")}\n`;
     if (imp.length) out += `IMPORTANT:\n${imp.map((m) => `! ${m.text}`).join("\n")}\n`;
     if (rest.length) out += `Other:\n${rest.slice(-20).map((m) => `- ${m.text}`).join("\n")}\n`;
     if (sparring > 0) out += `(${sparring} combat/sparring lines omitted)\n`;

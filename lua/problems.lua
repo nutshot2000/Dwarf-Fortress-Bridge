@@ -44,6 +44,24 @@ for _, u in ipairs(cits) do
   if u.counters2.hunger_timer > 75000 then add('high', name .. ' is starving.') end
 end
 
+-- livestock and pets: starving animals and grazers left out of a pasture
+for _, u in ipairs(df.global.world.units.active) do
+  if dfhack.units.isActive(u) and not dfhack.units.isDead(u) and not dfhack.units.isCitizen(u)
+     and dfhack.units.isTame(u) and dfhack.units.isOwnCiv(u) then
+    local name = unit_name(u)
+    if u.counters2.hunger_timer > 75000 then add('high', name .. ' (animal) is starving.') end
+    if try(function() return dfhack.units.isGrazer(u) end, false) then
+      local penned = false
+      for _, r in ipairs(u.general_refs) do
+        if df.general_ref_building_civzone_assignedst:is_instance(r) then penned = true end
+      end
+      if not penned and not u.flags1.caged then
+        add('medium', name .. ' is a grazer without a pasture: it will starve (df_animals pasture).')
+      end
+    end
+  end
+end
+
 -- hostiles
 local hostile = {}
 for _, u in ipairs(df.global.world.units.active) do
