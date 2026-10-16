@@ -65,14 +65,26 @@ if action == 'link' then
   job.job_type = df.job_type.LinkBuildingToTrigger
   job.completion_timer = -1
   job.pos:assign(xyz2pos(lever.centerx, lever.centery, lever.z))
-  for _ = 1, 2 do
-    job.job_items.elements:insert('#', {new = true, item_type = df.item_type.TRAPPARTS, item_subtype = -1,
-      mat_type = -1, mat_index = -1, quantity = 1, vector_id = df.job_item_vector_id.TRAPPARTS})
+  -- Like the game's UI, pick two specific mechanisms up front: one for the lever end (trigger) and one
+  -- for the target end. Leaving them as open job_items gets the job cancelled ("No mechanism for target").
+  local mechs = {}
+  for _, it in ipairs(df.global.world.items.other.TRAPPARTS) do
+    local f = it.flags
+    if not (f.in_job or f.forbid or f.in_building or f.in_inventory or f.trader or f.removed or f.garbage_collect) then
+      local x, y, z = dfhack.items.getPosition(it)
+      if x and dfhack.maps.canWalkBetween(xyz2pos(x, y, z), xyz2pos(lever.centerx, lever.centery, lever.z)) then
+        table.insert(mechs, it)
+        if #mechs == 2 then break end
+      end
+    end
   end
+  if #mechs < 2 then job:delete() emit({error = 'Need 2 free, reachable mechanisms (have ' .. #mechs .. ')'}) return end
   job.general_refs:insert('#', {new = df.general_ref_building_holderst, building_id = lever.id})
   job.general_refs:insert('#', {new = df.general_ref_building_triggertargetst, building_id = target.id})
   lever.jobs:insert('#', job)
   dfhack.job.linkIntoWorld(job, true)
+  dfhack.job.attachJobItem(job, mechs[1], df.job_role_type.LinkToTrigger, -1, -1)
+  dfhack.job.attachJobItem(job, mechs[2], df.job_role_type.LinkToTarget, -1, -1)
   dfhack.job.checkBuildingsNow()
   emit({ok = true, queued = 'Link ' .. bname(lever) .. ' -> ' .. bname(target), jobs = pending(lever)}) return
 end
