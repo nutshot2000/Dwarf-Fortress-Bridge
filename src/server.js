@@ -15,7 +15,7 @@ lowercase d h u j i r = pending dig designation, @ citizen, E hostile, a other c
 W workshop, S stockpile, P farm plot, B bed, D door, K table, C chair/box/cabinet, c unfinished building.
 Workshops are 3x3 and placed by their CENTRE tile; farm plots, stockpiles and zones take a top-left corner + size.
 Farm plots need soil/mud floor underground or any soil surface. Check df_help for building keys.
-Production: df_order (manager work orders; needs a MANAGER, run df_noble repair if orders never validate) or df_workshop action=add (direct workshop tasks, no manager needed). Prefer native tasks
+Production: df_order (manager work orders; needs a MANAGER, run df_noble repair if orders never validate) or df_workshop action=add (direct workshop tasks, no manager needed). Reactions (soap, brewing, lye-based, many crafts) are most reliable as df_order reaction=...: hand-built workshop reaction jobs can miss reagents that come in containers (e.g. lye in a bucket). Prefer native tasks
 ("construct bed", "make barrel", "brew drink from plant") over "make wooden ..." reactions.
 Farm plots reset to fallow when construction finishes: set crops with df_crop AFTER the plot is built.
 People: df_unit (detail), df_labor (labors/work details), df_noble (appoint MANAGER, MILITIA_COMMANDER...),
