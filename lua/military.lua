@@ -161,6 +161,7 @@ if action == 'equip' then
             local as = E.items_assigned[sp.item_type]
             if not utils.linear_index(as, id) then utils.insert_sorted(as, id) end
             sp.assigned:insert('#', id)
+            utils.insert_sorted(p.equipment.assigned_items, id) -- dwarves fetch what is listed here
             taken[id] = true
             table.insert(done, (u and unit_name(u) or ('pos ' .. pi)) .. ': ' .. dfhack.df2utf(dfhack.items.getReadableDescription(df.item.find(id))))
           end
@@ -173,7 +174,16 @@ if action == 'equip' then
       end
     end
   end
-  emit({ok = true, assigned = done, still_missing = missing,
+  -- keep each position's assigned_items consistent with its slots (older assignments included)
+  local synced = 0
+  for _, p in ipairs(sq.positions) do
+    for s = 0, 6 do for _, sp in ipairs(p.equipment.uniform[s]) do for _, id in ipairs(sp.assigned) do
+      if not utils.linear_index(p.equipment.assigned_items, id) then
+        utils.insert_sorted(p.equipment.assigned_items, id) synced = synced + 1
+      end
+    end end end
+  end
+  emit({ok = true, assigned = done, still_missing = missing, synced = synced,
     hint = 'Dwarves now collect the assigned items. still_missing = make or buy those.'}) return
 end
 
