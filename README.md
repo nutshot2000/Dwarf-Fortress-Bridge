@@ -16,19 +16,19 @@
          /      \     \   \  |    ##  |  /|   | ##    | /    \           \    \
         /        \     \   \_|____##__|__/_\__|_##____|/      \           \    \
        /__________\_____\_____________________________________\___________\____\
-               ~  claude plays  ~  you watch  ~  strike the earth!  ~
+               ~  your AI plays ~  you watch  ~  strike the earth!  ~
 ```
 
 <div align="center">
 
-**Claude plays Dwarf Fortress. You grab a drink and watch.**
+**Your AI plays Dwarf Fortress. You grab a drink and watch.**
 
-An MCP server that gives Claude 50 tools to run a real Dwarf Fortress fortress through DFHack:<br>
+An MCP server that gives any AI agent (Claude, Codex, OpenCode, Hermes, OpenClaw, Cursor, Gemini...) 50 tools<br>to run a real Dwarf Fortress fortress through DFHack:<br>
 digging, building, trade, war and diplomacy, with a camera that follows the action for you.
 
 ![Dwarf Fortress](https://img.shields.io/badge/Dwarf%20Fortress-v53%20Steam-8b5a2b)
 ![DFHack](https://img.shields.io/badge/DFHack-53.16-4a7c59)
-![MCP](https://img.shields.io/badge/MCP-server-6b4fbb)
+![MCP](https://img.shields.io/badge/MCP-any%20client-6b4fbb)
 ![Tools](https://img.shields.io/badge/tools-50-c08a1e)
 ![No cheats](https://img.shields.io/badge/cheats-none-b33a3a)
 
@@ -38,12 +38,12 @@ digging, building, trade, war and diplomacy, with a camera that follows the acti
 
 ## 🎬 What it's like
 
-You start Dwarf Fortress, Claude takes the overseer's chair, and your screen turns into a live broadcast of your fort.
+You start Dwarf Fortress, your AI takes the overseer's chair, and your screen turns into a live broadcast of your fort.
 
-- 🗡️ **A goblin thief slips in at the map edge.** The game pauses, the camera snaps to it, and Claude sends the Hollow Guard. You watch the commander charge across the surface.
+- 🗡️ **A goblin thief slips in at the map edge.** The game pauses, the camera snaps to it, and the AI sends the Hollow Guard. You watch the commander charge across the surface.
 - 🏗️ **Nothing dangerous going on?** The camera tours the fort: a new bedroom wing being dug, a legendary armourer at the forge, a bard performing in the tavern.
 - 🤝 **A caravan or a royal treasurer arrives.** You're there for the meeting and the haggling at the depot.
-- 📜 **Claude narrates** with captions in the game's own announcement log, so you know what you're about to see.
+- 📜 **The AI narrates** with captions in the game's own announcement log, so you know what you're about to see.
 
 Tell the camera what you enjoy, and it remembers:
 
@@ -66,36 +66,137 @@ df_camera dislike categories=["farming"]
 
 ## 📖 Tales from the first fort
 
-The bridge was built while playing, and the fort's disasters shaped the tools.
+The bridge was built by Claude while playing, and the fort's disasters shaped the tools.
 
-- **The well that ran dry.** The surface pool drained, so Claude dug a one-tile shaft 40 levels down into the first cavern's lake. The well now draws from water that never runs out.
+- **The well that ran dry.** The surface pool drained, so the overseer dug a one-tile shaft 40 levels down into the first cavern's lake. The well now draws from water that never runs out.
 - **The werebeast.** A wereiguana arrived disguised as a human and killed four children in the pasture. Two dwarves it had bitten turned at the next full moon. Avuz the broker and Dastot the axedwarf killed them. That's why `df_threats`, the watchdog and petition vetting exist.
-- **The stalled diplomat.** A royal treasurer's meeting froze the depot for days because the broker had no office worth meeting in. Claude dug one, engraved it and furnished it in iron, and the meeting went ahead.
+- **The stalled diplomat.** A royal treasurer's meeting froze the depot for days because the broker had no office worth meeting in. The overseer dug one, engraved it and furnished it in iron, and the meeting went ahead.
 - **The near miss.** A search for "scepter" almost carted a strange mood's artifact off to the trade depot. `df_trade send` now refuses artifacts.
 - **The yarn crisis.** A fey weaver needed wool cloth nobody had. With cheating ruled out, the answer was the dwarven caravan, and the mood ended in an artifact shirt with days to spare.
 
 ## 🚀 Quick start
 
 1. Install **Dwarf Fortress** and the free **DFHack** app on Steam, then launch the game (the DFHack console opens with it).
-2. Install the bridge:
+2. Install the bridge (needs [Node.js](https://nodejs.org) 18+):
    ```bash
    git clone https://github.com/nutshot2000/Dwarf-Fortress-Bridge.git
    cd Dwarf-Fortress-Bridge
    npm install
    ```
-3. Add it to Claude Code:
-   ```bash
-   claude mcp add -s user dwarf-fortress -- node /path/to/Dwarf-Fortress-Bridge/src/server.js
-   ```
-4. Load or embark on a fort and tell Claude to play.
+3. Connect your AI (below), load or embark on a fort, and tell it to play.
 
-If the game isn't in `D:\SteamLibrary`, set `DF_DIR` and `DFHACK_DIR`.
+If the game isn't in `D:\SteamLibrary`, set `DF_DIR` and `DFHACK_DIR` in the server's environment.
+
+### 🔌 Connect your AI
+
+It's a standard **MCP stdio server**: any client that speaks MCP can run it. Replace the path with yours.
+`df_wait` can run for up to 50 seconds per call, so give the server a tool timeout of at least 60 seconds
+(or lower `DF_WAIT_SECONDS`).
+
+<details open>
+<summary><b>Claude Code</b></summary>
+
+```bash
+claude mcp add -s user dwarf-fortress -- node /path/to/Dwarf-Fortress-Bridge/src/server.js
+```
+</details>
+
+<details>
+<summary><b>Codex</b> (<code>~/.codex/config.toml</code>)</summary>
+
+```toml
+[mcp_servers.dwarf-fortress]
+command = "node"
+args = ["/path/to/Dwarf-Fortress-Bridge/src/server.js"]
+tool_timeout_sec = 120
+```
+</details>
+
+<details>
+<summary><b>OpenCode</b> (<code>opencode.json</code>)</summary>
+
+```json
+{
+  "mcp": {
+    "dwarf-fortress": {
+      "type": "local",
+      "command": ["node", "/path/to/Dwarf-Fortress-Bridge/src/server.js"],
+      "enabled": true
+    }
+  }
+}
+```
+</details>
+
+<details>
+<summary><b>Hermes Agent</b> (<code>~/.hermes/config.yaml</code>)</summary>
+
+```yaml
+mcp_servers:
+  dwarf-fortress:
+    command: node
+    args: ["/path/to/Dwarf-Fortress-Bridge/src/server.js"]
+    timeout: 120
+```
+</details>
+
+<details>
+<summary><b>OpenClaw</b> (<code>mcp.servers</code> in your OpenClaw config)</summary>
+
+```json
+{
+  "mcp": {
+    "servers": {
+      "dwarf-fortress": {
+        "command": "node",
+        "args": ["/path/to/Dwarf-Fortress-Bridge/src/server.js"]
+      }
+    }
+  }
+}
+```
+</details>
+
+<details>
+<summary><b>Cursor, Claude Desktop, Gemini CLI, Windsurf and most others</b> (<code>mcpServers</code> JSON)</summary>
+
+```json
+{
+  "mcpServers": {
+    "dwarf-fortress": {
+      "command": "node",
+      "args": ["/path/to/Dwarf-Fortress-Bridge/src/server.js"],
+      "env": { "DF_TOOLS": "full" }
+    }
+  }
+}
+```
+Cursor: `.cursor/mcp.json` · Claude Desktop: `claude_desktop_config.json` · Gemini CLI: `~/.gemini/settings.json`
+</details>
+
+Config formats change between versions; if a snippet doesn't load, check your client's MCP docs for the current shape.
+
+### ⚙️ Settings
+
+All optional, set in the server's `env`:
+
+| Variable | Default | What it does |
+|---|---|---|
+| `DF_TOOLS` | `full` | `full` = all 50 tools · `core` = 19 essentials for clients with tool limits or smaller models · or a comma-separated list |
+| `DF_AGENT_NAME` | `Overseer` | The name on camera captions in the game's announcement log, e.g. `Codex` or `Hermes` |
+| `DF_WAIT_SECONDS` | `50` | Real-time cap for one `df_wait` call; keep it under your client's tool timeout |
+| `DF_DIR`, `DFHACK_DIR` | `D:\SteamLibrary\...` | Where Dwarf Fortress and DFHack live |
+
+### 📘 The playbook
+
+The server sends [`PLAYBOOK.md`](PLAYBOOK.md) to the model as its instructions: the turn loop, the rules (no cheating), and how to use each tool well.
+Some clients don't pass server instructions on to the model. If yours doesn't, start with *"call df_help topic=playbook first"*.
 
 ## 🔧 How it works
 
 ```mermaid
 flowchart LR
-    C[Claude] -- MCP --> S[df-bridge<br/>Node server]
+    C[Your AI agent] -- MCP --> S[df-bridge<br/>Node server]
     S -- "Lua per call<br/>dfhack-run lua -f" --> D[DFHack]
     S -- quickfort blueprints --> D
     D --> G[(Dwarf Fortress)]
@@ -140,7 +241,7 @@ A turn looks like this: `df_status` → `df_problems` → one action → `df_wai
 
 ## 🛠️ Development
 
-- `src/core.js` holds the server and helpers, `src/camera.js` the camera director, `src/tools/*.js` one file per area, and `lua/` the Lua behind each tool.
+- `PLAYBOOK.md` is the model's operating guide, `src/core.js` holds the server, settings and helpers, `src/camera.js` the camera director, `src/tools/*.js` one file per area, and `lua/` the Lua behind each tool.
 - Try one tool: `node scripts/call.mjs df_look "{\"radius\":20}"`
 - Several calls in one session (the camera keeps state in the server): `node scripts/session.mjs '[["df_camera",{"action":"follow","name":"Urist"}],["df_wait",{"days":1}]]'`
 - Tests: `npm test` runs every read-only tool against the running game and changes nothing; `npm run test:offline` only checks that all tools register.

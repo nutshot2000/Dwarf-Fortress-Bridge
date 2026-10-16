@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 
 const server = fileURLToPath(new URL("../src/server.js", import.meta.url));
 const client = new Client({ name: "camtest", version: "0" });
-await client.connect(new StdioClientTransport({ command: process.execPath, args: [server] }));
+await client.connect(new StdioClientTransport({ command: process.execPath, args: [server], env: { ...process.env } }));
 const call = async (name, args) => (await client.callTool({ name, arguments: args }, undefined, { timeout: 120000 })).content.map((c) => c.text).join("\n");
 const view = async () => call("df_lua", { code: "emit({df.global.window_x, df.global.window_y, df.global.window_z})" });
 

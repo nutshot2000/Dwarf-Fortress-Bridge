@@ -1,6 +1,6 @@
 // Tools: misc.
 import { camera, cameraTo, savePrefs, CATEGORIES } from "../camera.js";
-import { tool, luaTool, text, fail, json, coord, optCoord, z, command, lua, luaFile } from "../core.js";
+import { tool, luaTool, text, fail, json, coord, optCoord, z, command, lua, luaFile, INSTRUCTIONS, SETTINGS, toolProfile } from "../core.js";
 
 tool("df_view", "Move the player's camera to x,y,z so they can see what you are looking at.",
   { x: coord, y: coord, z: coord },
@@ -26,7 +26,18 @@ tool("df_lua", "Run raw DFHack Lua inside the game. Helpers available: emit(valu
     return text((value !== null ? json(value) : "") + (log ? `\n${log}` : "") || "(no output)");
   });
 
-tool("df_help", "Quickfort key reference and early-fort checklist.", {}, async () => text(HELP));
+tool("df_help", "Help. topic=keys (default): quickfort build keys, dig kinds and an early-fort checklist. topic=playbook: the full overseer playbook (how to run the fort with these tools; read it first if your client did not show the server instructions). topic=settings: tool profile and environment options.",
+  { topic: z.enum(["keys", "playbook", "settings"]).default("keys") },
+  async (a) => {
+    if (a.topic === "playbook") return text(INSTRUCTIONS);
+    if (a.topic === "settings") return text([
+      `Tool profile (DF_TOOLS): ${toolProfile}  -- full | core | comma-separated tool names`,
+      `Caption name (DF_AGENT_NAME): ${SETTINGS.agentName}`,
+      `Wait cap (DF_WAIT_SECONDS): ${SETTINGS.waitSeconds}s per df_wait call -- keep it under your MCP client's tool timeout`,
+      `Game folders (DF_DIR / DFHACK_DIR): set them if the game is not in D:\\SteamLibrary`,
+    ].join("\n"));
+    return text(HELP);
+  });
 
 const HELP = `BUILD KEYS (df_build): b bed, c chair, t table, d door, h container/box, f cabinet, r weapon rack, a armor stand,
 n coffin, s statue, l well, H hatch, j cage, v restraint, A archery target, k vermin catcher, D trade depot (5x5)

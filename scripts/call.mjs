@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 
 const server = fileURLToPath(new URL("../src/server.js", import.meta.url));
 const client = new Client({ name: "df-bridge-cli", version: "0" });
-await client.connect(new StdioClientTransport({ command: process.execPath, args: [server] }));
+await client.connect(new StdioClientTransport({ command: process.execPath, args: [server], env: { ...process.env } }));
 const [name = "list", raw = "{}"] = process.argv.slice(2);
 if (name === "list") {
   for (const t of (await client.listTools()).tools) console.log(t.name);

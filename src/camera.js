@@ -8,6 +8,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { lua, luaFile, DF_DIR } from "./dfhack.js";
+import { SETTINGS } from "./core.js";
 
 export const CATEGORIES = ["fights", "hostiles", "crafting", "building", "military", "farming", "animals", "social",
   "kids", "visitors", "mood", "diplomacy", "news"];
@@ -37,7 +38,7 @@ const weight = (cat) => camera.prefs[cat] ?? 1;
 // Show the player a spot, optionally with a caption in the game's announcement log.
 export async function cameraTo(x, y, z, why, caption) {
   if (camera.mode === "off" || x === undefined || x < 0) return;
-  const cap = caption ? `dfhack.gui.showAnnouncement(${JSON.stringify("[Claude] " + caption)}, COLOR_LIGHTCYAN, false)` : "";
+  const cap = caption ? `dfhack.gui.showAnnouncement(${JSON.stringify(`[${SETTINGS.agentName}] ` + caption)}, COLOR_LIGHTCYAN, false)` : "";
   await lua(`dfhack.gui.revealInDwarfmodeMap(xyz2pos(${x}, ${y}, ${z}), true, true) ${cap} emit(true)`);
   camera.last = { x, y, z };
   if (why && camera.log.at(-1) !== why) camera.log.push(why);

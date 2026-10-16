@@ -1,7 +1,7 @@
 // Tools: time.
 import { runUpkeep } from "./production.js";
 import { camera, directorReset, directorStep } from "../camera.js";
-import { tool, luaTool, text, fail, z, lua, luaFile } from "../core.js";
+import { tool, luaTool, text, fail, z, lua, luaFile, SETTINGS } from "../core.js";
 
 // One heartbeat per poll: the clock plus the watchdog counters (visible hostiles, active moods, caravans).
 async function tick() {
@@ -47,7 +47,7 @@ async function dismissPopup() {
   return { n, text: txt, after: await count() };
 }
 
-tool("df_wait", "Unpause and let the game run for a number of in-game days (1 day = 1200 ticks), then pause again and report new announcements. Stops early if the game pauses itself, and (watch, default on) the moment a hostile becomes visible, a citizen dies or leaves, a strange mood starts or a caravan arrives, so nothing happens unseen. on_threat=alert also turns on the civilian alert (burrow, default Inside) and puts squads on Ready when a hostile shows up. upkeep=true tops up stocks (df_upkeep apply) afterwards. The camera director (df_camera) moves the player's view to the action while time runs. Announcement popups are clicked away. Capped at ~50 s real time per call.",
+tool("df_wait", "Unpause and let the game run for a number of in-game days (1 day = 1200 ticks), then pause again and report new announcements. Stops early if the game pauses itself, and (watch, default on) the moment a hostile becomes visible, a citizen dies or leaves, a strange mood starts or a caravan arrives, so nothing happens unseen. on_threat=alert also turns on the civilian alert (burrow, default Inside) and puts squads on Ready when a hostile shows up. upkeep=true tops up stocks (df_upkeep apply) afterwards. The camera director (df_camera) moves the player's view to the action while time runs. Announcement popups are clicked away. Capped at DF_WAIT_SECONDS (default 50) real seconds per call; call again to continue.",
   { days: z.number().min(0.1).max(28).default(1), watch: z.boolean().default(true),
     on_threat: z.enum(["stop", "alert"]).default("stop"), burrow: z.string().default("Inside"),
     upkeep: z.boolean().default(false) },
@@ -105,7 +105,7 @@ tool("df_wait", "Unpause and let the game run for a number of in-game days (1 da
         }
         break;
       }
-      if (Date.now() - t0 > 50000) { reason = "real-time cap reached; call df_wait again to continue"; break; }
+      if (Date.now() - t0 > SETTINGS.waitSeconds * 1000) { reason = "real-time cap reached; call df_wait again to continue"; break; }
     }
     await setPause(true);
     const ran = (now.abs - start.abs) / 1200;

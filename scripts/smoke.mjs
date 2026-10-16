@@ -21,7 +21,7 @@ const READ_ONLY = [
 const offline = process.argv.includes("--offline");
 const server = fileURLToPath(new URL("../src/server.js", import.meta.url));
 const client = new Client({ name: "df-bridge-smoke", version: "0" });
-await client.connect(new StdioClientTransport({ command: process.execPath, args: [server] }));
+await client.connect(new StdioClientTransport({ command: process.execPath, args: [server], env: { ...process.env } }));
 
 const tools = (await client.listTools()).tools;
 const names = new Set(tools.map((t) => t.name));
