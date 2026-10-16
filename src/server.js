@@ -263,8 +263,8 @@ tool("df_burrow", "Burrows and the civilian alert. list: burrows and alerts. cre
     unit_ids: z.array(z.number().int()).optional(), all_citizens: z.boolean().optional() },
   (a) => luaTool("burrow", a));
 
-tool("df_trade", "Trading. status: caravans on the map, depots, broker, whether the trade screen is open. send: mark goods to haul to the depot by search text (e.g. 'crafts', 'mug', 'leather') or item_ids, up to limit. With the in-game trade screen open: screen lists merchant and fort goods with values and indices; select / deselect toggle indices on side merchant|fort and report selected totals. propose: press Trade (and confirm), returning the merchant reply and Value/Profit/Weight footer. Merchants want a clear profit and refuse loads over their carrying weight.",
-  { action: z.enum(["status", "send", "screen", "select", "deselect", "propose"]).default("status"),
+tool("df_trade", "Trading. status: caravans on the map, depots, broker, whether the trade screen is open. send: mark goods to haul to the depot by search text (e.g. 'crafts', 'mug', 'leather') or item_ids, up to limit. With the in-game trade screen open: screen lists merchant and fort goods with values and indices; select / deselect toggle indices on side merchant|fort and report selected totals. request_broker: call the broker to the depot. open: open the trade screen once the broker is there. propose: press Trade (and confirm), returning the merchant reply and Value/Profit/Weight footer. Merchants want a clear profit and refuse loads over their carrying weight.",
+  { action: z.enum(["status", "send", "request_broker", "open", "screen", "select", "deselect", "propose"]).default("status"),
     search: z.string().optional(), item_ids: z.array(z.number().int()).optional(), limit: z.number().int().optional(),
     depot_id: z.number().int().optional(), side: z.enum(["merchant", "fort"]).optional(),
     indices: z.array(z.number().int()).optional(), show_contained: z.boolean().optional() },
@@ -277,6 +277,32 @@ tool("df_trade", "Trading. status: caravans on the map, depots, broker, whether 
       const foot = lines.filter((l) => /Mark all|Trader Profit|(Allowed|Excess) Weight/.test(l)).map((l) => l.replace(/^\s*\d+\|/, "").replace(/\s{3,}/g, "   ").trim());
       return `${top.map((l) => l.replace(/^\s*\d+\|\s*/, "")).join("\n")}\n${foot.join("\n")}`;
     };
+    const openDepot = async () => {
+      const { value: st } = await luaFile("trade", { action: "status" });
+      const depot = (st?.depots ?? [])[0];
+      if (!depot) return null;
+      await lua(`local v=df.global.game.main_interface.view_sheets v.open=true v.active_sheet=df.view_sheet_type.BUILDING v.active_id=${depot.id} v.active_sub_tab=0 emit(true)`);
+      return depot;
+    };
+    if (a.action === "request_broker") {
+      // The game only creates the broker's depot job when the button is clicked, not when the flag is set.
+      const depot = await openDepot();
+      if (!depot) return fail("No trade depot");
+      await lua(`df.building.find(${depot.id}).trade_flags.trader_requested=false emit(true)`);
+      await luaFile("screen", { action: "click", text: "Broker requested at depot" });
+      await luaFile("screen", { action: "key", keys: ["LEAVESCREEN"] });
+      return text("Broker requested at the depot (via the depot button). Run df_wait until the broker arrives, then action=open.");
+    }
+    if (a.action === "open") {
+      const depot = await openDepot();
+      if (!depot) return fail("No trade depot");
+      const { value: f } = await luaFile("screen", { action: "find", text: "Trade" });
+      const btn = (f?.hits ?? []).filter((h) => h.y > 8 && h.y < 25)[0];
+      if (!btn) return fail("No Trade button on the depot panel (is a caravan at the depot and the broker there?)");
+      await luaFile("screen", { action: "click", x: btn.x + 2, y: btn.y });
+      const { value: v } = await luaFile("trade", { action: "status" });
+      return text(v?.trade_screen_open ? "Trade screen open. Use action=screen, select, propose." : "Trade screen did not open (broker not at the depot yet?)");
+    }
     if (a.action === "propose") {
       // the bottom-row "Trade" button, not "[Ctrl+t: DFHack trade UI]"
       const { value: f } = await luaFile("screen", { action: "find", text: "Trade" });
