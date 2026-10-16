@@ -37,7 +37,8 @@ local function find(text)
 end
 
 local function focus() return dfhack.gui.getCurFocus(true) end
-local function screen() return dfhack.gui.getDFViewscreen(true) end
+-- topmost screen, including DFHack dialogs and overlays (input must go to whatever is on top)
+local function screen() return dfhack.gui.getCurViewscreen(true) end
 
 local function click_at(x, y, right)
   df.global.gps.mouse_x = x

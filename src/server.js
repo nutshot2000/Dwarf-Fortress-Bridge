@@ -243,12 +243,34 @@ tool("df_burrow", "Burrows and the civilian alert. list: burrows and alerts. cre
     unit_ids: z.array(z.number().int()).optional(), all_citizens: z.boolean().optional() },
   (a) => luaTool("burrow", a));
 
-tool("df_trade", "Trading. status: caravans on the map, depots, broker, whether the trade screen is open. send: mark goods to haul to the depot by search text (e.g. 'crafts', 'mug', 'leather') or item_ids, up to limit. With the in-game trade screen open: screen lists merchant and fort goods with values and indices; select / deselect toggle indices on side merchant|fort and report selected totals. Proposing the deal (Trade button) is done on the screen.",
-  { action: z.enum(["status", "send", "screen", "select", "deselect"]).default("status"),
+tool("df_trade", "Trading. status: caravans on the map, depots, broker, whether the trade screen is open. send: mark goods to haul to the depot by search text (e.g. 'crafts', 'mug', 'leather') or item_ids, up to limit. With the in-game trade screen open: screen lists merchant and fort goods with values and indices; select / deselect toggle indices on side merchant|fort and report selected totals. propose: press Trade (and confirm), returning the merchant reply and Value/Profit/Weight footer. Merchants want a clear profit and refuse loads over their carrying weight.",
+  { action: z.enum(["status", "send", "screen", "select", "deselect", "propose"]).default("status"),
     search: z.string().optional(), item_ids: z.array(z.number().int()).optional(), limit: z.number().int().optional(),
     depot_id: z.number().int().optional(), side: z.enum(["merchant", "fort"]).optional(),
     indices: z.array(z.number().int()).optional(), show_contained: z.boolean().optional() },
-  (a) => luaTool("trade", a));
+  async (a) => {
+    // the screen's own verdict: merchant line plus the Value / Trader Profit / Weight footer
+    const verdict = async () => {
+      const top = (await luaFile("screen", { action: "read", y1: 4, y2: 12 })).value?.lines ?? [];
+      const { value } = await luaFile("screen", { action: "read" });
+      const lines = value?.lines ?? [];
+      const foot = lines.filter((l) => /Mark all|Trader Profit|(Allowed|Excess) Weight/.test(l)).map((l) => l.replace(/^\s*\d+\|/, "").replace(/\s{3,}/g, "   ").trim());
+      return `${top.map((l) => l.replace(/^\s*\d+\|\s*/, "")).join("\n")}\n${foot.join("\n")}`;
+    };
+    if (a.action === "propose") {
+      // the bottom-row "Trade" button, not "[Ctrl+t: DFHack trade UI]"
+      const { value: f } = await luaFile("screen", { action: "find", text: "Trade" });
+      const btn = (f?.hits ?? []).filter((h) => h.y > 60).sort((p, q) => q.y - p.y)[0];
+      if (!btn) return fail("Trade button not found: is the trade screen open?");
+      await luaFile("screen", { action: "click", x: btn.x + 2, y: btn.y });
+      const { value: s } = await luaFile("screen", { action: "read", y1: 0, y2: 1 });
+      if (s?.focus?.some((x) => x.includes("MessageBox"))) await luaFile("screen", { action: "key", keys: ["SELECT"] });
+      return text(`Proposed the trade. Merchant says:\n${await verdict()}\n(Excess Weight = offer lighter goods or buy heavier ones; "not enough" = offer more or take less.)`);
+    }
+    const res = await luaTool("trade", a);
+    if (!res.isError && (a.action === "select" || a.action === "deselect")) res.content[0].text += `\n--- screen ---\n${await verdict()}`;
+    return res;
+  });
 
 tool("df_justice", "Crimes involving the fort: type, criminal, accused, victim, witnesses, punishment. Use df_cmd 'justice' for convicts serving sentences and 'justice pardon --unit <id>' to pardon.",
   {}, () => luaTool("justice"));
