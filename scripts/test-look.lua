@@ -9,6 +9,7 @@ flags[8] = {hidden = false, water_table = true, dig = 0, flow_size = 0}
 flags[9] = {hidden = true, water_table = true, dig = 0, flow_size = 0}
 flags[10] = {hidden = true, water_table = true, dig = df.tile_dig_designation.UpDownStair, flow_size = 0}
 flags[11] = {hidden = false, water_table = true, dig = df.tile_dig_designation.Default, flow_size = 0}
+flags[12] = {hidden = false, water_table = true, dig = 0, flow_size = 2, liquid_type = false}
 local result
 local env = setmetatable({
   ARGS = {x = 3, y = 3, z = 0, radius = 3},
@@ -26,6 +27,8 @@ assert(result.rows[2]:sub(2, 2) == 'A', 'exposed aquifer must be marked')
 assert(result.rows[2]:sub(3, 3) == '?', 'hidden aquifer must remain hidden')
 assert(result.rows[2]:sub(4, 4) == 'i', 'hidden designation must not disclose aquifer')
 assert(result.rows[2]:sub(5, 5) == 'A', 'known hazard must take priority over dig designation')
-assert(#result.aquifer_tiles == 2, 'warning must exclude hidden aquifers')
-assert(result.aquifer_tiles[1].x == 1 and result.aquifer_tiles[2].x == 4, 'warning coordinates must match exposed tiles')
-report({passed = 6, map_mutated = false})
+assert(result.rows[2]:sub(6, 6) == '2', 'aquifer marker must not hide liquid depth')
+assert(#result.aquifer_tiles == 3, 'warning must exclude hidden aquifers')
+assert(result.aquifer_tiles[1].x == 1 and result.aquifer_tiles[2].x == 4 and result.aquifer_tiles[3].x == 5,
+  'warning coordinates must match exposed tiles')
+report({passed = 7, map_mutated = false})

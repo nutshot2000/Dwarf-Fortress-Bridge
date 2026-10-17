@@ -22,7 +22,7 @@ tool("df_look", "ASCII map slice of one z-level plus lists of units and building
     const { rows, x1, y1, x2, y2, z: zz, units, buildings, map_size } = value;
     const aquifers = value.aquifer_tiles ?? [];
     const waterWarning = aquifers.length
-      ? `WARNING: ${aquifers.length} exposed aquifer tile(s), marked A. Avoid breaching them without a water-control plan. At: ` +
+      ? `WARNING: ${aquifers.length} exposed aquifer tile(s); A marks dry tiles, wet tiles keep their liquid glyph. Avoid breaching them without a water-control plan. At: ` +
         aquifers.slice(0, 12).map((p) => `${p.x},${p.y},${zz}`).join("; ") +
         (aquifers.length > 12 ? "; ..." : "") + "\n"
       : "";

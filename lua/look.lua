@@ -19,7 +19,7 @@ local function tile_glyph(x, y)
   local fl = dfhack.maps.getTileFlags(x, y, z)
   -- Exposed aquifer tiles are a digging hazard even when designated. Never
   -- disclose aquifer information on hidden tiles.
-  if not fl.hidden and fl.water_table then return 'A' end
+  if not fl.hidden and fl.water_table and fl.flow_size == 0 then return 'A' end
   local dig = df.tile_dig_designation[fl.dig]
   if dig and DIG[dig] then return DIG[dig] end
   if fl.hidden then return '?' end
