@@ -33,15 +33,11 @@ out.idle_names = #idle <= 8 and idle or nil
 out.stressed = stressed
 
 -- stock counts (usable items only)
-local function usable(it)
-  local f = it.flags
-  return not (f.rotten or f.forbid or f.garbage_collect or f.trader or f.dump or f.hostile or f.removed)
-end
-local function count(type_name)
+local function count(type_name, available)
   local n = 0
   local list = try(function() return df.global.world.items.other[type_name] end, {})
   for _, it in ipairs(list) do
-    if usable(it) then n = n + it.stack_size end
+    if (available and stock_available(it)) or (not available and stock_usable(it)) then n = n + it.stack_size end
   end
   return n
 end
@@ -49,10 +45,11 @@ out.stocks = {
   drink = count('DRINK'),
   food = count('FOOD') + count('MEAT') + count('FISH') + count('CHEESE') + count('EGG') + count('PLANT'),
   seeds = count('SEEDS'),
-  wood = count('WOOD'),
-  stone_boulders = count('BOULDER'),
-  bars = count('BAR'),
+  wood = count('WOOD', true),
+  stone_boulders = count('BOULDER', true),
+  bars = count('BAR', true),
 }
+out.stock_note = 'Wood, stone and bars are available stock: installed, reserved, forbidden and owned items are excluded. df_stocks separates inventory totals from availability.'
 
 local hostile = 0
 for _, u in ipairs(df.global.world.units.active) do

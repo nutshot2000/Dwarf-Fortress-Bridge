@@ -3,11 +3,7 @@
 if not need_map() then return end
 local utils = require('utils')
 
-local function usable(it)
-  local f = it.flags
-  return not (f.rotten or f.forbid or f.garbage_collect or f.trader or f.dump or f.hostile or f.removed)
-end
-local function free(it) return usable(it) and not it.flags.in_building and not it.flags.in_job end
+local usable, free = stock_usable, stock_available
 local function count(list, pred)
   local n = 0
   for _, it in ipairs(list) do if pred(it) then n = n + (it.stack_size or 1) end end

@@ -6,10 +6,7 @@ local function add(sev, msg) table.insert(issues, {severity = sev, issue = msg})
 local cits = citizens()
 local pop = #cits
 
-local function usable(it)
-  local f = it.flags
-  return not (f.rotten or f.forbid or f.garbage_collect or f.trader or f.dump or f.hostile or f.removed)
-end
+local usable = stock_usable
 local function count(t)
   local n = 0
   for _, it in ipairs(try(function() return df.global.world.items.other[t] end, {})) do
@@ -99,19 +96,32 @@ end
 local beds = counts.Bed or 0
 if beds < pop then add(beds == 0 and 'medium' or 'low', ('Only %d beds for %d dwarves.'):format(beds, pop)) end
 local stills = 0
-for _, b in ipairs(df.global.world.buildings.other.WORKSHOP_STILL or {}) do stills = stills + 1 end
+for _, b in ipairs(df.global.world.buildings.other.WORKSHOP_STILL or {}) do
+  if b:getBuildStage() >= b:getMaxBuildStage() then stills = stills + 1 end
+end
 if stills == 0 then add('medium', 'No still built: dwarves need alcohol to work well.') end
 -- brewing needs an empty barrel or large pot per batch; food fills them up silently
 local empty = 0
 for _, it in ipairs(df.global.world.items.other.BARREL) do
-  if usable(it) and not it.flags.in_job and #dfhack.items.getContainedItems(it) == 0 then empty = empty + 1 end
+  if stock_available(it) and #dfhack.items.getContainedItems(it) == 0 then empty = empty + 1 end
 end
 for _, it in ipairs(df.global.world.items.other.TOOL) do
-  if usable(it) and not it.flags.in_job and it.subtype.id == 'ITEM_TOOL_LARGE_POT'
+  if stock_available(it) and it.subtype.id == 'ITEM_TOOL_LARGE_POT'
      and #dfhack.items.getContainedItems(it) == 0 then empty = empty + 1 end
 end
-if stills > 0 and empty < 5 then
-  add(drink < pop * 5 and 'high' or 'medium', ('Only %d empty barrels/large pots: brewing stalls ("Needs empty food storage item"). Order MakeBarrel (wood) or rock large pots (MakeTool ITEM_TOOL_LARGE_POT).'):format(empty))
+local pending_containers = 0
+for _, o in ipairs(df.global.world.manager_orders.all) do
+  if o.amount_left > 0 then
+    local pot = o.job_type == df.job_type.MakeTool and o.item_subtype >= 0
+      and df.itemdef_toolst.find(o.item_subtype)
+    if o.job_type == df.job_type.MakeBarrel or (pot and pot.id == 'ITEM_TOOL_LARGE_POT') then
+      pending_containers = pending_containers + o.amount_left
+    end
+  end
+end
+if stills > 0 then
+  local warning = container_warning(empty, pending_containers, drink, pop, ARGS.empty_storage_target)
+  if warning then add(warning.severity, warning.issue) end
 end
 if (counts.FarmPlot or 0) == 0 then add('medium', 'No farm plots.') end
 if (counts.Table or 0) == 0 or (counts.Chair or 0) == 0 then add('low', 'No tables/chairs: dwarves will eat on the floor.') end
@@ -121,5 +131,13 @@ for _, u in ipairs(cits) do if not u.job.current_job then idle = idle + 1 end en
 if pop > 0 and idle > pop / 2 then add('low', ('%d of %d dwarves idle: designate more work.'):format(idle, pop)) end
 
 local ORDER = {high = 1, medium = 2, low = 3}
+local construction = suspended_construction()
+if #construction.review > 0 then
+  local ids = {}
+  for i = 1, math.min(5, #construction.review) do ids[#ids + 1] = tostring(construction.review[i].id) end
+  add('medium', ('%d suspended construction job(s) need review (job IDs %s; materials assigned or not required). Review df_jobs action=suspended and resolve danger/obstructions before resuming; plans awaiting materials are listed separately.'):format(#construction.review, table.concat(ids, ', ')))
+end
 table.sort(issues, function(a, b) return ORDER[a.severity] < ORDER[b.severity] end)
-emit({population = pop, drink = drink, food = food, issues = issues})
+emit({population = pop, drink = drink, food = food, issues = issues,
+  food_containers = {available = empty, queued = pending_containers, reserve_target = ARGS.empty_storage_target or 5},
+  suspended_construction = {review = construction.review, waiting_for_materials_count = #construction.waiting_for_materials}})

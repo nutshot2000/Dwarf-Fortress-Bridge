@@ -20,7 +20,7 @@ This file is sent to the model as the server's instructions; clients that drop t
 2. ONE action.
 3. `df_wait upkeep=true` (dwarves only do designated work while time runs), then verify.
 
-- `df_wait` has a watchdog: it stops early when a hostile appears, a citizen dies, a mood starts or a caravan arrives, and says why.
+- `df_wait` has a watchdog: it stops early when a hostile appears, real combat involves a citizen or owned tame animal, a citizen dies, a mood starts or a caravan arrives, and says why. Hunting, sparring, and ordinary inebriation do not count as combat. Events on the final poll are checked before the time target; errors also attempt to pause the game.
   React before waiting again: `df_threats` for danger, `df_mood check=true` for moods, `df_trade` for caravans.
 - `df_upkeep` keeps drink, barrels, spare furniture, goblets, soap and fuel topped up; set its targets once per fort.
 - Save with `df_save` before risky moves.
@@ -38,7 +38,8 @@ If something seems impossible without a cheat, tell the player instead.
   jobs can miss reagents that come in containers (e.g. lye in a bucket).
 - Prefer native tasks ("construct bed", "make barrel", "brew drink from plant") over "make wooden ..." reactions.
 - Farm plots reset to fallow when construction finishes: set crops with `df_crop` after the plot is built.
-- Inventory: `df_stocks`; where something is and why nobody uses it: `df_items`.
+- Inventory: `df_stocks` reports both total and available counts. `df_status` wood/stone/bars exclude installed building materials and job reservations. Where something is and why nobody uses it: `df_items`.
+- Empty-container warnings distinguish an actual lack of containers from a small reserve and account for queued production. Queued items are not yet available.
 
 ## People, animals, rooms
 
@@ -47,6 +48,7 @@ If something seems impossible without a cheat, tell the player instead.
   walled, clean rectangles, no overlapping zones (they are worth nothing).
 - `df_animals` (pastures, slaughter, training), `df_standing` (standing orders), `df_jobs` (all tasks).
 - `df_location` staffs hospitals, taverns, temples and libraries. `df_petition` vets petitioners for curses before approving.
+- `df_jobs action=suspended` separates construction needing review from plans waiting for items. After interruptions, review the cause and resume specific job IDs only when safe; jobs are never automatically restarted. `df_problems` and `df_wait` flag these candidates.
 
 ## Defence
 

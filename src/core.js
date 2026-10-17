@@ -16,7 +16,9 @@ export const INSTRUCTIONS = (() => {
 //   DF_TOOLS        full (default) | core | comma-separated tool names: which tools to expose
 //   DF_AGENT_NAME   name shown on camera captions in the game (default "Overseer")
 //   DF_WAIT_SECONDS real-time cap for one df_wait call (default 50; keep it under your client's tool timeout)
+export const VERSION = JSON.parse(fs.readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
 export const SETTINGS = {
+  version: VERSION,
   agentName: process.env.DF_AGENT_NAME || "Overseer",
   waitSeconds: Math.max(5, Math.min(600, Number(process.env.DF_WAIT_SECONDS) || 50)),
 };
@@ -30,7 +32,7 @@ const enabled = profile === "full" ? null
 export const toolProfile = profile;
 
 
-export const server = new McpServer({ name: "dwarf-fortress", version: "0.1.0" }, { instructions: INSTRUCTIONS });
+export const server = new McpServer({ name: "dwarf-fortress", version: VERSION }, { instructions: INSTRUCTIONS });
 
 export const text = (s) => ({ content: [{ type: "text", text: s }] });
 export const fail = (s) => ({ content: [{ type: "text", text: s }], isError: true });

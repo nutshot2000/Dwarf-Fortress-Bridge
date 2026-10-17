@@ -1,11 +1,12 @@
 // Tools: observe.
 import { tool, luaTool, text, fail, optCoord, z, luaFile } from "../core.js";
+import { upkeepTargets } from "./production.js";
 
 tool("df_status", "Fort overview: date, pause state, population, idle/stressed counts, food/drink/wood/stone stocks, hostiles, map size and the player's current view.",
   {}, () => luaTool("status"));
 
 tool("df_problems", "Early-warning scan sorted by severity: food/drink shortages, strange moods, stress, starvation, hostiles, missing beds/still/farms/tables, idle labour.",
-  {}, () => luaTool("problems"));
+  {}, () => luaTool("problems", { empty_storage_target: Math.max(0, Math.ceil(upkeepTargets().empty_storage)) }));
 
 tool("df_units", "List citizens: id, name, profession, current job, position, stress, mood, hunger/thirst flags and top skills.",
   {}, () => luaTool("units"));

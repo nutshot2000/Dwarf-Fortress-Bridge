@@ -2,6 +2,11 @@
 if not need_map() then return end
 local utils = require('utils')
 local action = ARGS.action or 'list'
+if action == 'suspended' then
+  local out = suspended_construction()
+  out.guidance = 'Review suspended jobs with assigned materials (or no material requirements) for resolved interruptions before df_jobs resume job_id=... . Plans still awaiting materials are listed separately. Nothing was resumed automatically.'
+  emit(out) return
+end
 
 local function find_job(id)
   for _, j in utils.listpairs(df.global.world.jobs.list) do

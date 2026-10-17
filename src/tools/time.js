@@ -1,25 +1,13 @@
 // Tools: time.
 import { runUpkeep } from "./production.js";
 import { camera, directorReset, directorStep } from "../camera.js";
+import { waitDecision } from "../watchdog.js";
 import { tool, luaTool, text, fail, z, lua, luaFile, SETTINGS } from "../core.js";
 
 // One heartbeat per poll: the clock plus the watchdog counters (visible hostiles, active moods, caravans).
-async function tick() {
-  const { value } = await lua(
-    `local r = df.global.world.status.reports
-     local hostiles, names = 0, {}
-     for _, u in ipairs(df.global.world.units.active) do
-       if dfhack.units.isActive(u) and not dfhack.units.isDead(u) and not u.flags1.caged
-          and not dfhack.maps.getTileFlags(u.pos).hidden and dfhack.units.isDanger(u) then
-         hostiles = hostiles + 1
-         if #names < 4 then names[#names + 1] = unit_name(u) .. ' at ' .. u.pos.x .. ',' .. u.pos.y .. ',' .. u.pos.z end
-       end
-     end
-     local moods = 0
-     for _, u in ipairs(citizens()) do if u.mood >= 0 and df.mood_type[u.mood] ~= 'Baby' then moods = moods + 1 end end
-     emit({abs = df.global.cur_year * 403200 + df.global.cur_year_tick, paused = df.global.pause_state, pop = #citizens(),
-           last = #r > 0 and r[#r-1].id or -1, hostiles = hostiles, hostile_names = names, moods = moods,
-           caravans = #df.global.plotinfo.caravans})`);
+async function tick(since) {
+  const { value } = await luaFile("heartbeat", since === undefined ? {} : { since });
+  if (value?.error) throw new Error(value.error);
   return value;
 }
 
@@ -47,7 +35,7 @@ async function dismissPopup() {
   return { n, text: txt, after: await count() };
 }
 
-tool("df_wait", "Unpause and let the game run for a number of in-game days (1 day = 1200 ticks), then pause again and report new announcements. Stops early if the game pauses itself, and (watch, default on) the moment a hostile becomes visible, a citizen dies or leaves, a strange mood starts or a caravan arrives, so nothing happens unseen. on_threat=alert also turns on the civilian alert (burrow, default Inside) and puts squads on Ready when a hostile shows up. upkeep=true tops up stocks (df_upkeep apply) afterwards. The camera director (df_camera) moves the player's view to the action while time runs. Announcement popups are clicked away. Capped at DF_WAIT_SECONDS (default 50) real seconds per call; call again to continue.",
+tool("df_wait", "Unpause and let the game run for a number of in-game days (1 day = 1200 ticks), then pause again and report new announcements. Stops early if the game pauses itself, and (watch, default on) when a hostile becomes visible, real combat involves a citizen or owned tame animal (excluding hunting/sparring), a citizen dies or leaves, a strange mood starts or a caravan arrives. on_threat=alert also turns on the civilian alert (burrow, default Inside) and puts squads on Ready when a hostile or fortress combat is detected. upkeep=true tops up stocks (df_upkeep apply) afterwards. The camera director (df_camera) moves the player's view to the action while time runs. Announcement popups are clicked away. Capped at DF_WAIT_SECONDS (default 50) real seconds per call; call again to continue.",
   { days: z.number().min(0.1).max(28).default(1), watch: z.boolean().default(true),
     on_threat: z.enum(["stop", "alert"]).default("stop"), burrow: z.string().default("Inside"),
     upkeep: z.boolean().default(false) },
@@ -60,54 +48,53 @@ tool("df_wait", "Unpause and let the game run for a number of in-game days (1 da
     let now = start, reason = "done", lastAbs = start.abs, lastMove = Date.now();
     const popups = [];
     directorReset(start.last);
-    while (true) {
-      await new Promise((r) => setTimeout(r, 700));
-      now = await tick();
-      try { await directorStep(); } catch { /* the camera must never break a wait */ }
-      if (now.abs >= target) break;
-      if (now.abs !== lastAbs) { lastAbs = now.abs; lastMove = Date.now(); }
-      if (now.paused || Date.now() - lastMove > 2500) {
-        const p = popups.length < 8 ? await dismissPopup() : { n: 0 };
-        if (p.n > 0 && p.after < p.n) {
-          popups.push(p.text);
-          await setPause(false);
-          lastMove = Date.now();
-          continue;
-        }
-      }
-      if (a.watch !== false) {
-        const why = [];
-        if (now.hostiles > start.hostiles) why.push(`hostile on the map: ${(now.hostile_names ?? []).join("; ")}`);
-        if (now.pop < start.pop) why.push(`population fell ${start.pop} -> ${now.pop}`);
-        if (now.moods > start.moods) why.push("a strange mood started (df_mood)");
-        if (now.caravans > start.caravans) why.push("a caravan arrived (df_trade)");
-        if (why.length) {
-          reason = `WATCHDOG stopped early: ${why.join("; ")}`;
-          if (a.on_threat === "alert" && now.hostiles > start.hostiles) {
+    try {
+      while (true) {
+        await new Promise((r) => setTimeout(r, 700));
+        now = await tick(now.last);
+        try { await directorStep(); } catch { /* the camera must never break a wait */ }
+        const event = waitDecision(start, now, target, a.watch !== false);
+        if (a.watch !== false) {
+          if (event.reasons.length) {
             await setPause(true);
-            reason += ` -> ${(await threatResponse(a.burrow)).join(", ")}`;
+            reason = `WATCHDOG stopped early: ${event.reasons.join("; ")}`;
+            if (a.on_threat === "alert" && event.threat) {
+              reason += ` -> ${(await threatResponse(a.burrow)).join(", ")}`;
+            }
+            break;
+          }
+        }
+        if (event.stop) break;
+        if (now.abs !== lastAbs) { lastAbs = now.abs; lastMove = Date.now(); }
+        if (now.paused || Date.now() - lastMove > 2500) {
+          const p = popups.length < 8 ? await dismissPopup() : { n: 0 };
+          if (p.n > 0 && p.after < p.n) {
+            popups.push(p.text);
+            await setPause(false);
+            lastMove = Date.now();
+            continue;
+          }
+        }
+        if (now.paused) { reason = "game paused itself (check announcements)"; break; }
+        if (Date.now() - lastMove > 6000) {
+          reason = "time is not advancing - a game menu or dialog is probably open (ask the player to close it with Esc)";
+          const { value: op } = await lua(
+            `local r = {} for k, v in pairs(df.global.game.main_interface) do
+               local ok, o = pcall(function() return v.open end) if ok and o == true then r[#r + 1] = k end end emit(r)`);
+          if (op?.length) reason = `time is not advancing - panel(s) open: ${op.join(", ")} (df_ui close shuts them; they ignore Esc from scripts)`;
+          // diplomacy meetings and other dialogs: show their text so the overseer can answer with df_screen
+          const { value: sc } = await luaFile("screen", { action: "read" });
+          if (sc?.focus?.some((f) => /Diplomacy|Petition|Mandate/.test(f))) {
+            const lines = (sc.lines ?? []).map((l) => (typeof l === "string" ? l : l.text ?? "")).filter((l) => l.trim()).slice(0, 25).join(String.fromCharCode(10));
+            reason = `a ${sc.focus.join(" ")} dialog is open - answer it with df_screen (click its buttons):` + String.fromCharCode(10) + lines;
           }
           break;
         }
+        if (Date.now() - t0 > SETTINGS.waitSeconds * 1000) { reason = "real-time cap reached; call df_wait again to continue"; break; }
       }
-      if (now.paused) { reason = "game paused itself (check announcements)"; break; }
-      if (Date.now() - lastMove > 6000) {
-        reason = "time is not advancing - a game menu or dialog is probably open (ask the player to close it with Esc)";
-        const { value: op } = await lua(
-          `local r = {} for k, v in pairs(df.global.game.main_interface) do
-             local ok, o = pcall(function() return v.open end) if ok and o == true then r[#r + 1] = k end end emit(r)`);
-        if (op?.length) reason = `time is not advancing - panel(s) open: ${op.join(", ")} (df_ui close shuts them; they ignore Esc from scripts)`;
-        // diplomacy meetings and other dialogs: show their text so the overseer can answer with df_screen
-        const { value: sc } = await luaFile("screen", { action: "read" });
-        if (sc?.focus?.some((f) => /Diplomacy|Petition|Mandate/.test(f))) {
-          const lines = (sc.lines ?? []).map((l) => (typeof l === "string" ? l : l.text ?? "")).filter((l) => l.trim()).slice(0, 25).join(String.fromCharCode(10));
-          reason = `a ${sc.focus.join(" ")} dialog is open - answer it with df_screen (click its buttons):` + String.fromCharCode(10) + lines;
-        }
-        break;
-      }
-      if (Date.now() - t0 > SETTINGS.waitSeconds * 1000) { reason = "real-time cap reached; call df_wait again to continue"; break; }
+    } finally {
+      await setPause(true);
     }
-    await setPause(true);
     const ran = (now.abs - start.abs) / 1200;
     const { value: ann } = await luaFile("announcements", { since: start.last, limit: 200 });
     const all = ann?.messages ?? [];
@@ -133,6 +120,10 @@ tool("df_wait", "Unpause and let the game run for a number of in-game days (1 da
     if (rest.length) out += `Other:\n${rest.slice(-20).map((m) => `- ${m.text}`).join("\n")}\n`;
     if (sparring > 0) out += `(${sparring} combat/sparring lines omitted)\n`;
     if (!all.length) out += "No new announcements.";
+    const { value: construction } = await luaFile("jobs", { action: "suspended" });
+    if (construction?.review?.length) {
+      out += `\nCONSTRUCTION: ${construction.review.length} suspended construction job(s) need review. Review df_jobs action=suspended; resume specific jobs only after any danger or obstruction is resolved.`;
+    }
     if (a.upkeep) {
       const u = await runUpkeep("apply");
       const queued = u.split("\n").filter((l) => l.includes("-> queued"));

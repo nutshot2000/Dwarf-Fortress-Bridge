@@ -58,7 +58,7 @@ async function queueOrder(a) {
 const UPKEEP_FILE = path.join(DF_DIR, "dfhack-config", "df-bridge", "upkeep.json");
 const UPKEEP_DEFAULTS = { drink_per_dwarf: 5, empty_storage: 10, free_beds: 3, free_doors: 2, free_cabinets: 2,
   free_chests: 2, goblets: 10, soap: 5, fuel: 30 };
-function upkeepTargets() {
+export function upkeepTargets() {
   try { return { ...UPKEEP_DEFAULTS, ...JSON.parse(fs.readFileSync(UPKEEP_FILE, "utf8")) }; }
   catch { return { ...UPKEEP_DEFAULTS }; }
 }

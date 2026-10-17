@@ -31,6 +31,7 @@ tool("df_help", "Help. topic=keys (default): quickfort build keys, dig kinds and
   async (a) => {
     if (a.topic === "playbook") return text(INSTRUCTIONS);
     if (a.topic === "settings") return text([
+      `Bridge version: ${SETTINGS.version}`,
       `Tool profile (DF_TOOLS): ${toolProfile}  -- full | core | comma-separated tool names`,
       `Caption name (DF_AGENT_NAME): ${SETTINGS.agentName}`,
       `Wait cap (DF_WAIT_SECONDS): ${SETTINGS.waitSeconds}s per df_wait call -- keep it under your MCP client's tool timeout`,

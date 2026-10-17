@@ -1,10 +1,11 @@
 # Claspoceans playthrough
 
-## Checkpoint: 12 Felsite, year 100
+## Checkpoint: 14 Felsite, year 100 — bridge 1.1.0
 
 Saved and paused, camera on Founders Hall. Seven citizens alive, no stressed citizens,
-115 drink, 70 food, 42 seeds. No visible hostiles. Cerol's current syndrome wound is
-inebriation, not a combat injury; blood is full and pain is zero.
+113 drink, 70 food, 30 uninstalled seeds and 103 available logs. No visible hostiles.
+The earlier count of 42 seeds included planted seeds. Cerol's earlier syndrome wound
+was verified as inebriation, not a combat injury.
 
 This checkout is our independent upgrade copy. Claude's checkout at
 `C:/Users/batti/Dwarf-Fortress-Bridge` remains on main with its pre-existing lockfile edit.
@@ -54,14 +55,23 @@ All founders survived without combat wounds; the dog that was injured later reco
   Water retains its depth glyph; hidden aquifer information stays hidden.
   Commits: 4b56cb6 and dc4d220. Offline registration, live read-only smoke checks,
   and seven synthetic Lua assertions passed. Tests are included in npm test.
-- Still open: df_wait did not stop during the jaguar-man fight, despite the camera showing it.
-  Its current watchdog primarily counts units classified as dangerous; examine combat/interrupt
-  reports as well. Do not use raw wound counts as a fix: ordinary inebriation creates syndrome wounds.
-- Stock totals include logs embedded in buildings, so the wood headline can overstate usable logs.
-- df_problems warns at four empty barrels, although four are usable and another barrel is queued.
-- Interrupted construction can remain suspended. One dining chair had allocated material but was
-  suspended after the fight; it was resumed. All five carpentry jobs temporarily suspended for
-  hatch production were restored before this checkpoint.
+- Fixed in 1.1.0: the watchdog reads new Combat log entries for visible citizens and owned tame
+  animals, even when their opponent is not classified as dangerous. Hunting and sparring are excluded.
+  Events on the final wait poll are checked before the time target, and errors attempt to pause.
+  Read-only replay of the retained jaguar fight detected three fortress combatants with zero
+  dangerous creatures. No new attack was staged to test it. Raw wound counts are deliberately not used:
+  ordinary inebriation creates syndrome wounds.
+- Fixed: status resource counts exclude installed, reserved, carried, forbidden and owned materials.
+  df_stocks preserves inventory totals and supplies separate available counts. At the original
+  checkpoint, 126 total logs included only 108 available logs.
+- Fixed: container warnings distinguish a blocked new batch from a low reserve, respect the configured
+  upkeep reserve target, and account for queued production. Four containers plus one queued no longer
+  generate the old false brewing-stall warning. The latest check has six available and one queued.
+- Added: df_jobs action=suspended separates jobs requiring review from plans awaiting materials;
+  df_problems and df_wait flag the former. No jobs are automatically resumed, preserving intentional
+  suspensions. At this checkpoint nine construction plans await materials and none need interruption review.
+- Validation: offline registration, JavaScript watchdog decision tests, synthetic Lua regressions,
+  historical fight-log replay, live read-only checks, and normal gameplay using 1.1.0 all passed.
 
 ## Next priorities
 
@@ -70,4 +80,4 @@ and bookkeeper with appropriate offices, prepare a small militia, and plan migra
 Keep food protected and use trade or a deliberate aquifer crossing for the first stone industry.
 
 Save files are under `%APPDATA%/Bay 12 Games/Dwarf Fortress/save/`; latest verified checkpoint
-is `autosave 3`. DFHack's getSavePath reported a misleading installation-relative path on this setup.
+is `autosave 1` at 14 Felsite. DFHack's getSavePath reported a misleading installation-relative path on this setup.

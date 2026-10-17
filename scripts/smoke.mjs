@@ -4,10 +4,17 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { fileURLToPath } from "node:url";
+import { testWatchdog } from "./test-watchdog.mjs";
+testWatchdog();
 
 const READ_ONLY = [
   ["df_status", {}], ["df_problems", {}], ["df_alerts", {}], ["df_units", {}], ["df_announcements", {}],
   ["df_look", { radius: 3 }], ["df_stocks", {}], ["df_jobs", { limit: 5 }], ["df_order", {}],
+  ["df_jobs", { action: "suspended" }], ["df_stocks", { type: "WOOD" }],
+  ["df_lua", { code: "assert(loadfile(ARGS.test_path))(ARGS, emit, {usable=stock_usable, available=stock_available, warning=container_warning, construction=construction_review, try=try})", args: {
+    test_path: fileURLToPath(new URL("./test-runtime.lua", import.meta.url)),
+    heartbeat_path: fileURLToPath(new URL("../lua/heartbeat.lua", import.meta.url)),
+  } }],
   ["df_lua", { code: "assert(loadfile(ARGS.test_path))(ARGS, emit)", args: {
     test_path: fileURLToPath(new URL("./test-look.lua", import.meta.url)),
     look_path: fileURLToPath(new URL("../lua/look.lua", import.meta.url)),

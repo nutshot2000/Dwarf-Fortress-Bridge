@@ -58,3 +58,45 @@ local function citizens()
   return try(function() return dfhack.units.getCitizens(true) end)
       or try(function() return dfhack.units.getCitizens() end, {})
 end
+
+-- Installed building materials and personal possessions are not communal stock.
+local function stock_usable(it)
+  local f = it.flags
+  return not (f.rotten or f.forbid or f.garbage_collect or f.trader or f.dump
+    or f.hostile or f.removed or f.spider_web or f.in_building or f.owned)
+end
+local function stock_available(it) return stock_usable(it) and not it.flags.in_job and not it.flags.in_inventory end
+
+local function container_warning(empty, pending, drink, pop, target)
+  target = target or 5
+  if empty == 0 then
+    return {severity = drink < pop * 5 and 'high' or 'medium',
+      issue = ('No available empty barrels/large pots: a new brewing batch cannot start until a container is free. %d container(s) queued.'):format(pending)}
+  elseif empty < target and empty + pending < target then
+    return {severity = drink < pop * 5 and 'medium' or 'low',
+      issue = ('Empty food-container reserve low: %d available, %d queued, reserve target %d. Brewing can still use the available containers.'):format(empty, pending, target)}
+  end
+end
+
+local function construction_review(j, b)
+  if j.job_type ~= df.job_type.ConstructBuilding or not j.flags.suspend or not b
+     or b:getBuildStage() >= b:getMaxBuildStage() then return nil end
+  local allocated = #j.items
+  local requires_items = #j.job_items.elements > 0
+  return {id = j.id, building = b.id, building_type = df.building_type[b:getType()],
+    x = j.pos.x, y = j.pos.y, z = j.pos.z, allocated_items = allocated,
+    state = (allocated > 0 or not requires_items) and 'review_suspension' or 'waiting_for_materials'}
+end
+local function suspended_construction()
+  local out = {review = {}, waiting_for_materials = {}}
+  for _, j in require('utils').listpairs(df.global.world.jobs.list) do
+    if j.flags.suspend and j.job_type == df.job_type.ConstructBuilding then
+      local info = construction_review(j, dfhack.job.getHolder(j))
+      if info then
+        local bucket = info.state == 'review_suspension' and out.review or out.waiting_for_materials
+        bucket[#bucket + 1] = info
+      end
+    end
+  end
+  return out
+end

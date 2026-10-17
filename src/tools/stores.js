@@ -6,7 +6,7 @@ tool("df_crop", "Farming. action=list shows farm plots with crops per season and
     seasons: z.array(z.enum(["spring", "summer", "autumn", "winter"])).optional() },
   (a) => luaTool("crop", a));
 
-tool("df_stocks", "Item inventory. No args: totals per item type. type=<ITEM_TYPE> (e.g. BAR, BLOCKS, WEAPON, TOOL, BARREL, BED) and/or search=<text> (e.g. 'pick', 'iron', 'plump helmet'): breakdown by item plus some locations.",
+tool("df_stocks", "Item inventory, with total and available counts kept separate. Available excludes installed building materials, job reservations, forbidden, rotten, dumped and owned items. No args: counts per item type. type=<ITEM_TYPE> and/or search=<text>: breakdown by item plus locations.",
   { type: z.string().optional(), search: z.string().optional() }, (a) => luaTool("stocks", a));
 
 tool("df_workshop", "Workshops and furnaces. action=list shows each with queued jobs (pass building_id or show_tasks=true to see task names it accepts). action=add queues a task directly at building_id, like the in-game Add task button (no manager needed): task is a name or substring (e.g. 'bed', 'barrel', 'brew', 'prepare easy meal', 'rock table'); count up to 10; repeat=true keeps redoing it. action=cancel removes the job at index.",
@@ -24,8 +24,8 @@ tool("df_standing", "Standing orders (Labor > Standing orders). No args lists al
   { name: z.string().optional(), value: z.union([z.number().int(), z.boolean()]).optional() },
   (a) => luaTool("standing", a));
 
-tool("df_jobs", "Every job in the fort (the Tasks screen). list: summary counts plus jobs (filter by name substring, limit). cancel / suspend / resume / do_now act on job_id.",
-  { action: z.enum(["list", "cancel", "suspend", "resume", "do_now"]).default("list"),
+tool("df_jobs", "Every job in the fort (the Tasks screen). list: summary counts plus jobs (filter by name substring, limit). suspended: separate construction with allocated materials needing review from plans waiting for materials; never resumes automatically. After resolving an interruption, resume the specific job_id. cancel / suspend / resume / do_now act on job_id.",
+  { action: z.enum(["list", "suspended", "cancel", "suspend", "resume", "do_now"]).default("list"),
     job_id: z.number().int().optional(), filter: z.string().optional(), limit: z.number().int().min(1).max(200).optional() },
   (a) => luaTool("jobs", a));
 
