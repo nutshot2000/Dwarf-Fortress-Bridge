@@ -6,11 +6,12 @@ This file is sent to the model as the server's instructions; clients that drop t
 ## Map and coordinates
 
 - Map tiles: x east, y south, z UP (higher z = closer to the sky). Underground is lower z.
-- `df_look` glyphs: `?` unrevealed, `#` stone wall, `%` soil wall, `*` ore/gem vein, `.` floor, `,` grass, ` ` open air,
+- `df_look` glyphs: `?` unrevealed, `A` exposed aquifer tile (water hazard), `#` stone wall, `%` soil wall, `*` ore/gem vein, `.` floor, `,` grass, ` ` open air,
   `^` ramp, `v` ramp top, `< > X` stairs up/down/both, `T` tree, `o` boulder, `~` deep water, `1-3` shallow water, `!` magma,
   lowercase `d h u j i r` = pending dig designation, `@` citizen, `E` hostile, `a` other creature,
   `W` workshop, `S` stockpile, `P` farm plot, `B` bed, `D` door, `K` table, `C` chair/box/cabinet, `c` unfinished building.
 - Workshops are 3x3 and placed by their CENTRE tile; farm plots, stockpiles and zones take a top-left corner + size.
+- `df_look` warns about exposed aquifer tiles and gives their coordinates. Leave them intact until a water-control plan is ready; the readout never identifies hidden aquifers.
 - Farm plots need soil/mud floor underground or any soil surface. `df_help` lists building keys.
 
 ## The turn loop

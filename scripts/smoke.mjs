@@ -8,6 +8,10 @@ import { fileURLToPath } from "node:url";
 const READ_ONLY = [
   ["df_status", {}], ["df_problems", {}], ["df_alerts", {}], ["df_units", {}], ["df_announcements", {}],
   ["df_look", { radius: 3 }], ["df_stocks", {}], ["df_jobs", { limit: 5 }], ["df_order", {}],
+  ["df_lua", { code: "assert(loadfile(ARGS.test_path))(ARGS, emit)", args: {
+    test_path: fileURLToPath(new URL("./test-look.lua", import.meta.url)),
+    look_path: fileURLToPath(new URL("../lua/look.lua", import.meta.url)),
+  } }],
   ["df_noble", {}], ["df_rooms", { action: "list" }], ["df_rooms", { action: "audit" }],
   ["df_military", {}], ["df_schedule", {}], ["df_location", {}], ["df_animals", {}], ["df_standing", {}],
   ["df_crop", {}], ["df_pile", { action: "status" }], ["df_kitchen", {}], ["df_burrow", {}],

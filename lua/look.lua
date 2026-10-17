@@ -17,6 +17,9 @@ local function tile_glyph(x, y)
   local tt = dfhack.maps.getTileType(x, y, z)
   if not tt then return ' ' end
   local fl = dfhack.maps.getTileFlags(x, y, z)
+  -- Exposed aquifer tiles are a digging hazard even when designated. Never
+  -- disclose aquifer information on hidden tiles.
+  if not fl.hidden and fl.water_table then return 'A' end
   local dig = df.tile_dig_designation[fl.dig]
   if dig and DIG[dig] then return DIG[dig] end
   if fl.hidden then return '?' end
@@ -98,11 +101,15 @@ for _, u in ipairs(df.global.world.units.active) do
   end
 end
 
-local rows = {}
+local rows, aquifer_tiles = {}, {}
 for y = y1, y2 do
   local line = {}
   for x = x1, x2 do
     local k = y * 100000 + x
+    local fl = dfhack.maps.getTileFlags(x, y, z)
+    if fl and not fl.hidden and fl.water_table then
+      aquifer_tiles[#aquifer_tiles + 1] = {x = x, y = y}
+    end
     line[#line + 1] = grid_u[k] or grid_b[k] or tile_glyph(x, y)
   end
   rows[#rows + 1] = table.concat(line)
@@ -110,5 +117,5 @@ end
 
 emit({
   z = z, x1 = x1, y1 = y1, x2 = x2, y2 = y2, map_size = {x = sx, y = sy, z = sz},
-  rows = rows, units = ulist, buildings = blist,
+  rows = rows, units = ulist, buildings = blist, aquifer_tiles = aquifer_tiles,
 })

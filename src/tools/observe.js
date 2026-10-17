@@ -14,12 +14,18 @@ tool("df_announcements", "Recent game announcements (newest last). Pass since=<l
   { since: z.number().int().optional(), limit: z.number().int().min(1).max(100).optional() },
   (a) => luaTool("announcements", a));
 
-tool("df_look", "ASCII map slice of one z-level plus lists of units and buildings in it. Defaults to the player's current view. radius 3-40.",
+tool("df_look", "ASCII map slice of one z-level plus lists of units and buildings in it. A marks exposed aquifer tiles; a warning lists their coordinates. Hidden aquifers are not revealed. Defaults to the player's current view. radius 3-40.",
   { x: optCoord, y: optCoord, z: optCoord, radius: z.number().int().min(3).max(40).optional() },
   async (a) => {
     const { value } = await luaFile("look", a);
     if (value?.error) return fail(value.error);
     const { rows, x1, y1, x2, y2, z: zz, units, buildings, map_size } = value;
+    const aquifers = value.aquifer_tiles ?? [];
+    const waterWarning = aquifers.length
+      ? `WARNING: ${aquifers.length} exposed aquifer tile(s), marked A. Avoid breaching them without a water-control plan. At: ` +
+        aquifers.slice(0, 12).map((p) => `${p.x},${p.y},${zz}`).join("; ") +
+        (aquifers.length > 12 ? "; ..." : "") + "\n"
+      : "";
     // column ruler every 10 tiles so coordinates can be read off the picture
     let ruler = "      ";
     for (let x = x1; x <= x2; x++) ruler += x % 10 === 0 ? "|" : " ";
@@ -38,6 +44,6 @@ tool("df_look", "ASCII map slice of one z-level plus lists of units and building
       (b.x2 !== b.x || b.y2 !== b.y ? `..${b.x2},${b.y2}` : "") + (b.built ? "" : " (unbuilt)"));
     return text(
       `z=${zz}  x ${x1}..${x2}  y ${y1}..${y2}  (map ${map_size.x}x${map_size.y}x${map_size.z}; | marks x=${tens.join(",")})\n` +
-      `${ruler}\n${body}\n\nunits:\n${people.join("\n") || "  none"}\nanimals: ${animals || "none"}\n` +
+      waterWarning + `${ruler}\n${body}\n\nunits:\n${people.join("\n") || "  none"}\nanimals: ${animals || "none"}\n` +
       `buildings:\n${blds.join("\n") || "  none"}`);
   });
