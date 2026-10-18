@@ -63,7 +63,7 @@ tool("df_rooms", "Zones. action=list shows all zones with owners. action=assign 
     }
     const log = [];
     if (a.phase === "furnish" || a.phase === "zone") {
-      const {value:check}=await luaFile("room_check",{z:Z,rooms:layout});
+        const {value:check}=await luaFile("room_check",{z:Z,rooms:layout,allow_open_doorway:a.phase==="furnish"});
       if (!check?.ok) return fail(JSON.stringify(check,null,1));
     }
     const dig = async (kind, x1, y1, x2, y2) => {

@@ -207,9 +207,9 @@ Each tool writes a short Lua chunk and runs it through `dfhack-run`. Digging, bu
 
 A turn looks like this: `df_status` → `df_problems` → one action → `df_wait upkeep=true`, with the camera showing you each step.
 
-## Room protection and clearer diagnostics (v1.3.0)
+## Room protection and clearer diagnostics (v1.3.1)
 
-Bedroom wings now register protected walls. Digging and blueprints reject changes through protected room boundaries unless `allow_room_changes=true` explicitly permits remodelling. `df_room_plan` protects custom layouts and audits existing bedrooms; `df_rooms` refuses to furnish or zone open rooms. Existing damaged layouts are reported for repair.
+Bedroom wings now register protected walls. Digging and blueprints reject changes through protected room boundaries unless `allow_room_changes=true` explicitly permits remodelling. `df_room_plan` protects custom layouts and audits existing bedrooms; `df_rooms` refuses to furnish or zone open rooms. Existing damaged layouts are reported for repair. `df_room_plan action=repair` previews or queues walls, then doors; `action=tidy` previews or marks eligible loose stone/gems within one room. Both default to previews. Status distinguishes pending jobs from finished enclosure, and the playbook includes repair and relocation steps.
 
 Build previews identify invalid tiles, construction reviews distinguish allocated materials from foreign reservations, and crop/trade helpers prevent common supply mistakes. See [ISSUES-REVIEW.md](ISSUES-REVIEW.md) for reproduced issues, model mistakes, test results, and limits.
 

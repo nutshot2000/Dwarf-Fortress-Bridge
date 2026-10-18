@@ -55,7 +55,16 @@ for _, t in ipairs(types) do
         if reason then
           skipped = skipped + 1
           excluded_counts[reason]=(excluded_counts[reason] or 0)+1
-          if #excluded<20 then excluded[#excluded+1]={id=it.id,item=dfhack.df2utf(dfhack.items.getReadableDescription(it)),x=x,y=y,z=z,reason=reason} end
+          if #excluded<20 then
+            local owners={}
+            if f.in_job then for _,ref in ipairs(it.specific_refs) do
+              if ref.type==df.specific_ref_type.JOB and ref.data.job then
+                local job=ref.data.job local holder=dfhack.job.getHolder(job)
+                owners[#owners+1]={job_id=job.id,building_id=holder and holder.id}
+              end
+            end end
+            excluded[#excluded+1]={id=it.id,item=dfhack.df2utf(dfhack.items.getReadableDescription(it)),x=x,y=y,z=z,reason=reason,reserved_by=owners}
+          end
         elseif action == 'mark' and not f.dump then
           f.dump = true changed = changed + 1
           by_z[tostring(z)] = (by_z[tostring(z)] or 0) + 1

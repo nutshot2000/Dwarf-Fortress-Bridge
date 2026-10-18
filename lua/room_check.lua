@@ -10,7 +10,8 @@ local function wall(x,y,z)
 end
 for _,r in ipairs(ARGS.rooms) do
   local failures={}
-  for x=r.x,r.x+2 do for y=r.y,r.y+2 do
+  local w,h=r.w or 3,r.h or 3
+  for x=r.x,r.x+w-1 do for y=r.y,r.y+h-1 do
     local f=dfhack.maps.getTileFlags(x,y,ARGS.z)
     if not f or f.hidden then failures[#failures+1]={x=x,y=y,reason='interior not excavated/visible'}
     else
@@ -18,12 +19,12 @@ for _,r in ipairs(ARGS.rooms) do
       if a.shape~=df.tiletype_shape.FLOOR or f.flow_size>0 then failures[#failures+1]={x=x,y=y,reason='interior must be dry floor'} end
     end
   end end
-  for x=r.x-1,r.x+3 do for y=r.y-1,r.y+3 do
-    if (x==r.x-1 or x==r.x+3 or y==r.y-1 or y==r.y+3)
-      and not (x==r.x+1 and y==r.door_y) and not wall(x,y,ARGS.z) then
+  for x=r.x-1,r.x+w do for y=r.y-1,r.y+h do
+    if (x==r.x-1 or x==r.x+w or y==r.y-1 or y==r.y+h)
+      and not (ARGS.allow_open_doorway and x==(r.door_x or r.x+w//2) and y==r.door_y) and not wall(x,y,ARGS.z) then
       failures[#failures+1]={x=x,y=y,reason='missing or unverified enclosing wall'}
     end
   end end
   if #failures>0 then bad[#bad+1]={room=r,failures=failures} end
 end
-emit({ok=#bad==0,invalid_rooms=bad,guidance='Finish excavation and enclosing walls before furnishing. The doorway is the only intentional opening. Furnish places objects; phase=zone separately creates and assigns bedrooms.'})
+emit({ok=#bad==0,invalid_rooms=bad,guidance='Finish dry-floor excavation and enclosing walls. Furnishing allows only the planned entrance to remain open for door placement; zoning requires completed doors too. Use df_room_plan repair, wait and verify enclosed=true.'})

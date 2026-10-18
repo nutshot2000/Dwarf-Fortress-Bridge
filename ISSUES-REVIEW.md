@@ -58,3 +58,13 @@ override is available; raw Lua, console and manual UI remain outside these guard
 - No spawned items, instant building, teleportation or map revelation.
 
 Roof/light mechanics reference: https://dwarffortresswiki.org/index.php/Agriculture
+
+## Bedroom repair follow-up (v1.3.1)
+
+Live Monkmirror repairs completed: 12 bedroom zones enclosed, each with a bed, cabinet and chest; bedroom/corridor rectangle x89..118,y87..97,z169 has zero loose BOULDER/ROUGH items and zero skipped reservations. Three damaged rooms received constructed walls and doors; another received its missing door. The bedroom overlapping stairs at x99..101,y94..96 was replaced by the enclosed 2x3 room x94..95,y88..90, assigned back to unit8501. Old zone142 and cabinet70 removed normally; new zone210 replaces it. Shaft preserved. A missing cabinet in zone143 and chest in zone146 were added. Saved after verification.
+
+Five additional unbuilt roof plans (26,33,41,42,46 at z174) were removed to release stones obstructing the door or littering bedrooms/corridor. No completed roofs removed. Released stones were hauled by dwarves to the existing dump.
+
+New repair/tidy actions default to previews. Repairs preflight the footprint, preserve the chosen doorway and defer doors until walls complete. Repeated repair skips pending construction. Audit distinguishes unfinished walls/doors, missing walls/doors, unsuitable interior and finished enclosure. A zone and matching saved plan count once. Direct bedroom zoning and the wing zone phase require completed enclosure. Tidy is restricted to eligible loose stone/gems inside the selected room and reports owning jobs for skipped reservations. Finished operations explicitly stop suggesting repeated actions.
+
+Read-only synthetic lifecycle checks cover finished enclosure, missing/pending doors, missing/pending walls, stair interiors and plan/zone deduplication (12 assertions), alongside native dig guard tests and the full smoke suite. Live repair and tidy previews after completion report zero work. These helpers and instructions are validated; a separate weaker-model playthrough has not been run in this session.

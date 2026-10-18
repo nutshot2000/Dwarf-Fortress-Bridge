@@ -37,16 +37,31 @@ for _,b in ipairs(df.global.world.buildings.other.ANY_ZONE) do
         end
       end
     end end
-    if x2>=x1 then layouts[#layouts+1]={id='zone-'..b.id,x=x1,y=y1,z=b.z,w=x2-x1+1,h=y2-y1+1,zone=b.id} end
+    if x2>=x1 then
+      local r={id='zone-'..b.id,x=x1,y=y1,z=b.z,w=x2-x1+1,h=y2-y1+1,zone=b.id}
+      for _,p in pairs(plans) do
+        if p.x==r.x and p.y==r.y and p.z==r.z and p.w==r.w and p.h==r.h then
+          r.door_x=p.door_x r.door_y=p.door_y
+        end
+      end
+      for i=#layouts,1,-1 do local p=layouts[i]
+        if p.x==r.x and p.y==r.y and p.z==r.z and p.w==r.w and p.h==r.h then table.remove(layouts,i) end
+      end
+      layouts[#layouts+1]=r
+    end
   end
 end
 local protected,status={},{}
 for _,r in ipairs(layouts) do
-  local missing,unsafe,unknown={},{},0
+  local missing,unsafe,pending,doors,interior,unknown={},{},{},{},{},0
   for x=r.x,r.x+r.w-1 do for y=r.y,r.y+r.h-1 do
     local f=dfhack.maps.getTileFlags(x,y,r.z)
-    if f and not f.hidden and df.tiletype.attrs[dfhack.maps.getTileType(x,y,r.z)].shape==df.tiletype_shape.FLOOR then
+    local shape=f and not f.hidden and df.tiletype.attrs[dfhack.maps.getTileType(x,y,r.z)].shape
+    if shape==df.tiletype_shape.FLOOR then
       protected[r.z..','..x..','..y]={x=x,y=y,z=r.z,room=r.id,reason='existing room floor'}
+    end
+    if shape~=df.tiletype_shape.FLOOR or (f and f.flow_size>0) then
+      interior[#interior+1]={x=x,y=y,z=r.z,reason=shape and ('interior must be dry floor, found '..df.tiletype_shape[shape]) or 'unrevealed interior'}
     end
   end end
   for x=r.x-1,r.x+r.w do for y=r.y-1,r.y+r.h do
@@ -55,27 +70,49 @@ for _,r in ipairs(layouts) do
       local f=dfhack.maps.getTileFlags(x,y,r.z)
       local b=dfhack.buildings.findAtTile(x,y,r.z)
       local door=b and b:getType()==df.building_type.Door
+      if door then doors[#doors+1]={x=x,y=y,z=r.z,built=b:getBuildStage()>=b:getMaxBuildStage(),id=b.id} end
       if not door then
         protected[r.z..','..x..','..y]={x=x,y=y,z=r.z,room=r.id}
         if f and not f.hidden then
           local a=df.tiletype.attrs[dfhack.maps.getTileType(x,y,r.z)]
-          if a.shape~=df.tiletype_shape.WALL then missing[#missing+1]={x=x,y=y,z=r.z} end
+          if a.shape~=df.tiletype_shape.WALL then
+            if b and b:getType()==df.building_type.Construction and b.type==df.construction_type.Wall then
+              pending[#pending+1]={x=x,y=y,z=r.z,building_id=b.id}
+            else missing[#missing+1]={x=x,y=y,z=r.z} end
+          end
           if f.dig~=df.tile_dig_designation.No then unsafe[#unsafe+1]={x=x,y=y,z=r.z,designation=df.tile_dig_designation[f.dig]} end
         else unknown=unknown+1 end
       end
     end
   end end
   status[#status+1]={id=r.id,zone=r.zone,x=r.x,y=r.y,z=r.z,w=r.w,h=r.h,
+    door_x=r.door_x,door_y=r.door_y,doors=doors,pending_walls=pending,invalid_interior=interior,
     missing_walls=missing,unsafe_designations=unsafe,unrevealed_boundary_tiles=unknown}
 end
 if ARGS.internal then return {protected=protected,rooms=status} end
 local damaged=0
 for _,r in ipairs(status) do
   r.missing_wall_count=#r.missing_walls r.unsafe_designation_count=#r.unsafe_designations
-  if r.missing_wall_count>0 then damaged=damaged+1 end
+  r.pending_wall_count=#r.pending_walls
+  if r.door_x then
+    local d=dfhack.buildings.findAtTile(r.door_x,r.door_y,r.z)
+    r.door_complete=d and d:getType()==df.building_type.Door and d:getBuildStage()>=d:getMaxBuildStage() or false
+    r.door=d and {id=d.id,x=r.door_x,y=r.door_y,built=r.door_complete} or nil
+  else r.door_complete=#r.doors>0
+    for _,d in ipairs(r.doors) do if not d.built then r.door_complete=false end end
+  end
+  r.enclosed=r.missing_wall_count==0 and r.pending_wall_count==0 and r.door_complete and r.unrevealed_boundary_tiles==0 and #r.invalid_interior==0
+  r.state=r.enclosed and 'enclosed' or #r.invalid_interior>0 and 'unsuitable_interior'
+    or r.unrevealed_boundary_tiles>0 and 'unverified_boundary' or r.missing_wall_count>0 and 'needs_walls'
+    or r.pending_wall_count>0 and 'walls_pending' or r.door and 'door_pending' or 'needs_door'
+  local steps={enclosed='Audit furniture/ownership, then tidy preview.',unsuitable_interior='Inspect interior. Preserve shafts and relocate the bedroom when it overlaps stairs.',
+    unverified_boundary='Inspect visible layout; do not guess through hidden terrain.',needs_walls='Preview repair, confirm the corridor entrance, then apply.',
+    walls_pending='Wait; inspect suspended jobs. Repeat repair after walls complete to place the door.',door_pending='Wait; inspect suspended jobs before resuming a door job.',needs_door='Run repair with the original doorway coordinates if not already known.'}
+  r.next_step=steps[r.state]
+  if not r.enclosed then damaged=damaged+1 end
   if not ARGS.detail then
     while #r.missing_walls>6 do table.remove(r.missing_walls) end
     while #r.unsafe_designations>6 do table.remove(r.unsafe_designations) end
   end
 end
-emit({room_count=#status,damaged_rooms=damaged,rooms=status,guidance='Protected room boundaries block destructive bridge dig orders. Missing walls require repair; they are not automatically rebuilt. Coordinate lists are samples unless detail=true. Doorways stay open. Use forget only for intentional remodelling; existing bedroom zones remain protected.'})
+emit({room_count=#status,damaged_rooms=damaged,rooms=status,guidance='Repair: df_room_plan action=repair id=... previews wall/door jobs; dry_run=false queues them. If the entrance is unknown, supply door_x,door_y on the perimeter first. Pending walls/doors are not enclosure: wait, inspect suspended jobs, then recheck enclosed=true. Never wall over an entrance, corridor, stair or furniture. Clear loose clutter with a bounded df_dump after repairs. Coordinate lists are samples unless detail=true.'})

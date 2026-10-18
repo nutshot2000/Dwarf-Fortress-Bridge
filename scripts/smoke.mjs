@@ -5,9 +5,14 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { fileURLToPath } from "node:url";
 import { testWatchdog } from "./test-watchdog.mjs";
+import assert from "node:assert/strict";
 testWatchdog();
 
 const READ_ONLY = [
+  ["df_lua", {code:"assert(loadfile(ARGS.path))(ARGS,emit)",args:{
+    path:fileURLToPath(new URL("./test-room-repair.lua",import.meta.url)),
+    root:fileURLToPath(new URL("../",import.meta.url)).replace(/\\/g,"/")
+  }}],
   ["df_lua", {code:"assert(loadfile(ARGS.path))(ARGS,emit)",args:{
     path:fileURLToPath(new URL("./test-room-guard.lua",import.meta.url)),
     root:fileURLToPath(new URL("../",import.meta.url)).replace(/\\/g,"/")
@@ -77,6 +82,28 @@ if (!offline) {
       console.log(`  ✗ ${name}: ${e.message}`);
     }
   }
+  try {
+    const call=async(name,args)=>{
+      const res=await client.callTool({name,arguments:args});
+      assert(!res.isError,(res.content??[]).map(c=>c.text).join("\n"));
+      return JSON.parse(res.content.map(c=>c.text).join("\n"));
+    };
+    const r=(await call("df_room_plan",{})).rooms.find(r=>r.enclosed);
+    if(r){
+      const snapshot=()=>call("df_lua",{code:"local n=0 for _,it in ipairs(df.global.world.items.all) do if it.flags.dump then n=n+1 end end emit({buildings=#df.global.world.buildings.all,marked_dump=n,plans=dfhack.persistent.getSiteData('df-bridge/room-plans',{})})"});
+      const before=await snapshot();
+      for(let i=0;i<2;i++){
+        const repair=await call("df_room_plan",{action:"repair",id:r.id});
+        assert(repair.dry_run&&repair.wall_jobs===0&&repair.door_jobs===0);
+        assert(repair.next_step.startsWith("Nothing to repair"));
+      }
+      const tidy=await call("df_room_plan",{action:"tidy",id:r.id});
+      assert(tidy.dry_run);
+      if(tidy.items===0) assert(!tidy.next_step.startsWith("Repeat tidy"));
+      assert.deepEqual(await snapshot(),before,"room previews must not mutate plans, buildings or dump marks");
+      console.log("  ✓ room repair/tidy previews: finished-room feedback, repetition and no mutations");
+    } else console.log("  - room helper preview test skipped: no completed room in this fort");
+  } catch(e){failures++;console.log(`  ✗ room helper previews: ${e.message}`);}
 }
 await client.close();
 console.log(failures ? `${failures} problem(s)` : "all good");

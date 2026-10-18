@@ -8,9 +8,44 @@ tool("df_designations", "List actual pending dig/smooth and tree-felling/plant-g
 tool("df_remove", "Preview or deconstruct one building/plan by ID using ordinary game removal. dry_run defaults true. To release a reserved blocker, inspect df_jobs suspended, preview the owning unbuilt building, then dry_run=false. Built structures require allow_built=true. This removes the selected plan; it does not merely release its materials.",
   {building_id:z.number().int(),dry_run:z.boolean().default(true),allow_built:z.boolean().default(false)},a=>luaTool("remove",a));
 
-tool("df_room_plan", "Protect or audit private room layouts before mining. protect saves room interiors (x,y,w,h) and doorway coordinates for level z; enclosing walls are protected against destructive bridge dig/blueprint orders. Existing bedroom zones are also protected automatically. status reports missing walls and unsafe designations. forget id removes one saved plan for intentional remodelling.",
-  {action:z.enum(["status","protect","forget"]).default("status"),z:optCoord,id:z.string().optional(),detail:z.boolean().default(false),
-    rooms:z.array(z.object({x:coord,y:coord,w:z.number().int().min(1).max(30).optional(),h:z.number().int().min(1).max(30).optional(),door_x:optCoord,door_y:coord})).optional()},a=>luaTool("room_plan",a));
+tool("df_room_plan", "Protect, audit or repair private rooms. status reports missing walls, pending construction and enclosed. repair id=... previews missing wall/door jobs (dry_run defaults true); dry_run=false queues ordinary construction. Supply door_x,door_y when the damaged room has no surviving entrance. Repair preserves furniture and the doorway; wait and recheck enclosed=true before calling it finished. tidy id=... previews loose stone/gem cleanup in that room; dry_run=false marks eligible clutter for hauling to a dump, skipping reserved items and furniture. protect saves custom interiors and doorway coordinates. Existing bedroom zones are protected automatically. forget removes a saved plan for intentional remodelling.",
+  {action:z.enum(["status","protect","forget","repair","tidy"]).default("status"),z:optCoord,id:z.string().optional(),detail:z.boolean().default(false),
+    dry_run:z.boolean().default(true),door_x:optCoord,door_y:optCoord,
+    rooms:z.array(z.object({x:coord,y:coord,w:z.number().int().min(1).max(30).optional(),h:z.number().int().min(1).max(30).optional(),door_x:optCoord,door_y:coord})).optional()},async a=>{
+      if(!["repair","tidy"].includes(a.action)) return luaTool("room_plan",a);
+      const {value:report}=await luaFile("room_plan",{action:"status",detail:true});
+      const r=report?.rooms?.find(r=>r.id===a.id);
+      if(!r) return fail("repair/tidy requires an existing room id from df_room_plan status");
+      if(a.action==="tidy"){
+        const args={z:r.z,x1:r.x,y1:r.y,x2:r.x+r.w-1,y2:r.y+r.h-1,types:["BOULDER","ROUGH"]};
+        const {value:count}=await luaFile("dump",{...args,action:"count"});
+        if(!a.dry_run&&!count?.dump_zones?.length) return fail("Create a reachable garbage dump zone before marking bedroom clutter. Nothing marked.");
+        const result=a.dry_run?count:(await luaFile("dump",{...args,action:"mark"})).value;
+        return text(JSON.stringify({room:r.id,dry_run:a.dry_run,...result,next_step:result.items===0?(result.skipped>0?"No eligible clutter. Inspect skipped items and their reservations; do not keep marking or cancel useful jobs blindly.":"No loose stone/gem clutter remains in this room. Nothing to mark."):a.dry_run?"Repeat tidy with dry_run=false to mark eligible loose stone/gems in this room only.":"Wait for hauling, then preview tidy again until items=0. Reserved construction items, furniture and personal belongings are excluded. Dumped stone can be reclaimed using df_dump action=unforbid."},null,1));
+      }
+      if(r.invalid_interior?.length) return fail(JSON.stringify({error:"Room interior is unsuitable. Preserve stairs/access routes: relocate this bedroom to a safe dry-floor footprint instead of walling over a shaft. No construction queued.",tiles:r.invalid_interior}));
+      const dx=a.door_x??r.door_x??(r.doors?.length===1?r.doors[0].x:undefined);
+      const dy=a.door_y??r.door_y??(r.doors?.length===1?r.doors[0].y:undefined);
+      const edge=((dy===r.y-1||dy===r.y+r.h)&&dx>=r.x&&dx<r.x+r.w)||((dx===r.x-1||dx===r.x+r.w)&&dy>=r.y&&dy<r.y+r.h);
+      if(!edge) return fail("Entrance is unknown or invalid. Inspect the corridor, then supply door_x,door_y on a non-corner perimeter tile. No construction queued.");
+      if(r.unsafe_designation_count||r.unrevealed_boundary_tiles) return fail("Clear unsafe boundary dig designations and inspect unrevealed boundaries before repair. No construction queued.");
+      const targets=r.missing_walls.filter(p=>p.x!==dx||p.y!==dy).map(p=>({...p,key:"Cw"}));
+      const {value:door}=await lua(`local b=dfhack.buildings.findAtTile(ARGS.x,ARGS.y,ARGS.z); emit({exists=b and b:getType()==df.building_type.Door or false})`,{x:dx,y:dy,z:r.z});
+      const doorDeferred=!door.exists&&(targets.length>0||r.pending_wall_count>0);
+      if(!door.exists&&!doorDeferred) targets.push({x:dx,y:dy,z:r.z,key:"d"});
+      const blocked=[];
+      for(const t of targets){
+        const {value:check}=await luaFile("build_check",t);
+        if(!check?.can_place) blocked.push({tile:t,check});
+      }
+      if(blocked.length) return fail(JSON.stringify({error:"Repair footprint blocked; no construction queued. Inspect these tiles. Do not remove furniture or stairs blindly.",blocked}));
+      if(!a.dry_run&&!r.enclosed){
+        await luaFile("room_plan",{action:"protect",z:r.z,rooms:[{x:r.x,y:r.y,w:r.w,h:r.h,door_x:dx,door_y:dy}]});
+        for(const t of targets) await quickfort("build",[t.key],t.x,t.y,t.z);
+      }
+      return text(JSON.stringify({dry_run:a.dry_run,room:r.id,doorway:{x:dx,y:dy,z:r.z},wall_jobs:targets.filter(t=>t.key==="Cw").length,door_jobs:targets.filter(t=>t.key==="d").length,door_deferred_until_walls_complete:doorDeferred,targets,pending_walls:r.pending_wall_count,enclosed:r.enclosed,
+        next_step:r.enclosed?"Nothing to repair: room is enclosed. Audit furniture/ownership, then preview tidy.":targets.length===0?"Construction is already pending. Wait and inspect suspended jobs; do not repeatedly submit the same repair. Repeat repair after walls finish if a door was deferred.":a.dry_run?"Review entrance/access and targets, then repeat with dry_run=false.":"Construction queued, not finished. df_wait, inspect df_jobs suspended, then repeat repair after walls finish to place a deferred door. Recheck status until enclosed=true. Clear loose boulders with df_dump restricted to the room footprint; never dump construction materials."},null,1));
+    });
 
 tool("df_dig", "Designate a rectangle for digging (or channel/stairs/ramp/chop/gather/smooth/undesignate). x1,y1 to x2,y2 inclusive on level z. levels>1 repeats the same rectangle DOWNWARD (useful for updown_stair shafts). Unrevealed tiles can be designated.",
   {
@@ -116,11 +151,15 @@ tool("df_stockpile", "Create a stockpile rectangle. type is one or more #place l
     return text(await quickfort("place", [`${cell}(${a.w}x${a.h})`], a.x, a.y, a.z));
   });
 
-tool("df_zone", "Create a zone rectangle. type: m meeting area, b bedroom, h dining hall, n pasture, p pit/pond, w water source, f fishing, o office, D dormitory, B barracks, d garbage dump, T tomb, g gather fruit, s sand, c clay. Optional location: tavern, hospital, temple, library, guildhall.",
+tool("df_zone", "Create a zone rectangle. Bedroom zones require dry floor and completed walls/doors; repair with df_room_plan first. type: m meeting area, b bedroom, h dining hall, n pasture, p pit/pond, w water source, f fishing, o office, D dormitory, B barracks, d garbage dump, T tomb, g gather fruit, s sand, c clay. Optional location: tavern, hospital, temple, library, guildhall.",
   { type: z.string().min(1), x: coord, y: coord, z: coord,
     w: z.number().int().min(1), h: z.number().int().min(1),
     name: z.string().optional(), location: z.enum(["tavern", "hospital", "temple", "library", "guildhall"]).optional() },
   async (a) => {
+    if(a.type==="b"){
+      const {value:check}=await luaFile("room_check",{z:a.z,rooms:[{x:a.x,y:a.y,w:a.w,h:a.h}]});
+      if(!check?.ok) return fail(JSON.stringify({...check,guidance:"Bedroom zones require dry floor and completed walls/doors. Use df_room_plan protect, repair, wait and verify before zoning."}));
+    }
     const props = [];
     if (a.name) props.push(`name="${a.name.replace(/"/g, "")}"`);
     if (a.location) props.push(`location=${a.location}`);

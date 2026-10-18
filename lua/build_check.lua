@@ -22,13 +22,16 @@ for z,rows in pairs(ctx.preview.tiles) do for y,row in pairs(rows) do for x,vali
           local b=dfhack.buildings.findAtTile(x,y,z)
           why[#why+1]=b and ('occupied by '..df.building_type[b:getType()]..' #'..b.id) or 'building occupancy'
         end
-        if a.shape==df.tiletype_shape.WALL or a.shape==df.tiletype_shape.EMPTY then why[#why+1]='tile shape '..df.tiletype_shape[a.shape] end
+        why[#why+1]='tile shape '..df.tiletype_shape[a.shape]
         if ARGS.key=='b' and f.outside then why[#why+1]='bed requires inside space' end
       end
       known_tiles[z..','..x..','..y]=true
     end
   else why[#why+1]='off map' end
-  if not valid and #why>0 then tiles[#tiles+1]={x=x,y=y,z=z,reasons=why} end
+  if not valid then
+    if #why==0 then why[1]='native placement rule rejected this tile (for example, doors need an adjacent wall)' end
+    tiles[#tiles+1]={x=x,y=y,z=z,reasons=why}
+  end
 end end end
 for _,it in ipairs(df.global.world.items.other.IN_PLAY) do
   if it.flags.on_ground and not it.flags.removed then

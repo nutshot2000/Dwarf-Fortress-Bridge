@@ -41,6 +41,42 @@ zone phases refuse open rooms. Restore missing walls before assigning private be
 - `df_upkeep` keeps drink, barrels, spare furniture, goblets, soap and fuel topped up; set its targets once per fort.
 - Save with `df_save` before risky moves.
 
+## Repair and tidy a damaged bedroom
+
+1. `df_room_plan action=status detail=true` gives room IDs, full missing-wall lists,
+   pending walls, door completion and unsuitable interior tiles. `enclosed=true`
+   means dry floor plus completed perimeter walls and door, not merely queued jobs.
+2. Inspect the room and corridor with `df_look`. Run
+   `df_room_plan action=repair id="zone-141"` (substitute the actual ID).
+   This is a preview by default. If the entrance was destroyed, supply `door_x`
+   and `door_y` at its original connection to the corridor. Never guess an opening
+   through a neighbouring bedroom, block a corridor, or convert stairs into walls.
+3. Repeat with `dry_run=false` to queue ordinary wall construction. The helper
+   leaves the doorway open, preserves furniture, and skips already pending walls.
+   It refuses unsuitable interiors and blocked footprints before queueing anything.
+4. Wait for dwarves to build. Check `df_jobs action=suspended` after cancellations;
+   resolve the reported obstruction before resuming that specific job. When walls
+   finish, repeat repair to add a deferred door (doors need an adjacent wall).
+   Repeating repair does not duplicate existing wall or door plans.
+5. Recheck status until `enclosed=true`. `df_zone type=b` and the bedroom-wing
+   zone phase require completed enclosure. Furnishing permits only the planned
+   entrance to remain open so it can place the door. Audit furniture and ownership.
+6. `df_room_plan action=tidy id="zone-141"` previews loose boulders/rough gems
+   inside that room. `dry_run=false` marks eligible clutter for hauling to an
+   existing reachable dump. Wait, then preview again until `items=0`; inspect
+   `skipped_items` too. Reservations name their owning jobs/buildings. Do not
+   cancel useful plans just to clear their materials. Use a bounded `df_dump`
+   separately for corridor/doorway clutter. Furniture and personal possessions
+   are excluded. Reclaim dumped stone with `df_dump action=unforbid` as needed.
+
+If a room overlaps a shaft or essential route, relocate it instead of forcing
+repair. Protect a safe replacement footprint, finish its walls/door/furniture,
+record the old zone's owner, remove only the old bedroom zone and unwanted
+furniture with `df_remove`, create the replacement with `df_zone type=b`, then
+restore the owner using `df_rooms assign`. Never remove the stair shaft. Forget
+any obsolete saved plan only after inspecting it; ordinary zone removal does not
+remove saved plans. `df_rooms audit` checks overlap, furniture and ownership.
+
 ## Play fair
 
 Never spawn, teleport or reveal anything (no createitem, dig-now, reveal). Get materials through production, farming and trade.
