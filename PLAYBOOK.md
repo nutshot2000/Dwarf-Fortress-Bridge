@@ -35,6 +35,27 @@ zone phases refuse open rooms. Restore missing walls before assigning private be
 1. `df_status` → `df_problems` → `df_look` around the area you will change.
 2. ONE action.
 3. `df_wait upkeep=true` (dwarves only do designated work while time runs), then verify.
+4. After construction, excavation or repair finishes, pause and call
+   `df_screenshot x=... y=... z=...` for the changed area. Inspect the returned
+   image, then `df_problems` and `df_rooms audit`. Do not declare a layout safe
+   from a successful placement message or enclosure result alone.
+
+`df_screenshot` captures the actual game window on Windows, returns a PNG image
+to the model and saves a local copy. It never advances a paused game or moves
+the mouse. Omit coordinates to capture the current view; provide all three to
+centre a new view. For a wing wider than the image, take overlapping captures
+at both ends. Keep enough surroundings visible to follow the exit to main
+stairs. Look for workers behind new walls, blocked/unfinished doors, severed
+passages, pits, misplaced furniture and loose clutter. Its text includes room
+states and citizen connectivity so image observations can be cross-checked.
+Image pixels are not map coordinates: use `df_look` to identify exact tiles.
+
+For weaker models: take one area at a time, name the visible problem, confirm
+its tiles and affected citizens with text tools, perform one normal repair,
+wait and capture again. If the client/model cannot accept images, use the
+included text checks plus `df_look`, `df_problems`, and `df_rooms audit`; do not
+claim visual inspection. A minimized or blank capture is an error: restore the
+game/windowed mode and retry. Screenshot support is Windows-only for now.
 
 - `df_wait` has a watchdog: it stops early when a hostile appears, real combat involves a citizen or owned tame animal, a citizen dies, a mood starts or a caravan arrives, and says why. Hunting, sparring, and ordinary inebriation do not count as combat. Events on the final poll are checked before the time target; errors also attempt to pause the game.
   React before waiting again: `df_threats` for danger, `df_mood check=true` for moods, `df_trade` for caravans.
@@ -62,7 +83,8 @@ A room can be enclosed while its builder is trapped outside it. Preserve a servi
    resolve the reported obstruction before resuming that specific job. When walls
    finish, repeat repair to add a deferred door (doors need an adjacent wall).
    Repeating repair does not duplicate existing wall or door plans.
-5. Recheck status until `enclosed=true`. `df_zone type=b` and the bedroom-wing
+5. Recheck status until `enclosed=true`, then inspect a `df_screenshot` and
+   citizen access before calling the repair complete. `df_zone type=b` and the bedroom-wing
    zone phase require completed enclosure. Furnishing permits only the planned
    entrance to remain open so it can place the door. Audit furniture and ownership.
 6. `df_room_plan action=tidy id="zone-141"` previews loose boulders/rough gems

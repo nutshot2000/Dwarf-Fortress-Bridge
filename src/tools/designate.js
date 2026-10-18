@@ -138,7 +138,7 @@ tool("df_build", "Place a building, or dry_run=true for a real non-mutating nati
     if (a.name) cell += `{name="${a.name.replace(/"/g, "")}"}`;
     if (a.w || a.h) cell += `(${a.w ?? 1}x${a.h ?? 1})`;
     await cameraTo(a.x, a.y, a.z, `build ${a.key} at ${a.x},${a.y},${a.z}`);
-    return text(await quickfort("build", [cell], a.x, a.y, a.z) + "\nPreflight: " + JSON.stringify(check));
+    return text(await quickfort("build", [cell], a.x, a.y, a.z) + "\nPreflight: " + JSON.stringify(check)+`\nAfter construction finishes: df_screenshot x=${a.x} y=${a.y} z=${a.z}, then df_problems/df_rooms audit. Check workers can leave and passages remain open.`);
   });
 
 tool("df_stockpile", "Create a stockpile rectangle. type is one or more #place letters: a animal, f food, u furniture, n coins, y corpses, r refuse, s stone, w wood, e gems, b bars/blocks, h cloth, l leather, z ammo, S sheets, g finished goods, p weapons, d armor, c custom. e.g. 'fw' = food+wood.",

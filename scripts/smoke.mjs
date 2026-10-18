@@ -6,6 +6,7 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { fileURLToPath } from "node:url";
 import { testWatchdog } from "./test-watchdog.mjs";
 import assert from "node:assert/strict";
+import { testScreenshot } from "./test-screenshot.mjs";
 testWatchdog();
 
 const READ_ONLY = [
@@ -69,6 +70,9 @@ for (const [name] of READ_ONLY) {
 }
 
 if (!offline) {
+  if(process.platform==="win32"&&names.has("df_screenshot")){
+    try {await testScreenshot(client);} catch(e){failures++;console.log(`  ✗ screenshot: ${e.message}`);}
+  }
   for (const [name, args] of READ_ONLY) {
     if (!names.has(name)) continue;
     const t0 = Date.now();

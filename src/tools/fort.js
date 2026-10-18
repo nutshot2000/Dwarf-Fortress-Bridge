@@ -112,7 +112,7 @@ tool("df_rooms", "Zones. action=list shows all zones with owners. action=assign 
       }
       log.push(`zone: ${made} new of ${names.length} bedroom zones (existing kept); assigned ${assigned} to adults without a room`);
     }
-    return text(log.join("\n") + "\nRun df_rooms action=audit afterwards.");
+    return text(log.join("\n") + `\nAfter work finishes, inspect df_screenshot around the wing on z=${Z} (pan both ends), then df_rooms action=audit and df_problems. Check workers outside rooms have an escape route.`);
   });
 
 tool("df_mood", "Strange moods: which dwarf is in a mood, which workshop they claimed, and exactly which items they still need (runs DFHack showmood). check=true instead counts suitable items in the fort for each requirement, says how to get missing ones and gives days left, so impossible moods show up early. Provide the materials quickly or the dwarf goes insane.",

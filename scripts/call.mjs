@@ -11,7 +11,10 @@ if (name === "list") {
   for (const t of (await client.listTools()).tools) console.log(t.name);
 } else {
   const res = await client.callTool({ name, arguments: JSON.parse(raw) }, undefined, { timeout: 120000 });
-  for (const c of res.content) console.log(c.text);
+  for (const c of res.content) {
+    if(c.type==="text") console.log(c.text);
+    else if(c.type==="image") console.log(`[${c.mimeType} image returned; use the saved screenshot path above to view it]`);
+  }
   if (res.isError) process.exitCode = 1;
 }
 await client.close();

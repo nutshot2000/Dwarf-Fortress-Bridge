@@ -23,7 +23,7 @@
 
 **Your AI plays Dwarf Fortress. You grab a drink and watch.**
 
-An MCP server that gives any AI agent (Claude, Codex, OpenCode, Hermes, OpenClaw, Cursor, Gemini...) 54 tools<br>to run a real Dwarf Fortress fortress through DFHack:<br>
+An MCP server that gives any AI agent (Claude, Codex, OpenCode, Hermes, OpenClaw, Cursor, Gemini...) 55 tools<br>to run a real Dwarf Fortress fortress through DFHack:<br>
 digging, building, trade, war and diplomacy, with a camera that follows the action for you.
 
 ![Dwarf Fortress](https://img.shields.io/badge/Dwarf%20Fortress-v53%20Steam-8b5a2b)
@@ -182,7 +182,7 @@ All optional, set in the server's `env`:
 
 | Variable | Default | What it does |
 |---|---|---|
-| `DF_TOOLS` | `full` | `full` = all 54 tools · `core` = 23 essentials for clients with tool limits or smaller models · or a comma-separated list |
+| `DF_TOOLS` | `full` | `full` = all 55 tools · `core` = 24 essentials for clients with tool limits or smaller models · or a comma-separated list |
 | `DF_AGENT_NAME` | `Overseer` | The name on camera captions in the game's announcement log, e.g. `Codex` or `Hermes` |
 | `DF_WAIT_SECONDS` | `50` | Real-time cap for one `df_wait` call; keep it under your client's tool timeout |
 | `DF_DIR`, `DFHACK_DIR` | `D:\SteamLibrary\...` | Where Dwarf Fortress and DFHack live |
@@ -207,13 +207,19 @@ Each tool writes a short Lua chunk and runs it through `dfhack-run`. Digging, bu
 
 A turn looks like this: `df_status` → `df_problems` → one action → `df_wait upkeep=true`, with the camera showing you each step.
 
+## Visual inspection (v1.4.0)
+
+`df_screenshot` returns the actual Dwarf Fortress window as an MCP PNG image, a saved local PNG path, and text enclosure/access checks. Use `{ "x": 103, "y": 92, "z": 169 }` to centre an inspection, or `{}` to capture the current view. Pause first, inspect workers and exits after construction, and pan for large layouts. `max_width` defaults to1600 (640–2560). Images are saved under `%TEMP%/df-bridge/screenshots/`.
+
+Capture uses built-in Windows PowerShell/.NET and PrintWindow on the game client area only; no extra package, mouse movement, foreground switch, or desktop-wide capture. Restore minimized windows; blank captures fail explicitly. Currently Windows-only. Vision-capable MCP clients receive image content; text-only models still receive layout/access results and instructions to use text tools. A screenshot is one view, and the checks are aids rather than a guarantee that every unit can move.
+
 ## Room protection and clearer diagnostics (v1.3.1)
 
 Bedroom wings now register protected walls. Digging and blueprints reject changes through protected room boundaries unless `allow_room_changes=true` explicitly permits remodelling. `df_room_plan` protects custom layouts and audits existing bedrooms; `df_rooms` refuses to furnish or zone open rooms. Existing damaged layouts are reported for repair. `df_room_plan action=repair` previews or queues walls, then doors; `action=tidy` previews or marks eligible loose stone/gems within one room. Both default to previews. Status distinguishes pending jobs from finished enclosure, and the playbook includes repair and relocation steps.
 
 Build previews identify invalid tiles, construction reviews distinguish allocated materials from foreign reservations, and crop/trade helpers prevent common supply mistakes. See [ISSUES-REVIEW.md](ISSUES-REVIEW.md) for reproduced issues, model mistakes, test results, and limits.
 
-## 🧰 The 54 tools
+## 🧰 The 55 tools
 
 | Group | Tools |
 |---|---|
@@ -225,7 +231,7 @@ Build previews identify invalid tiles, construction reviews distinguish allocate
 | ⚔️ Defence | `df_military` `df_schedule` `df_burrow` `df_levers` |
 | 💰 Trade | `df_trade` |
 | ⏳ Time | `df_wait` `df_pause` `df_resume` `df_save` |
-| 🎥 Watch & UI | `df_camera` `df_ui` `df_screen` `df_view` |
+| 🎥 Watch & UI | `df_camera` `df_ui` `df_screen` `df_view` `df_screenshot` |
 | 🧪 Expert | `df_auto` `df_cmd` `df_lua` `df_help` |
 
 <details>

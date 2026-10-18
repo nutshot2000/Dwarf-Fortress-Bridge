@@ -26,7 +26,7 @@ export const SETTINGS = {
 // A small set for clients with tool limits or smaller models: observe, build, produce, wait, defend, watch.
 const CORE_TOOLS = ["df_status", "df_problems", "df_look", "df_threats", "df_alerts", "df_dig", "df_build", "df_zone",
   "df_stockpile", "df_rooms", "df_order", "df_upkeep", "df_mood", "df_military", "df_trade", "df_wait", "df_camera",
-  "df_save", "df_help", "df_designations", "df_jobs", "df_remove", "df_room_plan"];
+  "df_save", "df_help", "df_designations", "df_jobs", "df_remove", "df_room_plan", "df_screenshot"];
 const profile = (process.env.DF_TOOLS || "full").trim();
 const enabled = profile === "full" ? null
   : new Set(profile === "core" ? CORE_TOOLS : profile.split(",").map((t) => t.trim()).filter(Boolean));
