@@ -110,14 +110,19 @@ for _, it in ipairs(df.global.world.items.other.TOOL) do
      and #dfhack.items.getContainedItems(it) == 0 then empty = empty + 1 end
 end
 local pending_containers = 0
+local unvalidated_orders=0
 for _, o in ipairs(df.global.world.manager_orders.all) do
   if o.amount_left > 0 then
+    if not o.status.validated then unvalidated_orders=unvalidated_orders+1 end
     local pot = o.job_type == df.job_type.MakeTool and o.item_subtype >= 0
       and df.itemdef_toolst.find(o.item_subtype)
     if o.job_type == df.job_type.MakeBarrel or (pot and pot.id == 'ITEM_TOOL_LARGE_POT') then
       pending_containers = pending_containers + o.amount_left
     end
   end
+end
+if unvalidated_orders>0 and #dfhack.units.getUnitsByNobleRole('manager')==0 then
+  add('high',('%d work order(s) cannot validate: no active MANAGER. Appoint one with df_noble, or repair the noble index if already assigned.'):format(unvalidated_orders))
 end
 if stills > 0 then
   local warning = container_warning(empty, pending_containers, drink, pop, ARGS.empty_storage_target)

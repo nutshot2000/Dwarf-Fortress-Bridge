@@ -22,11 +22,12 @@ local low = helpers.warning(4, 0, 115, 7)
 check(low.severity == 'low' and low.issue:find('Brewing can still'), 'small reserve must not claim brewing stalled')
 
 local holder = {id = 42, getBuildStage = function() return 0 end,
+  x1=1,x2=1,y1=2,y2=2,z=3,
   getMaxBuildStage = function() return 1 end, getType = function() return df.building_type.Hatch end}
 local job = {id = 17, job_type = df.job_type.ConstructBuilding, flags = {suspend = true}, items = {},
   job_items = {elements = {{quantity = 1}}}, pos = {x = 1,y = 2,z = 3}}
 check(helpers.construction(job, holder).state == 'waiting_for_materials', 'unfunded plans are not interrupted jobs')
-job.items = {1}
+job.items = {{item=df.global.world.items.other.IN_PLAY[0]}}
 check(helpers.construction(job, holder).state == 'review_suspension', 'allocated construction needs review')
 check(job.flags.suspend, 'diagnosis must not automatically resume an intentionally suspended job')
 job.flags.suspend = false
@@ -54,7 +55,7 @@ local function unit(options)
     Hunting = vector(options.hunting or {}), Sparring = vector(options.sparring or {})}}
   return options
 end
-local function heartbeat(actors, since)
+local function heartbeat(actors, since, report_animals)
   local result
   local reports = vector({{id = 10}, {id = 11}, {id = 12}})
   local fake_df = setmetatable({global = {cur_year = 100, cur_year_tick = 120,
@@ -66,7 +67,7 @@ local function heartbeat(actors, since)
     isDanger = function(u) return u.danger or false end, isCitizen = function(u) return u.citizen or false end,
     isTame = function(u) return u.tame or false end, isOwnCiv = function(u) return u.own or false end},
     maps = {getTileFlags = function(p) return {hidden = p.x == 99} end}}, {__index = dfhack})
-  local env = setmetatable({ARGS = {since = since}, df = fake_df, dfhack = fake_dfhack, ipairs = iter,
+  local env = setmetatable({ARGS = {since = since,report_animal_combat=report_animals}, df = fake_df, dfhack = fake_dfhack, ipairs = iter,
     try = helpers.try, need_map = function() return true end, unit_name = function(u) return u.name end,
     citizens = function() return {unit({citizen = true})} end,
     emit = function(value) result = value end}, {__index = _ENV})
@@ -76,6 +77,9 @@ end
 local realFight = heartbeat({unit({citizen = true, combat = {11}})}, 10)
 check(realFight.hostiles == 0 and #realFight.combat == 1, 'non-dangerous attackers must still trigger combat detection')
 check(#heartbeat({unit({tame = true, own = true, combat = {11}})}, 10).combat == 1, 'owned animal combat must be detected')
+local reported=heartbeat({unit({tame=true,own=true,combat={11}})},10,true)
+check(#reported.combat==0 and #reported.animal_combat==1,'report mode must retain animal reports without stopping')
+check(#heartbeat({unit({citizen=true,combat={11}})},10,true).combat==1,'animal report mode must still stop for citizen combat')
 check(#heartbeat({unit({combat = {11}})}, 10).combat == 0, 'unowned wildlife must not trigger fortress combat')
 check(#heartbeat({unit({citizen = true, hidden = true, combat = {11}})}, 10).combat == 0, 'hidden units must not be disclosed')
 check(#heartbeat({unit({citizen = true, combat = {11}, hunting = {11}})}, 10).combat == 0, 'routine hunting must not interrupt')

@@ -37,7 +37,11 @@ tool("df_rooms", "Zones. action=list shows all zones with owners. action=assign 
     phase: z.enum(["dig", "furnish", "zone"]).optional(), z: optCoord, x1: optCoord, y: optCoord, per_side: z.number().int().min(1).max(15).optional(),
     shaft_x: optCoord, priority: z.number().int().min(1).max(7).optional() },
   async (a) => {
-    if (a.action === "audit") return luaTool("audit", a);
+    if (a.action === "audit") {
+      const {value:report}=await luaFile("audit",a);
+      const {value:layout}=await luaFile("room_plan",{action:"status"});
+      return text(JSON.stringify({...report,room_layouts:layout?.rooms},null,1));
+    }
     if (a.action !== "bedroom_wing") return luaTool("rooms", a);
     // A tidy wing of private 3x3 bedrooms either side of a corridor (row y), each with a doorway.
     // Rooms skip the column of a stair shaft at shaft_x. Run phase dig, then furnish, then zone.
@@ -49,7 +53,19 @@ tool("df_rooms", "Zones. action=list shows all zones with owners. action=assign 
       rooms.push(x);
     }
     const xEnd = rooms[rooms.length - 1] + 2;
+    const layout=rooms.flatMap(x=>[{x,y:Y-4,door_x:x+1,door_y:Y-1},{x,y:Y+2,door_x:x+1,door_y:Y+1}]);
+    const {value:protectedPlan}=await luaFile("room_plan",{action:"protect",z:Z,rooms:layout});
+    if (protectedPlan?.error) return fail(protectedPlan.error);
+    if (a.phase === "dig" || !a.phase) {
+      const ids=new Set(layout.map(r=>`${r.x},${r.y},${Z}`));
+      const damaged=(protectedPlan?.rooms??[]).filter(r=>ids.has(r.id)&&r.missing_walls.length);
+      if (damaged.length) return fail(JSON.stringify({error:"Proposed room boundaries are already open. Choose intact rock or construct enclosing walls before mining/furnishing.",rooms:damaged}));
+    }
     const log = [];
+    if (a.phase === "furnish" || a.phase === "zone") {
+      const {value:check}=await luaFile("room_check",{z:Z,rooms:layout});
+      if (!check?.ok) return fail(JSON.stringify(check,null,1));
+    }
     const dig = async (kind, x1, y1, x2, y2) => {
       const out = await quickfort("dig", [`${DIG_KEYS[kind]}(${x2 - x1 + 1}x${y2 - y1 + 1})`], x1, y1, Z, ["-p", String(P)]);
       return out;

@@ -1,7 +1,9 @@
 -- Shared helpers prepended to every bridge call. ARGS is defined above this.
 local json = require('json')
 
+local bridge_emitted = false
 local function emit(v)
+  bridge_emitted = true
   print('\1JSON\1' .. json.encode(v, {pretty = false}) .. '\1END\1')
 end
 
@@ -83,8 +85,33 @@ local function construction_review(j, b)
      or b:getBuildStage() >= b:getMaxBuildStage() then return nil end
   local allocated = #j.items
   local requires_items = #j.job_items.elements > 0
+  local own,materials,ground={}, {}, {}
+  for _,r in ipairs(j.items) do
+    own[r.item.id]=true
+    local x,y,z=dfhack.items.getPosition(r.item)
+    materials[#materials+1]={id=r.item.id,item=dfhack.df2utf(dfhack.items.getReadableDescription(r.item)),x=x,y=y,z=z}
+  end
+  for _,it in ipairs(df.global.world.items.other.IN_PLAY) do
+    if it.flags.on_ground and not it.flags.removed and not own[it.id] then
+      local x,y,z=dfhack.items.getPosition(it)
+      if z==b.z and x>=b.x1 and x<=b.x2 and y>=b.y1 and y<=b.y2 then
+        local owners={}
+        for _,r in ipairs(it.specific_refs) do
+          if r.type==df.specific_ref_type.JOB and r.data.job then
+            local holder=dfhack.job.getHolder(r.data.job)
+            owners[#owners+1]={job_id=r.data.job.id,building_id=holder and holder.id or nil}
+          end
+        end
+        ground[#ground+1]={id=it.id,item=dfhack.df2utf(dfhack.items.getReadableDescription(it)),x=x,y=y,z=z,
+          reserved=it.flags.in_job,forbidden=it.flags.forbid,reserved_by=owners}
+      end
+    end
+  end
   return {id = j.id, building = b.id, building_type = df.building_type[b:getType()],
     x = j.pos.x, y = j.pos.y, z = j.pos.z, allocated_items = allocated,
+    materials=materials,other_ground_items=ground,
+    next_step=#ground>0 and 'Other ground items may obstruct this site. Reserved items cannot be dumped until the owning job releases them. Inspect reserved_by; do not dump this job\'s own materials or repeatedly resume blindly.'
+      or 'No other ground items found. Check access, recent cancellations and suspendmanager; this is not proof that the site is safe.',
     state = (allocated > 0 or not requires_items) and 'review_suspension' or 'waiting_for_materials'}
 end
 local function suspended_construction()

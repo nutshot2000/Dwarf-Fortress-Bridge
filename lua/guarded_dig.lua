@@ -1,0 +1,37 @@
+if not need_map() then return end
+local api=reqscript('internal/quickfort/api')
+local command=reqscript('internal/quickfort/command')
+local room_env=setmetatable({ARGS={internal=true},emit=function() end,need_map=need_map},{__index=_ENV})
+local rooms=assert(loadfile(ARGS.room_plan_path,'t',room_env))()
+local data,hazard={},{}
+for iy,row in ipairs(ARGS.cells) do
+  data[iy-1]={} hazard[iy-1]={}
+  for ix,text in ipairs(row) do
+    if text~='' then
+      data[iy-1][ix-1]=text
+      -- Erasing, smoothing and engraving do not breach walls.
+      if not text:match('^[xse]%s*%(') and not ({x=true,s=true,e=true})[text] then hazard[iy-1][ix-1]=text end
+    end
+  end
+end
+local preview=api.init_api_ctx({mode='dig',dry_run=true,priority=ARGS.priority or 4},{x=ARGS.x,y=ARGS.y,z=ARGS.z})
+preview.preview={tiles={},bounds={},total_tiles=0,invalid_tiles=0}
+for dz=0,(ARGS.levels or 1)-1 do
+  local shifted=api.normalize_data({[0]=hazard},{x=ARGS.x,y=ARGS.y,z=ARGS.z-dz})
+  for z,grid in pairs(shifted) do command.do_command_raw('dig',z,grid,preview) end
+end
+local conflicts={}
+for z,rows in pairs(preview.preview.tiles) do for y,row in pairs(rows) do for x,valid in pairs(row) do
+  local protected=rooms.protected[z..','..x..','..y]
+  if valid and protected then conflicts[#conflicts+1]=protected end
+end end end
+if #conflicts>0 and not ARGS.allow_room_changes then
+  emit({error='Dig order would breach protected room walls. Nothing was designated. Narrow the excavation to the interiors/corridor; use allow_room_changes=true only for intentional remodelling.',conflicts=conflicts}) return
+end
+local ctx=api.init_api_ctx({mode='dig',dry_run=ARGS.dry_run,priority=ARGS.priority or 4},{x=ARGS.x,y=ARGS.y,z=ARGS.z})
+for dz=0,(ARGS.levels or 1)-1 do
+  local shifted=api.normalize_data({[0]=data},{x=ARGS.x,y=ARGS.y,z=ARGS.z-dz})
+  for z,grid in pairs(shifted) do command.do_command_raw('dig',z,grid,ctx) end
+end
+emit({dry_run=ARGS.dry_run or false,stats=api.clean_stats(ctx.stats),protected_walls_preserved=true,
+  intentional_room_changes=ARGS.allow_room_changes and #conflicts or 0})

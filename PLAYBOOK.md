@@ -16,6 +16,22 @@ This file is sent to the model as the server's instructions; clients that drop t
 
 ## The turn loop
 
+If an action fails, do not repeat it unchanged. `df_help topic=triage` gives short
+recovery recipes. `df_build dry_run=true` names rejected tiles and item reservations;
+`df_designations` verifies actual tree marks and dig orders on an elevation.
+The files used for concurrent blueprints are unique to each call.
+
+Private rooms must have a layout before excavation. `df_rooms bedroom_wing` saves
+its interiors, enclosing walls and doorways automatically. For manual layouts,
+call `df_room_plan action=protect z=... rooms=[{x,y,w,h,door_x,door_y}]` first.
+Existing bedroom zones are also protected automatically. Destructive `df_dig`
+and dig blueprints that cross these boundaries (or alter existing bedroom floors)
+are rejected atomically before designation; interior excavation is allowed.
+`allow_room_changes=true` is only for deliberate remodelling. Raw Lua/console/manual
+game actions bypass these bridge guards. Never use them to work around a layout error.
+`df_room_plan` and `df_rooms audit` name damaged rooms and missing walls. Furnish and
+zone phases refuse open rooms. Restore missing walls before assigning private bedrooms.
+
 1. `df_status` → `df_problems` → `df_look` around the area you will change.
 2. ONE action.
 3. `df_wait upkeep=true` (dwarves only do designated work while time runs), then verify.
@@ -49,6 +65,16 @@ If something seems impossible without a cheat, tell the player instead.
 - `df_animals` (pastures, slaughter, training), `df_standing` (standing orders), `df_jobs` (all tasks).
 - `df_location` staffs hospitals, taverns, temples and libraries. `df_petition` vets petitioners for curses before approving.
 - `df_jobs action=suspended` separates construction needing review from plans waiting for items. After interruptions, review the cause and resume specific job IDs only when safe; jobs are never automatically restarted. `df_problems` and `df_wait` flag these candidates.
+- Suspended construction lists its own `materials` separately from `other_ground_items`.
+  The latter can be reserved by a different unfinished building. Dumping skips those
+  reservations. If that other plan is unwanted, preview `df_remove building_id=...`,
+  then remove it with `dry_run=false`, dump the released clutter, wait for hauling,
+  verify the footprint is clear, and resume the original construction. Never dump
+  the original job's own materials. Unchanged warnings are suppressed within one
+  server session.
+- For distant animal fights, `df_wait animal_fights=report` reports owned-animal
+  combat while retaining citizen-combat and new-hostile stops. Default `stop` remains
+  safest. This is narrower than disabling the watchdog with `watch=false`.
 
 ## Defence
 
@@ -61,6 +87,13 @@ If something seems impossible without a cheat, tell the player instead.
 
 - `df_trade`: send goods to the depot, call the broker, open the trade screen, select, propose, close.
   `request_anyone` when the broker is busy. Merchants want a clear profit and refuse loads over their weight.
+- Preview `df_trade action=goods` or `send dry_run=true`. Nonempty containers are
+  protected unless `allow_contents=true` is explicitly set after inspecting contents.
+  `value_with_contents` includes contents; bare `value` does not. No fixed price ratio
+  guarantees acceptance. Read the native profit/weight footer and merchant reply.
+- Crop assignment is rejected until the farm is built. `df_crop` lists light/dark
+  incompatibilities. A roof does not turn Light surface soil into Dark underground
+  soil; use an actual dark plot for plump helmets.
 - Diplomats meet nobles in an office of decent quality; without one the meeting (and depot trading) stalls. `df_justice` for crimes.
 
 ## The camera (the player is watching)

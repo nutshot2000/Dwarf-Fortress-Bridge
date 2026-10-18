@@ -41,6 +41,8 @@ tool("df_order", "Queue a manager work order (needs a MANAGER; df_noble repair i
 
 // Build and queue a manager order (shared by df_order and df_upkeep).
 async function queueOrder(a) {
+  const { value: manager } = await lua("emit(#dfhack.units.getUnitsByNobleRole('manager') > 0)");
+  if (!manager) throw new Error("No active MANAGER. Appoint one with df_noble action=appoint position=MANAGER unit_id=...; if already appointed, run df_noble action=repair. No order was queued.");
   const job = a.reaction ? "CustomReaction" : a.job;
   const order = { job, amount_total: a.amount ?? 1 };
   if (a.reaction) order.reaction = a.reaction.toUpperCase();
@@ -104,9 +106,9 @@ export async function runUpkeep(action = "check", targets) {
       const amount = Math.ceil(short / r.per);
       await queueOrder({ ...r.order, amount });
       for (const c of r.chain ?? []) await queueOrder({ ...c, amount });
-      note = ` -> queued ${amount}`;
+      note = ` -> added ${amount} production job(s), expected ${amount * r.per} item(s)`;
     } else if (short > 0) note = " (short)";
-    lines.push(`${r.key.padEnd(14)} ${String(have).padStart(5)} / ${String(want).padEnd(5)} queued ${queued}${note}`);
+    lines.push(`${r.key.padEnd(14)} ${String(have).padStart(5)} / ${String(want).padEnd(5)} expected from existing orders: ${queued} item(s)${note}`);
   }
   return `Upkeep ${action} (stock / target):\n` + lines.join("\n");
 }

@@ -23,7 +23,7 @@
 
 **Your AI plays Dwarf Fortress. You grab a drink and watch.**
 
-An MCP server that gives any AI agent (Claude, Codex, OpenCode, Hermes, OpenClaw, Cursor, Gemini...) 50 tools<br>to run a real Dwarf Fortress fortress through DFHack:<br>
+An MCP server that gives any AI agent (Claude, Codex, OpenCode, Hermes, OpenClaw, Cursor, Gemini...) 54 tools<br>to run a real Dwarf Fortress fortress through DFHack:<br>
 digging, building, trade, war and diplomacy, with a camera that follows the action for you.
 
 ![Dwarf Fortress](https://img.shields.io/badge/Dwarf%20Fortress-v53%20Steam-8b5a2b)
@@ -182,7 +182,7 @@ All optional, set in the server's `env`:
 
 | Variable | Default | What it does |
 |---|---|---|
-| `DF_TOOLS` | `full` | `full` = all 50 tools · `core` = 19 essentials for clients with tool limits or smaller models · or a comma-separated list |
+| `DF_TOOLS` | `full` | `full` = all 54 tools · `core` = 23 essentials for clients with tool limits or smaller models · or a comma-separated list |
 | `DF_AGENT_NAME` | `Overseer` | The name on camera captions in the game's announcement log, e.g. `Codex` or `Hermes` |
 | `DF_WAIT_SECONDS` | `50` | Real-time cap for one `df_wait` call; keep it under your client's tool timeout |
 | `DF_DIR`, `DFHACK_DIR` | `D:\SteamLibrary\...` | Where Dwarf Fortress and DFHack live |
@@ -207,13 +207,19 @@ Each tool writes a short Lua chunk and runs it through `dfhack-run`. Digging, bu
 
 A turn looks like this: `df_status` → `df_problems` → one action → `df_wait upkeep=true`, with the camera showing you each step.
 
-## 🧰 The 50 tools
+## Room protection and clearer diagnostics (v1.3.0)
+
+Bedroom wings now register protected walls. Digging and blueprints reject changes through protected room boundaries unless `allow_room_changes=true` explicitly permits remodelling. `df_room_plan` protects custom layouts and audits existing bedrooms; `df_rooms` refuses to furnish or zone open rooms. Existing damaged layouts are reported for repair.
+
+Build previews identify invalid tiles, construction reviews distinguish allocated materials from foreign reservations, and crop/trade helpers prevent common supply mistakes. See [ISSUES-REVIEW.md](ISSUES-REVIEW.md) for reproduced issues, model mistakes, test results, and limits.
+
+## 🧰 The 54 tools
 
 | Group | Tools |
 |---|---|
 | 👀 Observe | `df_status` `df_problems` `df_units` `df_unit` `df_announcements` `df_look` `df_alerts` |
-| 🧐 Diagnose | `df_threats` `df_items` `df_squad_status` `df_mood` `df_stocks` |
-| 🏗️ Build | `df_dig` `df_build` `df_stockpile` `df_zone` `df_blueprint` `df_rooms` |
+| 🧐 Diagnose | `df_threats` `df_items` `df_squad_status` `df_mood` `df_stocks` `df_designations` |
+| 🏗️ Build | `df_dig` `df_build` `df_stockpile` `df_zone` `df_blueprint` `df_rooms` `df_room_plan` `df_remove` |
 | ⚒️ Produce | `df_order` `df_upkeep` `df_workshop` `df_jobs` `df_crop` `df_kitchen` `df_pile` `df_dump` |
 | 👥 People | `df_labor` `df_noble` `df_location` `df_standing` `df_animals` `df_petition` `df_justice` |
 | ⚔️ Defence | `df_military` `df_schedule` `df_burrow` `df_levers` |

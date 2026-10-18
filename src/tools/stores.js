@@ -1,7 +1,7 @@
 // Tools: stores.
 import { tool, luaTool, text, fail, optCoord, z, command } from "../core.js";
 
-tool("df_crop", "Farming. action=list shows farm plots with crops per season and seeds in stock (with underground/surface and growing seasons). action=set makes plot_id grow plant (id or name, e.g. 'plump helmet', or 'fallow') in the given seasons (default all four).",
+tool("df_crop", "Farming. list reports built state, light/dark tiles, incompatible crops and seeds. set requires a completed plot and compatible light/dark conditions; unbuilt plots reset on completion, and roofing surface soil does NOT make it dark. Set plot_id, plant name/id or fallow, seasons (default all).",
   { action: z.enum(["list", "set"]).default("list"), plot_id: z.number().int().optional(), plant: z.string().optional(),
     seasons: z.array(z.enum(["spring", "summer", "autumn", "winter"])).optional() },
   (a) => luaTool("crop", a));
@@ -24,7 +24,7 @@ tool("df_standing", "Standing orders (Labor > Standing orders). No args lists al
   { name: z.string().optional(), value: z.union([z.number().int(), z.boolean()]).optional() },
   (a) => luaTool("standing", a));
 
-tool("df_jobs", "Every job in the fort (the Tasks screen). list: summary counts plus jobs (filter by name substring, limit). suspended: separate construction with allocated materials needing review from plans waiting for materials; never resumes automatically. After resolving an interruption, resume the specific job_id. cancel / suspend / resume / do_now act on job_id.",
+tool("df_jobs", "Every job in the fort. list: summary and jobs (filter, limit). suspended: separate missing-material plans from interrupted construction, listing its own materials plus OTHER ground items and their reserving job/building IDs. Reserved blockers cannot be dumped until their owning job releases them; do not dump a construction's own materials or blindly resume. After resolving interruptions, resume the specific job_id. cancel/suspend/resume/do_now act on job_id.",
   { action: z.enum(["list", "suspended", "cancel", "suspend", "resume", "do_now"]).default("list"),
     job_id: z.number().int().optional(), filter: z.string().optional(), limit: z.number().int().min(1).max(200).optional() },
   (a) => luaTool("jobs", a));

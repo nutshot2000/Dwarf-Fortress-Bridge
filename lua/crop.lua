@@ -15,13 +15,28 @@ end
 
 local function plot_info(b)
   local crops = {}
+  local light,dark=0,0
+  for x=b.x1,b.x2 do for y=b.y1,b.y2 do
+    if dfhack.buildings.containsTile(b,x,y) then
+      local f=dfhack.maps.getTileFlags(x,y,b.z)
+      if f and not f.hidden then if f.light then light=light+1 else dark=dark+1 end end
+    end
+  end end
+  local incompatible={}
   for s = 0, 3 do
     local pi = b.plant_id[s]
     crops[SEASONS[s + 1]] = pi >= 0 and plants[pi] and plants[pi].name or 'fallow'
+    if pi>=0 and plants[pi] then
+      local needs_dark=plants[pi].flags.BIOME_SUBTERRANEAN_WATER
+      if needs_dark and light>0 or not needs_dark and dark>0 then
+        incompatible[#incompatible+1]={season=SEASONS[s+1],crop=plants[pi].name,reason='Light/dark mismatch; a selected crop is not proof that it can grow here.'}
+      end
+    end
   end
   local underground = try(function() return dfhack.maps.getTileFlags(b.x1, b.y1, b.z).subterranean end, false)
   return {id = b.id, x = b.x1, y = b.y1, z = b.z, w = b.x2 - b.x1 + 1, h = b.y2 - b.y1 + 1,
-    underground = underground, built = b:getBuildStage() >= b:getMaxBuildStage(), crops = crops}
+    underground = underground, built = b:getBuildStage() >= b:getMaxBuildStage(), crops = crops,
+    light_tiles=light,dark_tiles=dark,incompatible_crops=incompatible}
 end
 
 if (ARGS.action or 'list') == 'list' then
@@ -47,6 +62,9 @@ end
 -- set
 local b = df.building.find(ARGS.plot_id or -1)
 if not b or not df.building_farmplotst:is_instance(b) then emit({error = 'No farm plot ' .. tostring(ARGS.plot_id)}) return end
+if b:getBuildStage()<b:getMaxBuildStage() then
+  emit({error='Farm plot is not built. Wait for construction, then set crops: the game resets planned plots to fallow on completion.',plot=plot_info(b)}) return
+end
 local want = (ARGS.plant or ''):upper()
 local pid = -1
 if want ~= '' and want ~= 'FALLOW' then
@@ -61,6 +79,17 @@ if want ~= '' and want ~= 'FALLOW' then
   if pid < 0 then emit({error = 'No plant matching ' .. want}) return end
 end
 local seasons = ARGS.seasons or SEASONS
+if pid>=0 then
+  local needs_dark=plants[pid].flags.BIOME_SUBTERRANEAN_WATER
+  local bad=0
+  for x=b.x1,b.x2 do for y=b.y1,b.y2 do
+    if dfhack.buildings.containsTile(b,x,y) then
+      local f=dfhack.maps.getTileFlags(x,y,b.z)
+      if f and (needs_dark and f.light or not needs_dark and not f.light) then bad=bad+1 end
+    end
+  end end
+  if bad>0 then emit({error=('Crop incompatible with %d plot tile(s). Underground crops need dark tiles. Roofing a surface plot does not remove its Light attribute. Use a genuinely dark underground plot.'):format(bad),plot=plot_info(b)}) return end
+end
 for _, s in ipairs(seasons) do
   for i, name in ipairs(SEASONS) do
     if name == s:lower() then b.plant_id[i - 1] = pid end

@@ -19,16 +19,17 @@ tool("df_cmd", "Run any DFHack console command and return its output (e.g. 'pros
   { command: z.string().min(1), args: z.array(z.string()).optional() },
   async (a) => text((await command(a.command, a.args ?? [])).trim() || "(no output)"));
 
-tool("df_lua", "Run raw DFHack Lua inside the game. Helpers available: emit(value) returns JSON, try(fn, default), unit_name(u), unit_job(u), citizens(), date_info(), pos_of(p). ARGS holds the args object.",
+tool("df_lua", "Run raw DFHack Lua inside the game. Use emit(value) or return value for JSON results; print produces text. Helpers: try(fn, default), unit_name(u), unit_job(u), citizens(), date_info(), pos_of(p). ARGS holds the args object.",
   { code: z.string().min(1), args: z.record(z.string(), z.any()).optional() },
   async (a) => {
     const { value, log } = await lua(a.code, a.args ?? {});
     return text((value !== null ? json(value) : "") + (log ? `\n${log}` : "") || "(no output)");
   });
 
-tool("df_help", "Help. topic=keys (default): quickfort build keys, dig kinds and an early-fort checklist. topic=playbook: the full overseer playbook (how to run the fort with these tools; read it first if your client did not show the server instructions). topic=settings: tool profile and environment options.",
-  { topic: z.enum(["keys", "playbook", "settings"]).default("keys") },
+tool("df_help", "Help. topic=keys (default): quickfort build keys, dig kinds and an early-fort checklist. topic=build: building keys. topic=triage: common failures and recovery helpers. topic=playbook: the full overseer playbook (how to run the fort with these tools; read it first if your client did not show the server instructions). topic=settings: tool profile and environment options.",
+  { topic: z.enum(["keys", "build", "triage", "playbook", "settings"]).default("keys") },
   async (a) => {
+    if (a.topic === "triage") return text(TRIAGE);
     if (a.topic === "playbook") return text(INSTRUCTIONS);
     if (a.topic === "settings") return text([
       `Bridge version: ${SETTINGS.version}`,
@@ -56,6 +57,18 @@ mason wm, still wl, kitchen wz, farmer ww 5) underground farm plots on soil, the
 6) beds: ConstructBed orders, then bedrooms (df_rooms bedroom_wing) 7) dining hall: tables+chairs + zone h 8) meeting area zone
 9) drink > 5 per dwarf: df_order reaction=BREW_DRINK_FROM_PLANT, or let df_upkeep keep it topped up
 10) trade depot D, basic defence (door + hatch, or a drawbridge g), a squad (df_military), then df_wait upkeep=true.`;
+
+const TRIAGE = `WHEN WORK STALLS:
+1. Do not repeat an unchanged failing action. Read df_problems, then inspect the failed result.
+2. Building rejected: df_build with the same args and dry_run=true. Read invalid_tiles and ground_items. wu=butcher; wb=bowyer. df_help topic=build lists keys.
+3. Suspended construction: df_jobs action=suspended. materials are THIS job's materials; other_ground_items may obstruct. reserved_by identifies OTHER jobs/buildings. df_dump deliberately skips reservations. For an unwanted unbuilt owning plan, df_remove building_id=... previews; dry_run=false removes it. Then dump released clutter, wait for real hauling, verify clear, resume the target job. Do not cancel finished structures or dump the target's materials.
+4. No wood: df_designations z=<ground elevation> kind=chop. Actual marked tree bases count; canopy clicks can do nothing. Fell trees at their base. Check accessibility and woodcutter labor.
+5. Farm: wait until built, then df_crop set. Underground crops need DARK soil; roofs do not convert Light surface soil. Crop lists identify incompatible assignments. Selected crop does not prove growth.
+6. Orders: df_noble appoint MANAGER, or repair if already assigned. Check workshop and ingredients. Upkeep reports expected ITEM output separately from newly added production JOBS.
+7. Trade: goods previews contents; send dry_run=true first. Full containers are protected unless allow_contents=true. Value totals include contents. Open screen lists loaded goods, not every haul request. Read native profit/weight and merchant response; never assume a guaranteed offer ratio.
+8. Repeated animal fights: animal_fights=report on df_wait keeps animal reports but still stops for citizen combat/new hostiles. Default stop is safer. DF_WAIT_SECONDS configures the real-time cap.
+9. Bedrooms: use df_rooms bedroom_wing for automatic persistent wall protection, or df_room_plan protect BEFORE manual excavation. Destructive dig/blueprint orders cannot cross protected boundaries by default. Finish excavation and walls; furnish, then phase=zone. Both refuse open pits. df_room_plan status names missing walls. allow_room_changes=true is only for deliberate remodelling.
+10. Raw Lua: emit(value) or return value returns JSON; print writes text. Item searches match material descriptions: type=BOULDER finds raw stone, ROUGH finds rough gems.`;
 
 // ---------- df_ui: one place that knows the v50 panels ----------
 // Hotkeys that open each info panel (these screens only populate their lists when opened this way).

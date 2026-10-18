@@ -41,17 +41,21 @@ local function in_dump(x, y, z)
   end
 end
 
-local changed, skipped, by_z = 0, 0, {}
+local changed, skipped, by_z, excluded = 0, 0, {}, {}
+local excluded_counts={}
 for _, t in ipairs(types) do
   for _, it in ipairs(try(function() return df.global.world.items.other[t] end, {})) do
     local f = it.flags
-    if f.on_ground and not f.removed and not f.in_job and not f.forbid then
+    if f.on_ground and not f.removed then
       local x, y, z = dfhack.items.getPosition(it)
       if z and z >= z1 and z <= z2 and in_box(x, y) then
         local b = dfhack.buildings.findAtTile(x, y, z)
         local stored = b and df.building_stockpilest:is_instance(b)
-        if stored or in_dump(x, y, z) then
+        local reason=f.in_job and 'reserved_by_job' or f.forbid and 'forbidden' or stored and 'stockpile' or in_dump(x,y,z) and 'dump_zone'
+        if reason then
           skipped = skipped + 1
+          excluded_counts[reason]=(excluded_counts[reason] or 0)+1
+          if #excluded<20 then excluded[#excluded+1]={id=it.id,item=dfhack.df2utf(dfhack.items.getReadableDescription(it)),x=x,y=y,z=z,reason=reason} end
         elseif action == 'mark' and not f.dump then
           f.dump = true changed = changed + 1
           by_z[tostring(z)] = (by_z[tostring(z)] or 0) + 1
@@ -67,7 +71,8 @@ for _, t in ipairs(types) do
   end
 end
 
-local out = {action = action, items = changed, by_z = by_z, skipped_stored = skipped, dump_zones = dumps}
+local out = {action = action, items = changed, by_z = by_z, skipped=skipped, skipped_stored=(excluded_counts.stockpile or 0)+(excluded_counts.dump_zone or 0),skipped_reasons=excluded_counts, skipped_items=excluded, dump_zones = dumps,
+  guidance='Reserved items are deliberately skipped. df_jobs action=suspended identifies owning jobs and separates construction materials from other ground items. Use types=["ROUGH"] for rough gems; the default is BOULDER only.'}
 if action == 'mark' and #dumps == 0 then
   out.warning = 'No garbage dump zone: make one (df_zone type d) or the marked items stay put.'
 elseif action == 'mark' then

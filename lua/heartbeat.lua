@@ -3,6 +3,7 @@
 if not need_map() then return end
 local r = df.global.world.status.reports
 local hostiles, names, hostile_ids, combat = 0, {}, {}, {}
+local animal_combat={}
 for _, u in ipairs(df.global.world.units.active) do
   local flags = try(function() return dfhack.maps.getTileFlags(u.pos) end)
   if flags and not flags.hidden then
@@ -30,7 +31,8 @@ for _, u in ipairs(df.global.world.units.active) do
         if id <= ARGS.since then break end
         local rep = not ignored[id] and df.report.find(id)
         if rep then
-          combat[#combat + 1] = {unit_id = u.id, name = unit_name(u), report_id = id,
+          local list=ARGS.report_animal_combat and not dfhack.units.isCitizen(u) and animal_combat or combat
+          list[#list + 1] = {unit_id = u.id, name = unit_name(u), report_id = id,
             text = dfhack.df2utf(rep.text)}
           break
         end
@@ -44,5 +46,5 @@ for _, u in ipairs(citizens()) do
 end
 emit({abs = df.global.cur_year * 403200 + df.global.cur_year_tick, paused = df.global.pause_state,
   pop = #citizens(), last = #r > 0 and r[#r - 1].id or -1,
-  hostiles = hostiles, hostile_names = names, hostile_ids = hostile_ids, combat = combat,
+  hostiles = hostiles, hostile_names = names, hostile_ids = hostile_ids, combat = combat,animal_combat=animal_combat,
   moods = moods, caravans = #df.global.plotinfo.caravans})

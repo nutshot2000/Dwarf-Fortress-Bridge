@@ -1,12 +1,14 @@
 // Tools: trade.
 import { tool, luaTool, text, fail, z, lua, luaFile } from "../core.js";
 
-tool("df_trade", "Trading. status: caravans on the map, depots, broker, whether the trade screen is open. send: mark goods to haul to the depot by search text (e.g. 'crafts', 'mug', 'leather') or item_ids, up to limit. With the in-game trade screen open: screen lists merchant and fort goods with values and indices; select / deselect toggle indices on side merchant|fort and report selected totals. request_broker: call the broker to the depot. request_anyone: let any dwarf trade (use when the broker is busy, e.g. stuck in a diplomat meeting). open: open the trade screen once the broker is there. propose: press Trade (and confirm), returning the merchant reply and Value/Profit/Weight footer. close: leave the trade screen (Esc does not; time stays frozen while it is open). Merchants want a clear profit and refuse loads over their carrying weight.",
-  { action: z.enum(["status", "send", "request_broker", "request_anyone", "open", "screen", "select", "deselect", "propose", "close"]).default("status"),
+tool("df_trade", "Trading. goods previews tradeable goods and contents; send marks search/item_ids for hauling (dry_run=true previews). Nonempty containers are protected unless allow_contents=true, preventing accidental sale of booze/seeds. value_with_contents includes contents. status shows caravans/depot/broker. request_broker/request_anyone calls a trader. open then screen shows loaded merchant/fort goods and indices; use show_contained=true for individual contents. select/deselect side=merchant|fort, propose returns the merchant reply and native Value/Profit/Weight footer. No fixed offer ratio guarantees acceptance. close exits the frozen trade screen.",
+  { action: z.enum(["status", "goods", "send", "request_broker", "request_anyone", "open", "screen", "select", "deselect", "propose", "close"]).default("status"),
     search: z.string().optional(), item_ids: z.array(z.number().int()).optional(), limit: z.number().int().optional(),
     depot_id: z.number().int().optional(), side: z.enum(["merchant", "fort"]).optional(),
-    indices: z.array(z.number().int()).optional(), show_contained: z.boolean().optional() },
+    indices: z.array(z.number().int()).optional(), show_contained: z.boolean().optional(),
+    dry_run: z.boolean().default(false), allow_contents: z.boolean().default(false) },
   async (a) => {
+    if (a.dry_run && !["goods","send","status","screen"].includes(a.action)) return fail("dry_run is supported for goods/send only. No trade action was performed.");
     // the screen's own verdict: merchant line plus the Value / Trader Profit / Weight footer
     const verdict = async () => {
       const top = (await luaFile("screen", { action: "read", y1: 4, y2: 12 })).value?.lines ?? [];

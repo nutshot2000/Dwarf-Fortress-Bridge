@@ -5,8 +5,8 @@ import { waitDecision } from "../watchdog.js";
 import { tool, luaTool, text, fail, z, lua, luaFile, SETTINGS } from "../core.js";
 
 // One heartbeat per poll: the clock plus the watchdog counters (visible hostiles, active moods, caravans).
-async function tick(since) {
-  const { value } = await luaFile("heartbeat", since === undefined ? {} : { since });
+async function tick(since, animalFights = "stop") {
+  const { value } = await luaFile("heartbeat", { since, report_animal_combat: animalFights === "report" });
   if (value?.error) throw new Error(value.error);
   return value;
 }
@@ -21,6 +21,7 @@ async function threatResponse(burrow) {
   return done;
 }
 const setPause = (p) => lua(`df.global.pause_state = ${p ? "true" : "false"} emit(true)`);
+let lastConstructionWarning = "";
 // Announcement popups ("X has bestowed the name..." etc.) freeze the clock until clicked away.
 // Esc/Enter don't close them; clicking the on-screen Okay button does.
 async function dismissPopup() {
@@ -35,23 +36,25 @@ async function dismissPopup() {
   return { n, text: txt, after: await count() };
 }
 
-tool("df_wait", "Unpause and let the game run for a number of in-game days (1 day = 1200 ticks), then pause again and report new announcements. Stops early if the game pauses itself, and (watch, default on) when a hostile becomes visible, real combat involves a citizen or owned tame animal (excluding hunting/sparring), a citizen dies or leaves, a strange mood starts or a caravan arrives. on_threat=alert also turns on the civilian alert (burrow, default Inside) and puts squads on Ready when a hostile or fortress combat is detected. upkeep=true tops up stocks (df_upkeep apply) afterwards. The camera director (df_camera) moves the player's view to the action while time runs. Announcement popups are clicked away. Capped at DF_WAIT_SECONDS (default 50) real seconds per call; call again to continue.",
+tool("df_wait", "Unpause and let the game run for a number of in-game days (1 day = 1200 ticks), then pause again and report new announcements. Stops early if the game pauses itself, and (watch, default on) when a hostile becomes visible, real combat involves a citizen or owned tame animal (excluding hunting/sparring), a citizen dies or leaves, a strange mood starts or a caravan arrives. on_threat=alert also turns on the civilian alert (burrow, default Inside) and puts squads on Ready when a hostile or fortress combat is detected. animal_fights=report reports owned-animal fights without stopping for them; citizen combat and new hostiles still stop the wait. upkeep=true tops up stocks (df_upkeep apply) afterwards. The camera director (df_camera) moves the player's view to the action while time runs. Announcement popups are clicked away. Capped at DF_WAIT_SECONDS (default 50) real seconds per call; call again to continue.",
   { days: z.number().min(0.1).max(28).default(1), watch: z.boolean().default(true),
+    animal_fights: z.enum(["stop", "report"]).default("stop"),
     on_threat: z.enum(["stop", "alert"]).default("stop"), burrow: z.string().default("Inside"),
     upkeep: z.boolean().default(false) },
   async (a) => {
-    const start = await tick();
+    const start = await tick(undefined,a.animal_fights);
     if (start.abs === undefined) return fail("No game state");
     const target = start.abs + Math.round(a.days * 1200);
     await setPause(false);
     const t0 = Date.now();
     let now = start, reason = "done", lastAbs = start.abs, lastMove = Date.now();
-    const popups = [];
+    const popups = [], animalReports = new Map();
     directorReset(start.last);
     try {
       while (true) {
         await new Promise((r) => setTimeout(r, 700));
-        now = await tick(now.last);
+        now = await tick(now.last,a.animal_fights);
+        for (const e of now.animal_combat ?? []) animalReports.set(e.report_id,e);
         try { await directorStep(); } catch { /* the camera must never break a wait */ }
         const event = waitDecision(start, now, target, a.watch !== false);
         if (a.watch !== false) {
@@ -108,6 +111,7 @@ tool("df_wait", "Unpause and let the game run for a number of in-game days (1 da
     const rest = all.filter((m) => !imp.includes(m) && !COMBAT.test(m.text));
     const sparring = all.length - imp.length - rest.length;
     let out = `Ran ${ran.toFixed(2)} days in ${((Date.now() - t0) / 1000).toFixed(0)}s: ${reason}. Paused.\n`;
+    if (animalReports.size) out += `Animal combat (${a.animal_fights} mode; citizen combat and new hostiles still stop waits):\n${[...animalReports.values()].slice(-3).map(e=>`${e.name}: ${e.text}`).join("\n")}\n`;
     if (start.hostiles > 0) out += `(${start.hostiles} hostile(s) were already visible when the wait began: ${(start.hostile_names ?? []).join("; ")})\n`;
     // Migrant waves arrive as a big popup, not a regular report, so also compare the population.
     if (now.pop !== undefined && start.pop !== undefined && now.pop !== start.pop) {
@@ -121,12 +125,14 @@ tool("df_wait", "Unpause and let the game run for a number of in-game days (1 da
     if (sparring > 0) out += `(${sparring} combat/sparring lines omitted)\n`;
     if (!all.length) out += "No new announcements.";
     const { value: construction } = await luaFile("jobs", { action: "suspended" });
-    if (construction?.review?.length) {
+    const constructionSignature=JSON.stringify((construction?.review??[]).map(j=>[j.id,j.building,j.other_ground_items?.map(i=>[i.id,i.reserved])]));
+    if (construction?.review?.length && constructionSignature!==lastConstructionWarning) {
       out += `\nCONSTRUCTION: ${construction.review.length} suspended construction job(s) need review. Review df_jobs action=suspended; resume specific jobs only after any danger or obstruction is resolved.`;
     }
+    lastConstructionWarning=constructionSignature;
     if (a.upkeep) {
       const u = await runUpkeep("apply");
-      const queued = u.split("\n").filter((l) => l.includes("-> queued"));
+      const queued = u.split("\n").filter((l) => l.includes("-> added"));
       out += "\n" + (queued.length ? `Upkeep queued:\n${queued.join("\n")}` : "Upkeep: all stocks on target.");
     }
     return text(out.trim());

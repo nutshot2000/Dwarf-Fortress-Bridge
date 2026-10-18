@@ -3,6 +3,7 @@
 if not need_map() then return end
 local text = (ARGS.search or ''):lower()
 local itype = ARGS.type and df.item_type[ARGS.type:upper()]
+if ARGS.type and (not itype or itype<0) then emit({error='Unknown item type '..ARGS.type..'. Use BOULDER for raw stone, ROUGH for rough gems, WOOD for logs. No unfiltered fallback performed.'}) return end
 local limit = math.min(ARGS.limit or 20, 200)
 
 local function where(it)
@@ -20,7 +21,7 @@ local function where(it)
       return ('dump zone #%d (%d,%d,%d)'):format(d.id, x, y, z)
     end
   end
-  return ('loose at %d,%d,%d%s'):format(x, y, z, inside)
+  return ((it.flags.on_ground and 'loose at ' or 'position record (not on ground) at ')..'%d,%d,%d%s'):format(x, y, z, inside)
 end
 
 local list = itype and df.global.world.items.other[df.item_type[itype]] or df.global.world.items.other.IN_PLAY
@@ -36,10 +37,11 @@ for _, it in ipairs(list) do
         for _, k in ipairs({'forbid', 'dump', 'in_job', 'trader', 'rotten', 'garbage_collect', 'owned', 'artifact'}) do
           if f[k] then blocks[#blocks + 1] = k end
         end
-        table.insert(found, {id = it.id, item = desc, where = where(it), flags = #blocks > 0 and table.concat(blocks, ',') or nil,
+        table.insert(found, {id = it.id, item = desc, where = where(it), on_ground=f.on_ground,flags = #blocks > 0 and table.concat(blocks, ',') or nil,
           value = dfhack.items.getValue(it)})
       end
     end
   end
 end
-emit({search = ARGS.search, type = ARGS.type, total = total, shown = #found, items = found})
+emit({search = ARGS.search, type = ARGS.type, total = total, shown = #found, items = found,
+  hint=total==0 and 'Search matches description text, not generic categories. Raw boulders are often named only by material: use type=BOULDER without search first.' or nil})

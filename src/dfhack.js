@@ -1,7 +1,7 @@
 // Thin transport to a running Dwarf Fortress via DFHack's dfhack-run.exe.
 // Every tool call writes a Lua chunk to a temp file and runs `lua -f <file>`.
 import { execFile } from "node:child_process";
-import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync, existsSync, unlinkSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
@@ -49,7 +49,7 @@ export async function lua(body, args = {}) {
   const argJson = JSON.stringify(args);
   let eq = "=";
   while (argJson.includes(`]${eq}]`)) eq += "=";
-  writeFileSync(file, `local ARGS = require('json').decode([${eq}[${argJson}]${eq}])\n${PRELUDE}\n${body}\n`);
+  writeFileSync(file, `local ARGS = require('json').decode([${eq}[${argJson}]${eq}])\n${PRELUDE}\nlocal function bridge_call()\n${body}\nend\nlocal result=bridge_call()\nif result ~= nil and not bridge_emitted then emit(result) end\n`);
   const out = await exec(["lua", "-f", file]);
   const start = out.indexOf("\u0001JSON\u0001");
   if (start < 0) {
@@ -76,4 +76,10 @@ export function writeBlueprint(name, text) {
   mkdirSync(dir, { recursive: true });
   writeFileSync(join(dir, `${name}.csv`), text);
   return `df-bridge/${name}.csv`;
+}
+
+export function removeBlueprint(name) {
+  // Only generated single-file bridge blueprints can be removed here.
+  if (!/^df-bridge\/run-[\w-]+\.csv$/.test(name)) return;
+  try { unlinkSync(join(DF_DIR, "dfhack-config", "blueprints", name)); } catch {}
 }

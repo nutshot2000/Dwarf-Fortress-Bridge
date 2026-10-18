@@ -8,6 +8,22 @@ import { testWatchdog } from "./test-watchdog.mjs";
 testWatchdog();
 
 const READ_ONLY = [
+  ["df_lua", {code:"assert(loadfile(ARGS.path))(ARGS,emit)",args:{
+    path:fileURLToPath(new URL("./test-room-guard.lua",import.meta.url)),
+    root:fileURLToPath(new URL("../",import.meta.url)).replace(/\\/g,"/")
+  }}],
+  ["df_room_plan", {}],
+  ["df_blueprint", {mode:"dig",rows:["x"],x:0,y:0,z:0,dry_run:true}],
+  ["df_lua", { code: "local b=df.global.world.buildings.all[0]; if b then local a={building_id=b.id,dry_run=true,allow_built=true}; local env=setmetatable({ARGS=a,emit=emit,need_map=need_map},{__index=_ENV}); assert(loadfile(ARGS.path,'t',env))() else emit({skipped=true}) end",args:{
+    path:fileURLToPath(new URL("../lua/remove.lua",import.meta.url))
+  }}],
+  ["df_designations", { limit: 3 }],
+  ["df_trade", { action: "goods", search: "barrel", limit: 2, dry_run: true }],
+  ["df_lua", { code: "return {return_value_supported=true}" }],
+  ["df_lua", { code: "assert(loadfile(ARGS.path))(ARGS,emit)",args:{
+    path:fileURLToPath(new URL("./test-coach.lua",import.meta.url)),
+    root:fileURLToPath(new URL("../",import.meta.url)).replace(/\\/g,"/")
+  }}],
   ["df_tutorial", {}], ["df_screen", { action: "read", layer: "base", y1: 0, y2: 2 }],
   ["df_status", {}], ["df_problems", {}], ["df_alerts", {}], ["df_units", {}], ["df_announcements", {}],
   ["df_look", { radius: 3 }], ["df_stocks", {}], ["df_jobs", { limit: 5 }], ["df_order", {}],
