@@ -61,6 +61,36 @@ local function citizens()
       or try(function() return dfhack.units.getCitizens() end, {})
 end
 
+-- Connectivity is a warning, not proof of ability to move (locks, injuries and
+-- burrows still require inspection). Compare against the majority citizen group.
+local function citizen_access_report(units, connected)
+  units=units or citizens()
+  connected=connected or dfhack.maps.canWalkBetween
+  local groups,n={},0
+  for _,u in ipairs(units) do
+    if u.pos and u.pos.x>=0 and u.pos.y>=0 and u.pos.z>=0 then
+      n=n+1
+      local found
+      for _,g in ipairs(groups) do
+        local ok,yes=pcall(connected,u.pos,g[1].pos)
+        if not ok then return {checked=false,isolated={},reason='walking connectivity unavailable'} end
+        if yes then g[#g+1]=u found=true break end
+      end
+      if not found then groups[#groups+1]={u} end
+    end
+  end
+  table.sort(groups,function(a,b) return #a>#b end)
+  local main=groups[1] or {}
+  local isolated={}
+  if #main>n/2 then
+    for i=2,#groups do for _,u in ipairs(groups[i]) do
+      isolated[#isolated+1]={id=u.id,name=try(function() return unit_name(u) end,tostring(u.id)),x=u.pos.x,y=u.pos.y,z=u.pos.z}
+    end end
+  end
+  return {checked=n>1,main_group_size=#main,citizens_checked=n,isolated=isolated,
+    guidance='Disconnected citizens may be trapped. Inspect walls, doors, stairs and access to supplies. Connected does not prove doors are unlocked or the unit is mobile. No majority group means no isolation verdict.'}
+end
+
 -- Installed building materials and personal possessions are not communal stock.
 local function stock_usable(it)
   local f = it.flags

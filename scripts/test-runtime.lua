@@ -70,6 +70,7 @@ local function heartbeat(actors, since, report_animals)
   local env = setmetatable({ARGS = {since = since,report_animal_combat=report_animals}, df = fake_df, dfhack = fake_dfhack, ipairs = iter,
     try = helpers.try, need_map = function() return true end, unit_name = function(u) return u.name end,
     citizens = function() return {unit({citizen = true})} end,
+    citizen_access_report = function() return {isolated={}} end,
     emit = function(value) result = value end}, {__index = _ENV})
   assert(loadfile(args.heartbeat_path, 't', env))()
   return result

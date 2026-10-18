@@ -9,6 +9,7 @@ import assert from "node:assert/strict";
 testWatchdog();
 
 const READ_ONLY = [
+  ["df_lua",{code:"local units={} for i=1,4 do units[i]={id=i,pos={x=i,y=0,z=0}} end local r=citizen_access_report(units,function(a,b) return (a.x<4)==(b.x<4) end); assert(#r.isolated==1 and r.isolated[1].id==4 and r.main_group_size==3); local even=citizen_access_report(units,function(a,b) return (a.x<3)==(b.x<3) end); assert(#even.isolated==0); local bad=citizen_access_report(units,function() error('unavailable') end); assert(not bad.checked and #bad.isolated==0); emit({passed=3,map_mutated=false})"}],
   ["df_lua", {code:"assert(loadfile(ARGS.path))(ARGS,emit)",args:{
     path:fileURLToPath(new URL("./test-room-repair.lua",import.meta.url)),
     root:fileURLToPath(new URL("../",import.meta.url)).replace(/\\/g,"/")

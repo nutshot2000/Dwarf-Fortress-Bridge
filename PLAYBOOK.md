@@ -41,6 +41,10 @@ zone phases refuse open rooms. Restore missing walls before assigning private be
 - `df_upkeep` keeps drink, barrels, spare furniture, goblets, soap and fuel topped up; set its targets once per fort.
 - Save with `df_save` before risky moves.
 
+## Access before enclosure
+
+A room can be enclosed while its builder is trapped outside it. Preserve a service passage around bedroom wings and inspect workers before closing the last wall. After construction, run df_problems and df_rooms audit: citizen_access identifies citizens disconnected from the majority walking group. Watched waits pause if a citizen newly loses that connection; existing warnings remain in wait output. Reopen a safe corridor or remove a constructed wall using ordinary deconstruction, without opening private rooms unnecessarily. Verify the citizen can reach the main stairs and actually leaves. Native walking connectivity is a warning aid: it does not account for every locked-door, burrow, injury or movement restriction, and equal-sized disconnected groups have no majority verdict.
+
 ## Repair and tidy a damaged bedroom
 
 1. `df_room_plan action=status detail=true` gives room IDs, full missing-wall lists,

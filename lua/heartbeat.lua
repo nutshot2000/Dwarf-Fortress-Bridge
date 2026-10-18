@@ -47,4 +47,4 @@ end
 emit({abs = df.global.cur_year * 403200 + df.global.cur_year_tick, paused = df.global.pause_state,
   pop = #citizens(), last = #r > 0 and r[#r - 1].id or -1,
   hostiles = hostiles, hostile_names = names, hostile_ids = hostile_ids, combat = combat,animal_combat=animal_combat,
-  moods = moods, caravans = #df.global.plotinfo.caravans})
+  moods = moods, caravans = #df.global.plotinfo.caravans,isolated=citizen_access_report().isolated})

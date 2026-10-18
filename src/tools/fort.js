@@ -40,7 +40,8 @@ tool("df_rooms", "Zones. action=list shows all zones with owners. action=assign 
     if (a.action === "audit") {
       const {value:report}=await luaFile("audit",a);
       const {value:layout}=await luaFile("room_plan",{action:"status"});
-      return text(JSON.stringify({...report,room_layouts:layout?.rooms},null,1));
+        const {value:access}=await luaFile("access",{});
+        return text(JSON.stringify({...report,room_layouts:layout?.rooms,citizen_access:access},null,1));
     }
     if (a.action !== "bedroom_wing") return luaTool("rooms", a);
     // A tidy wing of private 3x3 bedrooms either side of a corridor (row y), each with a doorway.

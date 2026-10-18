@@ -5,6 +5,10 @@ local function add(sev, msg) table.insert(issues, {severity = sev, issue = msg})
 
 local cits = citizens()
 local pop = #cits
+local access=citizen_access_report(cits)
+for _,u in ipairs(access.isolated) do
+  add('high',('Potentially trapped: %s (#%d) at %d,%d,%d has no walking connection to the main citizen group. Inspect/reopen a safe passage; do not remove bedroom walls blindly.'):format(u.name,u.id,u.x,u.y,u.z))
+end
 
 local usable = stock_usable
 local function count(t)

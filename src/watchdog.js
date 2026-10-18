@@ -5,6 +5,9 @@ export function watchdogEvents(start, now) {
   const newHostile = (now.hostile_ids ?? []).some((id) => !known.has(id));
   const combat = now.combat ?? [];
   const reasons = [];
+  const knownIsolated=new Set((start.isolated??[]).map(u=>u.id));
+  const isolated=(now.isolated??[]).filter(u=>!knownIsolated.has(u.id));
+  if(isolated.length) reasons.push(`citizen lost walking access (possibly trapped): ${isolated.map(u=>`${u.name} #${u.id} at ${u.x},${u.y},${u.z}`).join("; ")} (df_problems)`);
   if (newHostile || now.hostiles > start.hostiles) reasons.push(`hostile on the map: ${(now.hostile_names ?? []).join("; ")}`);
   if (combat.length) reasons.push(`combat involving fortress units: ${combat.map((e) => `${e.name}: ${e.text}`).join("; ")}`);
   if (now.pop < start.pop) reasons.push(`population fell ${start.pop} -> ${now.pop}`);
