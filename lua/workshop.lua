@@ -99,8 +99,16 @@ if action == 'add' then
     job.id = df.global.job_next_id
     df.global.job_next_id = df.global.job_next_id + 1
     job.completion_timer = -1
+    -- Native jobs use -1 for unspecified material, not the struct's zero
+    -- default (which means inorganic material and displays 'unknown material').
     job.pos:assign(xyz2pos(b.centerx, b.centery, b.z))
     if pick.job_fields then job:assign(pick.job_fields) end
+    if not pick.job_fields or pick.job_fields.mat_type == nil then job.mat_type = -1 end
+    if not pick.job_fields or pick.job_fields.mat_index == nil then job.mat_index = -1 end
+    if df.building_workshopst:is_instance(b) and b.type == df.workshop_type.Carpenters
+       and not (pick.job_fields and pick.job_fields.reaction_name) then
+      job.material_category.wood = true
+    end
     job.flags['repeat'] = ARGS['repeat'] or false
     for _, item in ipairs(pick.items or {}) do
       local f = utils.clone(item, true)

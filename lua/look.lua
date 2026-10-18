@@ -101,7 +101,7 @@ for _, u in ipairs(df.global.world.units.active) do
   end
 end
 
-local rows, aquifer_tiles = {}, {}
+local rows, aquifer_tiles, ice_tiles, flooded_buildings = {}, {}, {}, {}
 for y = y1, y2 do
   local line = {}
   for x = x1, x2 do
@@ -110,7 +110,18 @@ for y = y1, y2 do
     if fl and not fl.hidden and fl.water_table then
       aquifer_tiles[#aquifer_tiles + 1] = {x = x, y = y}
     end
-    line[#line + 1] = grid_u[k] or grid_b[k] or tile_glyph(x, y)
+    if fl and not fl.hidden then
+      local tt = dfhack.maps.getTileType(x,y,z)
+      if tt and df.tiletype.attrs[tt].material == MAT.FROZEN_LIQUID then
+        ice_tiles[#ice_tiles+1] = {x=x,y=y}
+      end
+      if fl.flow_size > 0 and grid_b[k] then
+        flooded_buildings[#flooded_buildings+1] = {x=x,y=y,depth=fl.flow_size}
+      end
+    end
+    -- Stockpile/building glyphs must not conceal dangerous liquid.
+    local wet = fl and not fl.hidden and fl.flow_size > 0
+    line[#line + 1] = grid_u[k] or (wet and tile_glyph(x,y)) or grid_b[k] or tile_glyph(x, y)
   end
   rows[#rows + 1] = table.concat(line)
 end
@@ -118,4 +129,5 @@ end
 emit({
   z = z, x1 = x1, y1 = y1, x2 = x2, y2 = y2, map_size = {x = sx, y = sy, z = sz},
   rows = rows, units = ulist, buildings = blist, aquifer_tiles = aquifer_tiles,
+  ice_tiles = ice_tiles, flooded_buildings = flooded_buildings,
 })

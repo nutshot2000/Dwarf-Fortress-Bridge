@@ -22,6 +22,10 @@ tool("df_look", "ASCII map slice of one z-level plus lists of units and building
     if (value?.error) return fail(value.error);
     const { rows, x1, y1, x2, y2, z: zz, units, buildings, map_size } = value;
     const aquifers = value.aquifer_tiles ?? [];
+    const ice = value.ice_tiles ?? [];
+    const flooded = value.flooded_buildings ?? [];
+    const hazardWarning = (ice.length ? `WARNING: ${ice.length} exposed frozen-water tiles. Ice can thaw and flood adjacent excavations. At: ${ice.slice(0,12).map(p => `${p.x},${p.y},${zz}`).join("; ")}\n` : "") +
+      (flooded.length ? `WARNING: ${flooded.length} building/stockpile tiles contain liquid. At: ${flooded.slice(0,12).map(p => `${p.x},${p.y},${zz} depth ${p.depth}`).join("; ")}\n` : "");
     const waterWarning = aquifers.length
       ? `WARNING: ${aquifers.length} exposed aquifer tile(s); A marks dry tiles, wet tiles keep their liquid glyph. Avoid breaching them without a water-control plan. At: ` +
         aquifers.slice(0, 12).map((p) => `${p.x},${p.y},${zz}`).join("; ") +
@@ -45,6 +49,6 @@ tool("df_look", "ASCII map slice of one z-level plus lists of units and building
       (b.x2 !== b.x || b.y2 !== b.y ? `..${b.x2},${b.y2}` : "") + (b.built ? "" : " (unbuilt)"));
     return text(
       `z=${zz}  x ${x1}..${x2}  y ${y1}..${y2}  (map ${map_size.x}x${map_size.y}x${map_size.z}; | marks x=${tens.join(",")})\n` +
-      waterWarning + `${ruler}\n${body}\n\nunits:\n${people.join("\n") || "  none"}\nanimals: ${animals || "none"}\n` +
+      waterWarning + hazardWarning + `${ruler}\n${body}\n\nunits:\n${people.join("\n") || "  none"}\nanimals: ${animals || "none"}\n` +
       `buildings:\n${blds.join("\n") || "  none"}`);
   });

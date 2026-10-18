@@ -8,6 +8,7 @@ import { testWatchdog } from "./test-watchdog.mjs";
 testWatchdog();
 
 const READ_ONLY = [
+  ["df_tutorial", {}], ["df_screen", { action: "read", layer: "base", y1: 0, y2: 2 }],
   ["df_status", {}], ["df_problems", {}], ["df_alerts", {}], ["df_units", {}], ["df_announcements", {}],
   ["df_look", { radius: 3 }], ["df_stocks", {}], ["df_jobs", { limit: 5 }], ["df_order", {}],
   ["df_jobs", { action: "suspended" }], ["df_stocks", { type: "WOOD" }],

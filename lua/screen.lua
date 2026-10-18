@@ -18,6 +18,12 @@ local function row_text(y, x1, x2)
   for x = x1, x2 do
     local t = dfhack.screen.readTile(x, y)
     local c = t and t.ch or 32
+    if ARGS.layer == 'base' then
+      -- DF's tutorial is a separate top layer. readTile reads only that
+      -- layer while it is active, omitting exposed controls underneath.
+      -- Layout matches DFHack's bundled devel/inspect-screen (8 bytes/cell).
+      c = df.global.gps.screen[(x * df.global.gps.dimy + y) * 8]
+    end
     line[#line + 1] = (c >= 32 and c < 127) and string.char(c) or ' '
   end
   return table.concat(line)
@@ -63,9 +69,41 @@ local function click_at(x, y, right)
   else gui.simulateInput(screen(), '_MOUSE_L_DOWN', '_MOUSE_L') end
 end
 
+if action == 'map_click' then
+  if not need_map() then return end
+  if ARGS.x == nil or ARGS.y == nil or ARGS.z == nil then
+    emit({error = 'map_click requires world x,y,z coordinates'}) return
+  end
+  if ARGS.z ~= df.global.window_z then
+    emit({error = 'Target is not on the viewed elevation; move the camera first'}) return
+  end
+  -- Use the game's pixel-to-map mapping, which accounts for graphics zoom.
+  -- Text-grid cells are smaller than map tiles. Find an interior sample without
+  -- moving the camera or altering designation/tutorial state.
+  local g = df.global.gps
+  local old = {g.mouse_x, g.mouse_y, g.precise_mouse_x, g.precise_mouse_y}
+  local hits = {}
+  for sy = 0, H - 1 do for sx = 0, W - 1 do
+    g.mouse_x, g.mouse_y = sx, sy
+    g.precise_mouse_x = sx*g.tile_pixel_x + g.tile_pixel_x//2
+    g.precise_mouse_y = sy*g.tile_pixel_y + g.tile_pixel_y//2
+    local p = dfhack.gui.getMousePos()
+    if p and p.x == ARGS.x and p.y == ARGS.y and p.z == ARGS.z then
+      hits[#hits+1] = {x=sx,y=sy}
+    end
+  end end
+  g.mouse_x, g.mouse_y = old[1], old[2]
+  g.precise_mouse_x, g.precise_mouse_y = old[3], old[4]
+  if #hits == 0 then emit({error='Target is offscreen or covered by UI; reposition the camera first'}) return end
+  local hit = hits[math.ceil(#hits/2)]
+  click_at(hit.x, hit.y, ARGS.right)
+  emit({ok=true, target={x=ARGS.x,y=ARGS.y,z=ARGS.z}, screen=hit, focus=focus()}) return
+end
+
 if action == 'read' then
-  local x1, y1 = ARGS.x1 or 0, ARGS.y1 or 0
+  local x1, y1 = math.max(0, ARGS.x1 or 0), math.max(0, ARGS.y1 or 0)
   local x2, y2 = math.min(ARGS.x2 or W - 1, W - 1), math.min(ARGS.y2 or H - 1, H - 1)
+  if x1 > x2 or y1 > y2 then emit({error='Read rectangle is outside the screen'}) return end
   local rows = grid(x1, y1, x2, y2)
   local out = {}
   for i, r in ipairs(rows) do

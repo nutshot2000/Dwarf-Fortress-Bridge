@@ -72,6 +72,19 @@ If something seems impossible without a cheat, tell the player instead.
 
 ## Screens
 
+- Tutorial: `df_tutorial` reads actual lesson checkmarks. Follow each prompt with normal
+  UI inputs; blueprint/job creation alone does not trigger every tutorial UI check.
+  `df_screen key` sends multiple keys in separate game calls so they can register.
+- `df_screen map_click x,y,z` clicks a world tile on the current elevation using the
+  current graphics zoom. Make the target visible and clear of panels first.
+- During tutorial overlays, `df_screen read layer=base` reads the underlying UI text
+  (including buttons omitted by the default top-layer read). It can include covered
+  text; inspect the overlay before clicking a base-layer match. `df_tutorial minimize`
+  and `restore` change visibility only, never completion flags.
+- `df_look` warns about exposed frozen water and flooded stockpile/building tiles.
+  Never tunnel into pond ice: spring thaw can flood an adjacent room. Hidden terrain
+  remains hidden. Water glyphs take precedence over stockpile symbols.
+
 - `df_ui` opens/closes the game's panels, presses buttons and ticks squads; `df_screen` read/find/click/key for anything else.
 - Panels (trade, squads, petitions) ignore Esc from scripts and some freeze time: `df_ui close`.
 - Strange moods: `df_mood` (and `check=true` to see whether the needed items exist). `df_pile` for stockpile presets and links,
