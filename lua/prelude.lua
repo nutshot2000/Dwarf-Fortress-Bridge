@@ -94,8 +94,9 @@ end
 -- Installed building materials and personal possessions are not communal stock.
 local function stock_usable(it)
   local f = it.flags
+  -- construction: the item is built into a wall/floor/stair (it stays an item, but is not free stock)
   return not (f.rotten or f.forbid or f.garbage_collect or f.trader or f.dump
-    or f.hostile or f.removed or f.spider_web or f.in_building or f.owned)
+    or f.hostile or f.removed or f.spider_web or f.in_building or f.owned or f.construction)
 end
 local function stock_available(it) return stock_usable(it) and not it.flags.in_job and not it.flags.in_inventory end
 

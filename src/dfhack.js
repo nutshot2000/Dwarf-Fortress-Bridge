@@ -16,7 +16,14 @@ const RUN = join(DFHACK_DIR, "dfhack-run.exe");
 const TMP = join(tmpdir(), "df-bridge");
 mkdirSync(TMP, { recursive: true });
 
-const PRELUDE = readFileSync(join(HERE, "..", "lua", "prelude.lua"), "utf8");
+// The prelude is prepended to every call; re-read it when it changes, like the tool scripts.
+const PRELUDE_PATH = join(HERE, "..", "lua", "prelude.lua");
+let prelude = { mtime: -1, src: "" };
+function preludeSource() {
+  const mtime = statSync(PRELUDE_PATH).mtimeMs;
+  if (mtime !== prelude.mtime) prelude = { mtime, src: readFileSync(PRELUDE_PATH, "utf8") };
+  return prelude.src;
+}
 let seq = 0;
 
 function exec(args, timeoutMs = 30000) {
@@ -49,7 +56,7 @@ export async function lua(body, args = {}) {
   const argJson = JSON.stringify(args);
   let eq = "=";
   while (argJson.includes(`]${eq}]`)) eq += "=";
-  writeFileSync(file, `local ARGS = require('json').decode([${eq}[${argJson}]${eq}])\n${PRELUDE}\nlocal function bridge_call()\n${body}\nend\nlocal result=bridge_call()\nif result ~= nil and not bridge_emitted then emit(result) end\n`);
+  writeFileSync(file, `local ARGS = require('json').decode([${eq}[${argJson}]${eq}])\n${preludeSource()}\nlocal function bridge_call()\n${body}\nend\nlocal result=bridge_call()\nif result ~= nil and not bridge_emitted then emit(result) end\n`);
   const out = await exec(["lua", "-f", file]);
   const start = out.indexOf("\u0001JSON\u0001");
   if (start < 0) {
