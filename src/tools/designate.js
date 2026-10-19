@@ -152,7 +152,7 @@ tool("df_stockpile", "Create a stockpile rectangle. type is one or more #place l
     if (a.name) cell += `{name="${a.name.replace(/"/g, "")}"}`;
     await cameraTo(a.x + (a.w >> 1), a.y + (a.h >> 1), a.z, `stockpile at ${a.x},${a.y},${a.z}`);
     const out = await quickfort("place", [`${cell}(${a.w}x${a.h})`], a.x, a.y, a.z);
-    return text(out + await skippedTilesNote(out, a));
+    return text(out + await newIdNote("stockpile", a) + await skippedTilesNote(out, a));
   });
 
 // Quickfort silently leaves unusable tiles out of a stockpile or zone, which leaves a ragged edge.
@@ -189,8 +189,22 @@ tool("df_zone", "Create a zone rectangle. Bedroom zones require dry floor and co
     const cell = a.type + (props.length ? `{${props.join(" ")}}` : "") + `(${a.w}x${a.h})`;
     await cameraTo(a.x + (a.w >> 1), a.y + (a.h >> 1), a.z, `zone at ${a.x},${a.y},${a.z}`);
     const out = await quickfort("zone", [cell], a.x, a.y, a.z);
-    return text(out + await skippedTilesNote(out, a));
+    return text(out + await newIdNote("zone", a) + await skippedTilesNote(out, a));
   });
+
+// Report the id of the zone/stockpile just made, so follow-up calls (assign, barracks, presets) need no listing.
+async function newIdNote(kind, a) {
+  const { value } = await lua(`local best
+    for x = ARGS.x, ARGS.x + ARGS.w - 1 do for y = ARGS.y, ARGS.y + ARGS.h - 1 do
+      local list = ARGS.kind == 'zone' and dfhack.buildings.findCivzonesAt(xyz2pos(x, y, ARGS.z))
+        or {dfhack.buildings.findAtTile(x, y, ARGS.z)}
+      for _, b in ipairs(list or {}) do
+        if b and (ARGS.kind == 'zone' or b:getType() == df.building_type.Stockpile) and (not best or b.id > best) then best = b.id end
+      end
+    end end
+    emit(best)`, { ...a, kind });
+  return value != null ? `\n${kind === "zone" ? "Zone" : "Stockpile"} id: ${value}` : "";
+}
 
 tool("df_blueprint", "Apply a free-form quickfort blueprint. rows are CSV lines (cells separated by commas) starting at x,y,z as the top-left. Use for irregular shapes. dry_run reports what would happen without changing the game.",
   { mode: z.enum(["dig", "build", "place", "zone"]), rows: z.array(z.string()).min(1),

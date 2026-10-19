@@ -121,7 +121,7 @@ for _,r in ipairs(status) do
   r.invalid_interior_count=#r.invalid_interior
   -- A finished room needs no repair data; keep the summary short unless detail=true.
   if r.enclosed and not ARGS.detail then
-    status[_]={id=r.id,zone=r.zone,x=r.x,y=r.y,z=r.z,w=r.w,h=r.h,state=r.state,door=r.door,next_step=r.next_step}
+    status[_]={id=r.id,zone=r.zone,x=r.x,y=r.y,z=r.z,w=r.w,h=r.h,state=r.state,enclosed=true,door=r.door,next_step=r.next_step}
   elseif not ARGS.detail then
     while #r.missing_walls>6 do table.remove(r.missing_walls) end
     while #r.unsafe_designations>6 do table.remove(r.unsafe_designations) end

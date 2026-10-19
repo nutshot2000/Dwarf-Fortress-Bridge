@@ -79,8 +79,13 @@ tool("df_wait", "Unpause and let the game run for a number of in-game days (1 da
           }
         }
         if (now.paused) { reason = "game paused itself (check announcements)"; break; }
-        if (Date.now() - lastMove > 6000) {
-          reason = "time is not advancing - a game menu or dialog is probably open (ask the player to close it with Esc)";
+        // DF autosaves when a season begins (every 100800 ticks) and time stands still while it writes.
+        const seasonStart = now.abs % 100800 < 1200;
+        // Saves (df_save or autosave) also freeze time for several seconds, so allow 15 s before blaming a menu.
+        if (Date.now() - lastMove > (seasonStart ? 45000 : 15000)) {
+          reason = seasonStart
+            ? "time stalled at the start of a season, most likely DF's seasonal autosave; call df_wait again"
+            : "time is not advancing - a save may still be writing, or a game menu or dialog is open (retry once; if it persists ask the player to close it with Esc)";
           const { value: op } = await lua(
             `local r = {} for k, v in pairs(df.global.game.main_interface) do
                local ok, o = pcall(function() return v.open end) if ok and o == true then r[#r + 1] = k end end emit(r)`);
@@ -108,7 +113,7 @@ tool("df_wait", "Unpause and let the game run for a number of in-game days (1 da
     const COMBAT = /lightly tapping|misses the|charges at|collides with|strikes at|parried|deflected|rolls away|jumps away|attacks the .* but|no longer stunned|is knocked over|punches|kicks|scratches|bites|grabs|releases the grip/i;
     const HURT = /dead|killed|struck down|severed|mangled|torn|shattered|unconscious|bleeding/i;
     // DF tags every blow-by-blow line with a COMBAT_* report type; the text patterns catch the rest.
-    const isCombat = (m) => /^COMBAT/.test(m.type || "") || COMBAT.test(m.text);
+    const isCombat = (m) => /^(COMBAT|BREAK_GRIP|EXHAUSTION|VOMIT|NOT_STUNNED|STAND_UP|LOSE_EMOTION|.*CONSCIOUS|PASS_OUT)/.test(m.type || "") || COMBAT.test(m.text);
     const imp = all.filter((m) => (IMPORTANT.test(m.type || "") || IMPORTANT_TEXT.test(m.text)) && !(isCombat(m) && !HURT.test(m.text)));
     const rest = all.filter((m) => !imp.includes(m) && !isCombat(m));
     const sparring = all.length - imp.length - rest.length;

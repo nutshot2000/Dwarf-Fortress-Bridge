@@ -65,9 +65,14 @@ tool("df_rooms", "Zones. action=list shows all zones with owners. action=assign 
       if (damaged.length) return fail(JSON.stringify({error:"Proposed room boundaries are already open. Choose intact rock or construct enclosing walls before mining/furnishing.",rooms:damaged}));
     }
     const log = [];
+    // Zoning skips rooms that are not finished yet (a door still being made) instead of refusing the whole
+    // wing; run the zone phase again later to pick them up.
+    const notReady = new Set();
     if (a.phase === "furnish" || a.phase === "zone") {
         const {value:check}=await luaFile("room_check",{z:Z,rooms:layout,allow_open_doorway:a.phase==="furnish"});
-      if (!check?.ok) return fail(JSON.stringify(check,null,1));
+      const bad = check?.invalid_rooms ?? [];
+      if (!check?.ok && (a.phase !== "zone" || !bad.length || bad.length >= layout.length)) return fail(JSON.stringify(check,null,1));
+      for (const r of bad) notReady.add(`${r.room.x},${r.room.y}`);
     }
     const dig = async (kind, x1, y1, x2, y2) => {
       const out = await quickfort("dig", [`${DIG_KEYS[kind]}(${x2 - x1 + 1}x${y2 - y1 + 1})`], x1, y1, Z, ["-p", String(P)]);
@@ -82,7 +87,11 @@ tool("df_rooms", "Zones. action=list shows all zones with owners. action=assign 
         await dig("dig", x, Y - 4, x + 2, Y - 2); await dig("dig", x + 1, Y - 1, x + 1, Y - 1);
         await dig("dig", x, Y + 2, x + 2, Y + 4); await dig("dig", x + 1, Y + 1, x + 1, Y + 1);
       }
-      await quickfort("dig", ["i"], SX, Y, Z, ["-p", "1"]); // re-assert the shaft after the corridor dig
+      // Re-assert the shaft after the corridor dig, but only where a stair really is: the shaft need
+      // not sit on the corridor row, and a blind "i" would carve a stray staircase.
+      const { value: stairHere } = await lua(`local tt=dfhack.maps.getTileType(ARGS.x,ARGS.y,ARGS.z)
+        emit(tt ~= nil and df.tiletype.attrs[tt].shape == df.tiletype_shape.STAIR_UPDOWN)`, { x: SX, y: Y, z: Z });
+      if (stairHere) await quickfort("dig", ["i"], SX, Y, Z, ["-p", "1"]);
       log.push(`dig: corridor x${X1}-${corrEnd} y${Y} and ${rooms.length * 2} rooms on z${Z}; shaft at ${SX},${Y}`);
     }
     if (a.phase === "furnish") {
@@ -102,7 +111,7 @@ tool("df_rooms", "Zones. action=list shows all zones with owners. action=assign 
       const existing = new Set(before ?? []);
       for (const x of rooms) for (const yy of [Y - 4, Y + 2]) {
         n++; const name = `Bedroom ${Z}-${n}`; names.push(name);
-        if (existing.has(`${x},${yy}`)) continue;
+        if (existing.has(`${x},${yy}`) || notReady.has(`${x},${yy}`)) continue;
         await quickfort("zone", [`b{name="${name}"}(3x3)`], x, yy, Z); made++;
       }
       // assign to adults without a bedroom
@@ -115,7 +124,8 @@ tool("df_rooms", "Zones. action=list shows all zones with owners. action=assign 
       for (let i = 0; i < free.length && i < homeless.length; i++) {
         await luaFile("rooms", { action: "assign", zone_id: free[i].id, unit_id: homeless[i].id }); assigned++;
       }
-      log.push(`zone: ${made} new of ${names.length} bedroom zones (existing kept); assigned ${assigned} to adults without a room`);
+      log.push(`zone: ${made} new of ${names.length} bedroom zones (existing kept); assigned ${assigned} to adults without a room` +
+        (notReady.size ? `; ${notReady.size} room(s) not finished yet (${[...notReady].join(" ")}): run phase zone again once their doors/walls are built` : ""));
     }
     return text(log.join("\n") + `\nAfter work finishes, inspect df_screenshot around the wing on z=${Z} (pan both ends), then df_rooms action=audit and df_problems. Check workers outside rooms have an escape route.`);
   });

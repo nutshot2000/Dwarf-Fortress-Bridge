@@ -153,6 +153,9 @@ If something seems impossible without a cheat, tell the player instead.
 
 ## Trade and diplomacy
 
+- Caravans have a weight limit ("Allowed Weight" in the trade footer): stone mugs and crafts are heavy, so prefer light,
+  valuable goods (cut gems, cloth, small metal or bone crafts). The merchant line shown before you propose is the reply
+  to the previous offer; judge a new selection only by the reply to `propose`.
 - `df_trade`: send goods to the depot, call the broker, open the trade screen, select, propose, close.
   `request_anyone` when the broker is busy. Merchants want a clear profit and refuse loads over their weight.
 - Preview `df_trade action=goods` or `send dry_run=true`. Nonempty containers are

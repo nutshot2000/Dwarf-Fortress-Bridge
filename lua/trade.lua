@@ -79,6 +79,8 @@ if action == 'send' or action == 'goods' then
         value=dfhack.items.getValue(it),value_with_contents=value_with_contents(it),contents=contents,
         at_depot=dfhack.items.getHolderBuilding(it)==depot}
       if #contents>0 and not ARGS.allow_contents then
+        -- Food and booze barrels can hold dozens of stacks: list contents only with show_contained=true.
+        if not ARGS.show_contained then entry.contents=nil entry.content_count=#contents end
         if #protected<20 then protected[#protected+1]=entry end
       else
         if action=='send' and not ARGS.dry_run then

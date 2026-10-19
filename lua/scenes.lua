@@ -62,7 +62,10 @@ for _, u in ipairs(citizens()) do
   end
   for _, r in ipairs(u.specific_refs) do
     if r.type == df.specific_ref_type.ACTIVITY and try(function() return r.data.activity.unit_noble == u.id end, false) then
-      add('diplomacy', 3.2, u, unit_name(u):match('^[^,]+') .. ' in a meeting with a visiting diplomat')
+      -- Name the visitor: not every noble meeting is with a diplomat (petitioners, messengers, citizens).
+      local actor = try(function() return df.unit.find(r.data.activity.unit_actor) end, nil)
+      add('diplomacy', 3.2, u, unit_name(u):match('^[^,]+') .. ' in a meeting with ' ..
+        (actor and unit_name(actor):match('^[^,]+') or 'a visitor'))
     end
   end
 end

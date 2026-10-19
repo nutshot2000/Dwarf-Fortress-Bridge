@@ -110,9 +110,15 @@ end
 
 if action == 'add' then
   local sq = get_squad() if not sq then return end
-  local ok = dfhack.military.addToSquad(ARGS.unit_id, sq.id, -1)
-  if not ok then emit({error = 'addToSquad failed (unit already in a squad, squad full, or leader slot vacant)'}) return end
-  emit({ok = true, squad = squad_info(sq)}) return
+  -- unit_id or unit_ids (one call per soldier: addToSquad takes a single unit).
+  local ids = ARGS.unit_ids or {ARGS.unit_id}
+  if #ids == 0 then emit({error = 'add needs unit_id or unit_ids'}) return end
+  local failed = {}
+  for _, id in ipairs(ids) do
+    if not dfhack.military.addToSquad(id, sq.id, -1) then failed[#failed + 1] = id end
+  end
+  if #failed == #ids then emit({error = 'addToSquad failed (unit already in a squad, squad full, or leader slot vacant)', unit_ids = failed}) return end
+  emit({ok = true, failed = #failed > 0 and failed or nil, squad = squad_info(sq)}) return
 end
 
 if action == 'remove' then

@@ -10,12 +10,14 @@ tool("df_trade", "Trading. goods previews tradeable goods and contents; send mar
   async (a) => {
     if (a.dry_run && !["goods","send","status","screen"].includes(a.action)) return fail("dry_run is supported for goods/send only. No trade action was performed.");
     // the screen's own verdict: merchant line plus the Value / Trader Profit / Weight footer
-    const verdict = async () => {
-      const top = (await luaFile("screen", { action: "read", y1: 4, y2: 12 })).value?.lines ?? [];
+    // reply=false gives only the footer: the merchant line is the reply to the PREVIOUS proposal, and
+    // echoing it after select/deselect makes a stale refusal look like a verdict on the new selection.
+    const verdict = async (reply = true) => {
+      const top = reply ? (await luaFile("screen", { action: "read", y1: 4, y2: 12 })).value?.lines ?? [] : [];
       const { value } = await luaFile("screen", { action: "read" });
       const lines = value?.lines ?? [];
       const foot = lines.filter((l) => /Mark all|Trader Profit|(Allowed|Excess) Weight/.test(l)).map((l) => l.replace(/^\s*\d+\|/, "").replace(/\s{3,}/g, "   ").trim());
-      return `${top.map((l) => l.replace(/^\s*\d+\|\s*/, "")).join("\n")}\n${foot.join("\n")}`;
+      return `${top.map((l) => l.replace(/^\s*\d+\|\s*/, "")).join("\n")}${top.length ? "\n" : ""}${foot.join("\n")}`;
     };
     const openDepot = async () => {
       const { value: st } = await luaFile("trade", { action: "status" });
@@ -55,7 +57,7 @@ tool("df_trade", "Trading. goods previews tradeable goods and contents; send mar
       return text(`Proposed the trade. Merchant says:\n${await verdict()}\n(Excess Weight = offer lighter goods or buy heavier ones; "not enough" = offer more or take less.)`);
     }
     const res = await luaTool("trade", a);
-    if (!res.isError && (a.action === "select" || a.action === "deselect")) res.content[0].text += `\n--- screen ---\n${await verdict()}`;
+    if (!res.isError && (a.action === "select" || a.action === "deselect")) res.content[0].text += `\n--- footer (propose to get the merchant's answer) ---\n${await verdict(false)}`;
     return res;
   });
 

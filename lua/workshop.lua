@@ -28,7 +28,14 @@ local EXTRA = {
   },
 }
 local function task_list(b)
-  local jobs = workshops.getJobs(b:getType(), b:getSubtype(), b:getCustomType()) or {}
+  -- dfhack.workshops prints debug lines ("adding: <ore>" plus a table dump) while it builds the
+  -- smelter list; mute print around the call so they don't flood the result.
+  local G = dfhack.BASE_G or _G -- modules see the real global table, not this script's environment
+  local p, pa = G.print, G.printall
+  G.print, G.printall = function() end, function() end
+  local ok, jobs = pcall(workshops.getJobs, b:getType(), b:getSubtype(), b:getCustomType())
+  G.print, G.printall = p, pa
+  jobs = ok and jobs or {}
   local list = {}
   for _, j in pairs(jobs) do table.insert(list, j) end
   local sub = df.building_workshopst:is_instance(b) and df.workshop_type[b.type]
@@ -71,8 +78,9 @@ if not b or not is_shop(b) then emit({error = 'No workshop ' .. tostring(ARGS.bu
 
 if action == 'cancel' then
   local idx = ARGS.index or 0
+  -- Indexing past the end of a DF vector raises instead of returning nil.
+  if idx < 0 or idx >= #b.jobs then emit({error = ('No job at index %d (queue has %d)'):format(idx, #b.jobs), jobs = queued(b)}) return end
   local j = b.jobs[idx]
-  if not j then emit({error = 'No job at index ' .. idx}) return end
   dfhack.job.removeJob(j)
   emit({ok = true, jobs = queued(b)}) return
 end
