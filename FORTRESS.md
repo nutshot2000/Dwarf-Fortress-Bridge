@@ -7,9 +7,8 @@ Saved and paused, camera on Founders Hall. Seven citizens alive, no stressed cit
 The earlier count of 42 seeds included planted seeds. Cerol's earlier syndrome wound
 was verified as inebriation, not a combat injury.
 
-This checkout is our independent upgrade copy. Claude's checkout at
-`C:/Users/batti/Dwarf-Fortress-Bridge` remains on main with its pre-existing lockfile edit.
-Do not push our changes to the original repository without the user's direction.
+These notes were written in the separate Codex upgrade copy. Those commits have since been merged into
+the main repository (nutshot2000/Dwarf-Fortress-Bridge) and released as 1.4.0; see CHANGELOG.md for later work.
 
 ## Layout and management
 

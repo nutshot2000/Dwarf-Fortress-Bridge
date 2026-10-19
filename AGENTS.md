@@ -24,3 +24,8 @@ server sends as its instructions. Play fair: never spawn, teleport or reveal any
 - `node scripts/call.mjs <tool> '<json>'` for one tool; `node scripts/session.mjs '[[tool, args], ...]'` for several in one
   server session (camera state lives in the server process).
 - Lua compiles inside DFHack only; a quick syntax check: `df_lua` with `loadfile(<path>)` over `lua/`.
+- Lua edits are picked up on the next call (the server re-reads changed files). JS edits under `src/` need a server
+  restart; `scripts/call.mjs` starts a fresh server, so use it to test JS changes against the running game.
+- DFHack modules (`dfhack.workshops` and others) see the real global table: to silence their `print`, patch
+  `dfhack.BASE_G`, not the script's `_G`.
+- Bump the version in `package.json` and `package-lock.json` and add a `CHANGELOG.md` entry with user-visible changes.

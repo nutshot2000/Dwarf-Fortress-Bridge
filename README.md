@@ -207,6 +207,14 @@ Each tool writes a short Lua chunk and runs it through `dfhack-run`. Digging, bu
 
 A turn looks like this: `df_status` → `df_problems` → one action → `df_wait upkeep=true`, with the camera showing you each step.
 
+## Field-tested fixes (v1.4.1–1.4.3)
+
+A full first year of play (the fort Spearmirrors: an aquifer crossing, a cavern breach, a caravan, migrant waves) turned
+up rough edges that are now fixed: dig jobs that vanished from the map, ragged stockpiles, refused furniture with no
+reason given, fights that stopped every wait, seasonal autosaves mistaken for open menus, and trade replies that looked
+like refusals. Output is also much shorter. Lua changes now take effect without restarting the server. Details in
+[CHANGELOG.md](CHANGELOG.md).
+
 ## Visual inspection (v1.4.0)
 
 `df_screenshot` returns the actual Dwarf Fortress window as an MCP PNG image, a saved local PNG path, and text enclosure/access checks. Use `{ "x": 103, "y": 92, "z": 169 }` to centre an inspection, or `{}` to capture the current view. Pause first, inspect workers and exits after construction, and pan for large layouts. `max_width` defaults to1600 (640–2560). Images are saved under `%TEMP%/df-bridge/screenshots/`.
@@ -248,6 +256,18 @@ Build previews identify invalid tiles, construction reviews distinguish allocate
 - **Dumps** forbid whatever lands in them; `df_dump action=unforbid` makes dumped stone usable again.
 - **Linked stockpiles**: a workshop with linked "give" piles only takes from those piles.
 - **Farm plots** reset to fallow when construction finishes, so set crops afterwards.
+- **Damp stone**: digging next to water or a light aquifer cancels the designation once ("damp stone located");
+  designating the same tiles again confirms it. Water standing on a floor also makes the rock around it "damp" and
+  cancels nearby digs silently. A light aquifer drips into tiles dug directly beneath it, so the level right under an
+  aquifer layer is unusable for rooms. The playbook explains crossing one with a walled shaft ring.
+- **Dig jobs** clear the tile's dig flag once a dwarf takes them, so a plain map read shows rock; `df_look` overlays
+  queued dig jobs.
+- **Workshop queues** run front to back and ignore the job's do-now flag; `df_jobs do_now` moves the job forward.
+- **Doors** need an existing wall beside them; in one blueprint with their walls they are refused until the walls are
+  built.
+- **Caravans** have a weight limit: stone mugs and crafts are heavy, cut gems and metal crafts are light.
+- **Seasonal autosave** freezes time for a while at the start of each season.
+- **`dfhack.workshops.getJobs`** prints a debug dump for every ore when listing smelter jobs; the bridge mutes it.
 
 </details>
 
@@ -257,6 +277,10 @@ Build previews identify invalid tiles, construction reviews distinguish allocate
 - Try one tool: `node scripts/call.mjs df_look "{\"radius\":20}"`
 - Several calls in one session (the camera keeps state in the server): `node scripts/session.mjs '[["df_camera",{"action":"follow","name":"Urist"}],["df_wait",{"days":1}]]'`
 - Tests: `npm test` runs every read-only tool against the running game and changes nothing; `npm run test:offline` only checks that all tools register.
+- Lua files reload automatically when edited. Changes under `src/` need the MCP server restarted (reconnect it in your
+  client, or stop its `node src/server.js` process if your client relaunches it). `scripts/call.mjs` always starts a
+  fresh server, so it tests new JS right away.
+- Notable changes per release are in [CHANGELOG.md](CHANGELOG.md).
 
 <div align="center">
 
