@@ -56,6 +56,12 @@ export async function luaTool(name, args) {
   return text(json(value) + (log ? `\n--- log ---\n${log}` : ""));
 }
 
+/** Material preflight (lua/inputs.lua): warnings for job inputs with no usable item. Never throws. */
+export async function inputWarnings(args) {
+  try { return (await luaFile("inputs", args)).value?.warnings ?? []; }
+  catch (e) { return [`input check failed: ${String(e.message || e).split("\n")[0]}`]; }
+}
+
 export const coord = z.number().int();
 export const optCoord = coord.optional();
 

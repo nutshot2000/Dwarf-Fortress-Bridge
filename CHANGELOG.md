@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.4.4
+
+- `df_workshop action=add` and `df_order` check materials before queuing (new `lua/inputs.lua`). The job is
+  still queued, but a `WARNING:` line names any input with no usable item (not forbidden, reserved, dumped or
+  unreachable), e.g. "0 usable rough gems; brown jasper vein visible but unmined (44 tiles, e.g. 54,64,156):
+  mine it first". Smelting says whether matching ore is visible but unmined; fuel (coke/charcoal bars) is
+  checked for smelting and fuel reactions; stone furniture lists the economic stone that masons will not use.
+- Tables, chairs and doors fall back to wood when no non-economic stone is free (economic stone no longer counts).
+
 ## 1.4.3
 
 Fight, roof and furniture reporting, from the Spearmirrors playthrough.

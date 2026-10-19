@@ -157,3 +157,24 @@ local function suspended_construction()
   end
   return out
 end
+
+-- A job_item filter (catalogue table or df reagent) as plain JSON-able data: fields plus flag-name lists.
+local function job_item_filter(f)
+  local out = {}
+  for _, k in ipairs({'item_type', 'item_subtype', 'mat_type', 'mat_index', 'reaction_class', 'has_material_reaction_product', 'metal_ore'}) do
+    local ok, v = pcall(function() return f[k] end)
+    if ok and v ~= nil then out[k] = v end
+  end
+  for k, enum in pairs({flags1 = df.job_item_flags1, flags2 = df.job_item_flags2, flags3 = df.job_item_flags3}) do
+    local names = {}
+    local ok, bits = pcall(function() return f[k] end)
+    if ok and type(bits) ~= 'nil' then
+      for i = 0, 31 do
+        local n = enum[i]
+        if n and try(function() return bits[n] end, false) then names[#names + 1] = n end
+      end
+    end
+    out[k] = names
+  end
+  return out
+end
