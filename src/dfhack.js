@@ -1,7 +1,7 @@
 // Thin transport to a running Dwarf Fortress via DFHack's dfhack-run.exe.
 // Every tool call writes a Lua chunk to a temp file and runs `lua -f <file>`.
 import { execFile } from "node:child_process";
-import { mkdirSync, readFileSync, writeFileSync, existsSync, unlinkSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync, existsSync, unlinkSync, statSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
@@ -64,10 +64,13 @@ export async function lua(body, args = {}) {
 }
 
 const scripts = new Map();
-/** Run lua/<name>.lua with ARGS = args. */
+/** Run lua/<name>.lua with ARGS = args. Re-reads the file when it changes, so Lua fixes apply without a restart. */
 export function luaFile(name, args = {}) {
-  if (!scripts.has(name)) scripts.set(name, readFileSync(join(HERE, "..", "lua", `${name}.lua`), "utf8"));
-  return lua(scripts.get(name), args);
+  const path = join(HERE, "..", "lua", `${name}.lua`);
+  const mtime = statSync(path).mtimeMs;
+  let entry = scripts.get(name);
+  if (!entry || entry.mtime !== mtime) scripts.set(name, entry = { mtime, src: readFileSync(path, "utf8") });
+  return lua(entry.src, args);
 }
 
 /** Write a quickfort CSV into dfhack-config/blueprints/df-bridge and return its quickfort name. */

@@ -16,8 +16,16 @@ if action=='protect' then
   end
   dfhack.persistent.saveSiteData(key,plans)
 elseif action=='forget' then
-  if not ARGS.id or not plans[ARGS.id] then emit({error='Specify an existing protected plan id'}) return end
-  plans[ARGS.id]=nil dfhack.persistent.saveSiteData(key,plans)
+  -- One plan by id, a list of ids, or every saved plan on level z (bedroom zones stay protected regardless).
+  local n=0
+  for _,id in ipairs(ARGS.ids or {ARGS.id}) do if plans[id] then plans[id]=nil n=n+1 end end
+  if ARGS.z~=nil and not ARGS.id and not ARGS.ids then
+    for id,p in pairs(plans) do if p.z==ARGS.z then plans[id]=nil n=n+1 end end
+  end
+  if n==0 then emit({error='No saved plan matched. Pass id (from status), ids, or z to forget every saved plan on a level.'}) return end
+  dfhack.persistent.saveSiteData(key,plans)
+  local left=0 for _ in pairs(plans) do left=left+1 end
+  emit({forgotten=n,saved_plans_left=left}) return
 end
 local layouts={}
 for _,r in pairs(plans) do layouts[#layouts+1]=r end
@@ -110,9 +118,20 @@ for _,r in ipairs(status) do
     walls_pending='Wait; inspect suspended jobs. Repeat repair after walls complete to place the door.',door_pending='Wait; inspect suspended jobs before resuming a door job.',needs_door='Run repair with the original doorway coordinates if not already known.'}
   r.next_step=steps[r.state]
   if not r.enclosed then damaged=damaged+1 end
-  if not ARGS.detail then
+  r.invalid_interior_count=#r.invalid_interior
+  -- A finished room needs no repair data; keep the summary short unless detail=true.
+  if r.enclosed and not ARGS.detail then
+    status[_]={id=r.id,zone=r.zone,x=r.x,y=r.y,z=r.z,w=r.w,h=r.h,state=r.state,door=r.door,next_step=r.next_step}
+  elseif not ARGS.detail then
     while #r.missing_walls>6 do table.remove(r.missing_walls) end
     while #r.unsafe_designations>6 do table.remove(r.unsafe_designations) end
+    while #r.invalid_interior>2 do table.remove(r.invalid_interior) end
   end
+end
+-- z narrows the report to one level (protection itself always covers every level).
+if ARGS.z~=nil and action=='status' then
+  local keep={} damaged=0
+  for _,r in ipairs(status) do if r.z==ARGS.z then keep[#keep+1]=r if not r.enclosed then damaged=damaged+1 end end end
+  status=keep
 end
 emit({room_count=#status,damaged_rooms=damaged,rooms=status,guidance='Repair: df_room_plan action=repair id=... previews wall/door jobs; dry_run=false queues them. If the entrance is unknown, supply door_x,door_y on the perimeter first. Pending walls/doors are not enclosure: wait, inspect suspended jobs, then recheck enclosed=true. Never wall over an entrance, corridor, stair or furniture. Clear loose clutter with a bounded df_dump after repairs. Coordinate lists are samples unless detail=true.'})

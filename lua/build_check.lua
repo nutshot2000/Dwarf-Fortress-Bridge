@@ -9,6 +9,12 @@ ctx.preview = {tiles={},bounds={},total_tiles=0,invalid_tiles=0}
 for z,grid in pairs(data) do command.do_command_raw('build',z,grid,ctx) end
 local tiles,items = {},{}
 local known_tiles = {}
+-- Quickfort rejects a whole multi-tile footprint when one tile fails, so plain buildable ground is
+-- counted, not listed; only tiles with an actual problem are reported.
+local BUILDABLE = {FLOOR=true, PEBBLES=true}
+local SHAPE_WHY = {EMPTY='open space or hole (no floor)', SHRUB='shrub (gather it first)', SAPLING='sapling',
+  WALL='wall', BOULDER='boulder in the way', TREE='tree'}
+local footprint_ok = 0
 for z,rows in pairs(ctx.preview.tiles) do for y,row in pairs(rows) do for x,valid in pairs(row) do
   local f,o = dfhack.maps.getTileFlags(x,y,z)
   local why = {}
@@ -22,13 +28,15 @@ for z,rows in pairs(ctx.preview.tiles) do for y,row in pairs(rows) do for x,vali
           local b=dfhack.buildings.findAtTile(x,y,z)
           why[#why+1]=b and ('occupied by '..df.building_type[b:getType()]..' #'..b.id) or 'building occupancy'
         end
-        why[#why+1]='tile shape '..df.tiletype_shape[a.shape]
+        local shape=df.tiletype_shape[a.shape]
+        if not BUILDABLE[shape] then why[#why+1]=SHAPE_WHY[shape] or ('tile shape '..shape) end
         if ARGS.key=='b' and f.outside then why[#why+1]='bed requires inside space' end
+        if #why==0 then footprint_ok=footprint_ok+1 why=nil end
       end
       known_tiles[z..','..x..','..y]=true
     end
   else why[#why+1]='off map' end
-  if not valid then
+  if not valid and why then
     if #why==0 then why[1]='native placement rule rejected this tile (for example, doors need an adjacent wall)' end
     tiles[#tiles+1]={x=x,y=y,z=z,reasons=why}
   end
@@ -50,5 +58,6 @@ table.sort(tiles,function(a,b) return a.y==b.y and a.x<b.x or a.y<b.y end)
 local stats=api.clean_stats(ctx.stats)
 if stats.build_designated then stats.build_designated.label='Buildings that would be designated (preview only)' end
 emit({dry_run=true,key=ARGS.key,stats=stats,invalid_tiles=tiles,ground_items=items,
+  rejected_with_footprint=footprint_ok>0 and footprint_ok or nil,
   can_place=(stats.build_designated and stats.build_designated.value>0 or false),
   guidance='Native Quickfort checks the entire footprint; tiles without a specific obvious reason are omitted. Ground items are observations, not proof of obstruction. Reserved items may be construction materials. wb=bowyer, wu=butcher. Use df_help topic=keys.'})

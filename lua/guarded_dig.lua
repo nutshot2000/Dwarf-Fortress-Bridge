@@ -7,7 +7,8 @@ local data,hazard={},{}
 for iy,row in ipairs(ARGS.cells) do
   data[iy-1]={} hazard[iy-1]={}
   for ix,text in ipairs(row) do
-    if text~='' then
+    -- "`" is quickfort's explicit empty cell; the raw command API would report it as an invalid key.
+    if text~='' and text~='`' then
       data[iy-1][ix-1]=text
       -- Erasing, smoothing and engraving do not breach walls.
       if not text:match('^[xse]%s*%(') and not ({x=true,s=true,e=true})[text] then hazard[iy-1][ix-1]=text end
@@ -33,5 +34,10 @@ for dz=0,(ARGS.levels or 1)-1 do
   local shifted=api.normalize_data({[0]=data},{x=ARGS.x,y=ARGS.y,z=ARGS.z-dz})
   for z,grid in pairs(shifted) do command.do_command_raw('dig',z,grid,ctx) end
 end
-emit({dry_run=ARGS.dry_run or false,stats=api.clean_stats(ctx.stats),protected_walls_preserved=true,
+-- Report only the counters that fired, as {label=value}; the full table is mostly zeros.
+local stats={}
+for _,s in pairs(api.clean_stats(ctx.stats)) do
+  if type(s)=='table' and s.value and s.value~=0 then stats[s.label]=s.value end
+end
+emit({dry_run=ARGS.dry_run or false,stats=stats,protected_walls_preserved=true,
   intentional_room_changes=ARGS.allow_room_changes and #conflicts or 0})

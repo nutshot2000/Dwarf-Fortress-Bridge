@@ -55,7 +55,8 @@ if action == 'enable' or action == 'disable' then
     u.status.labors[idx] = on
     table.insert(done, name:upper())
   end
-  emit({ok = true, unit = unit_name(u), [action .. 'd'] = done, labors = unit_labors(u)}) return
+  -- The full list is ~80 names; action=list shows it when needed.
+  emit({ok = true, unit = unit_name(u), [action .. 'd'] = done, labor_count = #unit_labors(u)}) return
 end
 
 if action == 'detail_add' or action == 'detail_remove' then

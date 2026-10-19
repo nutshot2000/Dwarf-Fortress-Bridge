@@ -60,6 +60,8 @@ tool("df_rooms", "Zones. action=list shows all zones with owners. action=assign 
     if (a.phase === "dig" || !a.phase) {
       const ids=new Set(layout.map(r=>`${r.x},${r.y},${Z}`));
       const damaged=(protectedPlan?.rooms??[]).filter(r=>ids.has(r.id)&&r.missing_walls.length);
+      // A refused wing must not leave phantom protected plans behind.
+      if (damaged.length) await luaFile("room_plan", { action: "forget", ids: [...ids] });
       if (damaged.length) return fail(JSON.stringify({error:"Proposed room boundaries are already open. Choose intact rock or construct enclosing walls before mining/furnishing.",rooms:damaged}));
     }
     const log = [];
@@ -72,13 +74,16 @@ tool("df_rooms", "Zones. action=list shows all zones with owners. action=assign 
       return out;
     };
     if (a.phase === "dig" || !a.phase) {
-      await dig("dig", X1, Y, xEnd, Y);
+      // The corridor must reach the shaft even when every room lies west of it.
+      const corrEnd = SX > xEnd ? SX - 1 : xEnd;
+      if (SX < X1) log.push(`note: the shaft at x${SX} is west of x1=${X1}; dig a link from the shaft to x${X1} yourself.`);
+      await dig("dig", X1, Y, corrEnd, Y);
       for (const x of rooms) {
         await dig("dig", x, Y - 4, x + 2, Y - 2); await dig("dig", x + 1, Y - 1, x + 1, Y - 1);
         await dig("dig", x, Y + 2, x + 2, Y + 4); await dig("dig", x + 1, Y + 1, x + 1, Y + 1);
       }
       await quickfort("dig", ["i"], SX, Y, Z, ["-p", "1"]); // re-assert the shaft after the corridor dig
-      log.push(`dig: corridor x${X1}-${xEnd} y${Y} and ${rooms.length * 2} rooms on z${Z}; shaft at ${SX},${Y}`);
+      log.push(`dig: corridor x${X1}-${corrEnd} y${Y} and ${rooms.length * 2} rooms on z${Z}; shaft at ${SX},${Y}`);
     }
     if (a.phase === "furnish") {
       for (const x of rooms) {

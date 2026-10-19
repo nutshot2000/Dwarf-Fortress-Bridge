@@ -26,11 +26,15 @@ tool("df_look", "ASCII map slice of one z-level plus lists of units and building
     const flooded = value.flooded_buildings ?? [];
     const hazardWarning = (ice.length ? `WARNING: ${ice.length} exposed frozen-water tiles. Ice can thaw and flood adjacent excavations. At: ${ice.slice(0,12).map(p => `${p.x},${p.y},${zz}`).join("; ")}\n` : "") +
       (flooded.length ? `WARNING: ${flooded.length} building/stockpile tiles contain liquid. At: ${flooded.slice(0,12).map(p => `${p.x},${p.y},${zz} depth ${p.depth}`).join("; ")}\n` : "");
-    const waterWarning = aquifers.length
-      ? `WARNING: ${aquifers.length} exposed aquifer tile(s); A marks dry tiles, wet tiles keep their liquid glyph. Avoid breaching them without a water-control plan. At: ` +
-        aquifers.slice(0, 12).map((p) => `${p.x},${p.y},${zz}`).join("; ") +
-        (aquifers.length > 12 ? "; ..." : "") + "\n"
-      : "";
+    // Only aquifer tiles touching open space can leak; walled-in ones are reported as sealed.
+    const leaking = aquifers.filter((p) => p.open !== false);
+    const sealed = aquifers.length - leaking.length;
+    const waterWarning = leaking.length
+      ? `WARNING: ${leaking.length} exposed aquifer tile(s) touch open space and can seep water` + (sealed ? ` (${sealed} more sealed behind walls)` : "") +
+        `; A marks dry tiles, wet tiles keep their liquid glyph. Avoid breaching them without a water-control plan. At: ` +
+        leaking.slice(0, 12).map((p) => `${p.x},${p.y},${zz}`).join("; ") +
+        (leaking.length > 12 ? "; ..." : "") + "\n"
+      : sealed ? `Aquifer: ${sealed} visible aquifer tile(s) (A), all sealed behind walls or rock: no open tile touches them.\n` : "";
     // column ruler every 10 tiles so coordinates can be read off the picture
     let ruler = "      ";
     for (let x = x1; x <= x2; x++) ruler += x % 10 === 0 ? "|" : " ";

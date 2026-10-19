@@ -12,6 +12,12 @@ This file is sent to the model as the server's instructions; clients that drop t
   `W` workshop, `S` stockpile, `P` farm plot, `B` bed, `D` door, `K` table, `C` chair/box/cabinet, `c` unfinished building.
 - Workshops are 3x3 and placed by their CENTRE tile; farm plots, stockpiles and zones take a top-left corner + size.
 - `df_look` warns about exposed aquifer tiles and gives their coordinates. Leave them intact until a water-control plan is ready; the readout never identifies hidden aquifers.
+- Crossing a LIGHT aquifer layer with the stair shaft (`df_cmd aquifer list` shows light/heavy per level): dig the shaft
+  through that level only, plus a one-tile ring around it (`dig`), then build walls (`Cw`, logs are fine) on the whole ring
+  so no open tile touches aquifer soil. Build the four ring corners FIRST: once the sides are walled, a corner touches the
+  shaft only diagonally and builders cannot reach it. "Digging designation cancelled: damp stone" is a one-time warning;
+  designate the same tiles again to confirm. Water on a floor makes the neighbouring rock "damp" and silently cancels
+  digs next to it, so seal before digging rooms below. `df_look` reports the ring as sealed once it is closed.
 - Farm plots need soil/mud floor underground or any soil surface. `df_help` lists building keys.
 
 ## The turn loop

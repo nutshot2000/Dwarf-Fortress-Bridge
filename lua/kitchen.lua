@@ -16,10 +16,16 @@ local function excl_list()
   return out
 end
 
+-- DF forbids cooking every seed type by default; those ~100 entries are summarised as a count.
+local function excl_summary()
+  local other, seeds = {}, 0
+  for _, e in ipairs(excl_list()) do if e.item == 'SEEDS' and e.forbidden == 'Cook' then seeds = seeds + 1 else table.insert(other, e) end end
+  return other, seeds .. ' seed types (DF default)'
+end
+
 if action == 'list' then
-  local all, other, seeds = excl_list(), {}, 0
-  for _, e in ipairs(all) do if e.item == 'SEEDS' and e.forbidden == 'Cook' then seeds = seeds + 1 else table.insert(other, e) end end
-  emit({exclusions = other, seed_cooking_forbidden = seeds .. ' seed types (DF default)',
+  local other, seeds = excl_summary()
+  emit({exclusions = other, seed_cooking_forbidden = seeds,
   hint = 'set plant=<name> cook=false|true brew=false|true. seedwatch can manage this automatically.'}) return end
 
 if action == 'set' then
@@ -48,6 +54,7 @@ if action == 'set' then
       table.insert(changes, ('%s: %s'):format(kind, excluded and 'forbidden' or 'allowed'))
     end
   end
-  emit({ok = true, plant = p.name, changes = changes, exclusions = excl_list()}) return
+  local other, seeds = excl_summary()
+  emit({ok = true, plant = p.name, changes = changes, exclusions = other, seed_cooking_forbidden = seeds}) return
 end
 emit({error = 'Unknown action ' .. action})

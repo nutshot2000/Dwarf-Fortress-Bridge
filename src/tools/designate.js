@@ -8,7 +8,7 @@ tool("df_designations", "List actual pending dig/smooth and tree-felling/plant-g
 tool("df_remove", "Preview or deconstruct one building/plan by ID using ordinary game removal. dry_run defaults true. To release a reserved blocker, inspect df_jobs suspended, preview the owning unbuilt building, then dry_run=false. Built structures require allow_built=true. This removes the selected plan; it does not merely release its materials.",
   {building_id:z.number().int(),dry_run:z.boolean().default(true),allow_built:z.boolean().default(false)},a=>luaTool("remove",a));
 
-tool("df_room_plan", "Protect, audit or repair private rooms. status reports missing walls, pending construction and enclosed. repair id=... previews missing wall/door jobs (dry_run defaults true); dry_run=false queues ordinary construction. Supply door_x,door_y when the damaged room has no surviving entrance. Repair preserves furniture and the doorway; wait and recheck enclosed=true before calling it finished. tidy id=... previews loose stone/gem cleanup in that room; dry_run=false marks eligible clutter for hauling to a dump, skipping reserved items and furniture. protect saves custom interiors and doorway coordinates. Existing bedroom zones are protected automatically. forget removes a saved plan for intentional remodelling.",
+tool("df_room_plan", "Protect, audit or repair private rooms. status reports missing walls, pending construction and enclosed. repair id=... previews missing wall/door jobs (dry_run defaults true); dry_run=false queues ordinary construction. Supply door_x,door_y when the damaged room has no surviving entrance. Repair preserves furniture and the doorway; wait and recheck enclosed=true before calling it finished. tidy id=... previews loose stone/gem cleanup in that room; dry_run=false marks eligible clutter for hauling to a dump, skipping reserved items and furniture. protect saves custom interiors and doorway coordinates. Existing bedroom zones are protected automatically. forget removes a saved plan (id) or every saved plan on level z, for intentional remodelling or abandoned layouts. status z=... reports one level.",
   {action:z.enum(["status","protect","forget","repair","tidy"]).default("status"),z:optCoord,id:z.string().optional(),detail:z.boolean().default(false),
     dry_run:z.boolean().default(true),door_x:optCoord,door_y:optCoord,
     rooms:z.array(z.object({x:coord,y:coord,w:z.number().int().min(1).max(30).optional(),h:z.number().int().min(1).max(30).optional(),door_x:optCoord,door_y:coord})).optional()},async a=>{
@@ -138,7 +138,10 @@ tool("df_build", "Place a building, or dry_run=true for a real non-mutating nati
     if (a.name) cell += `{name="${a.name.replace(/"/g, "")}"}`;
     if (a.w || a.h) cell += `(${a.w ?? 1}x${a.h ?? 1})`;
     await cameraTo(a.x, a.y, a.z, `build ${a.key} at ${a.x},${a.y},${a.z}`);
-    return text(await quickfort("build", [cell], a.x, a.y, a.z) + "\nPreflight: " + JSON.stringify(check)+`\nAfter construction finishes: df_screenshot x=${a.x} y=${a.y} z=${a.z}, then df_problems/df_rooms audit. Check workers can leave and passages remain open.`);
+    // Placement passed preflight, so only the parts worth reading: counters that fired and anything on the ground.
+    const fired = Object.fromEntries(Object.values(check.stats ?? {}).filter((s) => s?.value && !/would be designated/.test(s.label)).map((s) => [s.label, s.value]));
+    const preflight = { ...(Object.keys(fired).length ? { stats: fired } : {}), ...(check.ground_items?.length ? { ground_items: check.ground_items } : {}) };
+    return text(await quickfort("build", [cell], a.x, a.y, a.z) + (Object.keys(preflight).length ? "\nPreflight: " + JSON.stringify(preflight) : "") +`\nAfter construction finishes: df_screenshot x=${a.x} y=${a.y} z=${a.z}, then df_problems/df_rooms audit. Check workers can leave and passages remain open.`);
   });
 
 tool("df_stockpile", "Create a stockpile rectangle. type is one or more #place letters: a animal, f food, u furniture, n coins, y corpses, r refuse, s stone, w wood, e gems, b bars/blocks, h cloth, l leather, z ammo, S sheets, g finished goods, p weapons, d armor, c custom. e.g. 'fw' = food+wood.",
@@ -148,8 +151,28 @@ tool("df_stockpile", "Create a stockpile rectangle. type is one or more #place l
     let cell = a.type;
     if (a.name) cell += `{name="${a.name.replace(/"/g, "")}"}`;
     await cameraTo(a.x + (a.w >> 1), a.y + (a.h >> 1), a.z, `stockpile at ${a.x},${a.y},${a.z}`);
-    return text(await quickfort("place", [`${cell}(${a.w}x${a.h})`], a.x, a.y, a.z));
+    const out = await quickfort("place", [`${cell}(${a.w}x${a.h})`], a.x, a.y, a.z);
+    return text(out + await skippedTilesNote(out, a));
   });
+
+// Quickfort silently leaves unusable tiles out of a stockpile or zone, which leaves a ragged edge.
+// Name them, usually undug rock or tiles still being mined, so the area can be laid again once ready.
+async function skippedTilesNote(out, a) {
+  if (!/skipped/i.test(out)) return "";
+  const { value } = await lua(`local bad = {}
+    for y = ARGS.y, ARGS.y + ARGS.h - 1 do for x = ARGS.x, ARGS.x + ARGS.w - 1 do
+      local tt = dfhack.maps.getTileType(x, y, ARGS.z)
+      local f = dfhack.maps.getTileFlags(x, y, ARGS.z)
+      local shape = tt and df.tiletype_shape[df.tiletype.attrs[tt].shape]
+      local why = not tt and 'off map' or f.hidden and 'unrevealed' or (shape ~= 'FLOOR' and shape ~= 'PEBBLES') and (shape:lower() .. (f.dig ~= 0 and ' (still designated for digging)' or ''))
+        or (dfhack.buildings.findAtTile(x, y, ARGS.z) and 'building already there') or nil
+      if why then bad[#bad + 1] = x .. ',' .. y .. ' ' .. why end
+    end end
+    emit(bad)`, a);
+  if (!value?.length) return "\nNote: some tiles were skipped although the area now looks clear; inspect it with df_look.";
+  return `\nNote: ${value.length} tile(s) were left out, so the area is not a clean rectangle: ${value.slice(0, 8).join("; ")}` +
+    (value.length > 8 ? "; ..." : "") + ". Wait for digging to finish, then remove it (df_remove allow_built=true) and place it again.";
+}
 
 tool("df_zone", "Create a zone rectangle. Bedroom zones require dry floor and completed walls/doors; repair with df_room_plan first. type: m meeting area, b bedroom, h dining hall, n pasture, p pit/pond, w water source, f fishing, o office, D dormitory, B barracks, d garbage dump, T tomb, g gather fruit, s sand, c clay. Optional location: tavern, hospital, temple, library, guildhall.",
   { type: z.string().min(1), x: coord, y: coord, z: coord,
@@ -165,7 +188,8 @@ tool("df_zone", "Create a zone rectangle. Bedroom zones require dry floor and co
     if (a.location) props.push(`location=${a.location}`);
     const cell = a.type + (props.length ? `{${props.join(" ")}}` : "") + `(${a.w}x${a.h})`;
     await cameraTo(a.x + (a.w >> 1), a.y + (a.h >> 1), a.z, `zone at ${a.x},${a.y},${a.z}`);
-    return text(await quickfort("zone", [cell], a.x, a.y, a.z));
+    const out = await quickfort("zone", [cell], a.x, a.y, a.z);
+    return text(out + await skippedTilesNote(out, a));
   });
 
 tool("df_blueprint", "Apply a free-form quickfort blueprint. rows are CSV lines (cells separated by commas) starting at x,y,z as the top-left. Use for irregular shapes. dry_run reports what would happen without changing the game.",

@@ -49,7 +49,8 @@ end
 if action == 'list' then
   local out = {}
   for _, b in ipairs(df.global.world.buildings.all) do
-    if is_shop(b) then
+    -- With building_id, report just that workshop (with its task list).
+    if is_shop(b) and (not ARGS.building_id or ARGS.building_id == b.id) then
       local entry = {id = b.id, type = shop_type(b), x = b.centerx, y = b.centery, z = b.z,
         built = b:getBuildStage() >= b:getMaxBuildStage(), jobs = queued(b)}
       if ARGS.building_id == b.id or ARGS.show_tasks then

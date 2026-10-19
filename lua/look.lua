@@ -87,6 +87,15 @@ for _, b in ipairs(df.global.world.buildings.all) do
   end
 end
 
+-- DF clears a tile's dig flag once a job is made from it, so show queued dig jobs as designations too.
+local DIG_JOBS = { Dig = 'd', CarveUpDownStaircase = 'i', CarveDownwardStaircase = 'j', CarveUpwardStaircase = 'u',
+  CarveRamp = 'r', DigChannel = 'h' }
+local grid_j = {}
+for _, j in require('utils').listpairs(df.global.world.jobs.list) do
+  local g = DIG_JOBS[df.job_type[j.job_type]]
+  if g and j.pos.z == z then grid_j[j.pos.y * 100000 + j.pos.x] = g end
+end
+
 local grid_u, ulist = {}, {}
 for _, u in ipairs(df.global.world.units.active) do
   local p = u.pos
@@ -108,7 +117,13 @@ for y = y1, y2 do
     local k = y * 100000 + x
     local fl = dfhack.maps.getTileFlags(x, y, z)
     if fl and not fl.hidden and fl.water_table then
-      aquifer_tiles[#aquifer_tiles + 1] = {x = x, y = y}
+      -- An aquifer only leaks into open neighbours (same level or below); one fully walled in is sealed.
+      local open = false
+      for _, d in ipairs({{-1,-1,0},{0,-1,0},{1,-1,0},{-1,0,0},{1,0,0},{-1,1,0},{0,1,0},{1,1,0},{0,0,-1}}) do
+        local nt = dfhack.maps.getTileType(x + d[1], y + d[2], z + d[3])
+        if nt and df.tiletype.attrs[nt].shape ~= SHAPE.WALL then open = true break end
+      end
+      aquifer_tiles[#aquifer_tiles + 1] = {x = x, y = y, open = open}
     end
     if fl and not fl.hidden then
       local tt = dfhack.maps.getTileType(x,y,z)
@@ -121,7 +136,7 @@ for y = y1, y2 do
     end
     -- Stockpile/building glyphs must not conceal dangerous liquid.
     local wet = fl and not fl.hidden and fl.flow_size > 0
-    line[#line + 1] = grid_u[k] or (wet and tile_glyph(x,y)) or grid_b[k] or tile_glyph(x, y)
+    line[#line + 1] = grid_u[k] or (wet and tile_glyph(x,y)) or grid_b[k] or grid_j[k] or tile_glyph(x, y)
   end
   rows[#rows + 1] = table.concat(line)
 end

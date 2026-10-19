@@ -45,6 +45,16 @@ if action == 'cancel' then
   emit({ok = true, cancelled = info}) return
 elseif action == 'suspend' then j.flags.suspend = true
 elseif action == 'resume' then j.flags.suspend = false
-elseif action == 'do_now' then j.flags.do_now = true
+elseif action == 'do_now' then
+  j.flags.do_now = true
+  -- A workshop works its queue front to back and ignores do_now, so move the job to the front
+  -- (behind a job someone is already working on).
+  local b = dfhack.job.getHolder(j)
+  if b and b.jobs then
+    local idx
+    for i = 0, #b.jobs - 1 do if b.jobs[i] == j then idx = i break end end
+    local front = (#b.jobs > 0 and b.jobs[0] ~= j and dfhack.job.getWorker(b.jobs[0])) and 1 or 0
+    if idx and idx > front then b.jobs:erase(idx) b.jobs:insert(front, j) end
+  end
 else emit({error = 'Unknown action ' .. action}) return end
 emit({ok = true, job = jinfo(j)})

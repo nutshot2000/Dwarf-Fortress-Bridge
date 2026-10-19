@@ -107,8 +107,10 @@ tool("df_wait", "Unpause and let the game run for a number of in-game days (1 da
     // Blow-by-blow combat lines (mostly squad sparring) are noise unless someone actually got hurt.
     const COMBAT = /lightly tapping|misses the|charges at|collides with|strikes at|parried|deflected|rolls away|jumps away|attacks the .* but|no longer stunned|is knocked over|punches|kicks|scratches|bites|grabs|releases the grip/i;
     const HURT = /dead|killed|struck down|severed|mangled|torn|shattered|unconscious|bleeding/i;
-    const imp = all.filter((m) => (IMPORTANT.test(m.type || "") || IMPORTANT_TEXT.test(m.text)) && !(COMBAT.test(m.text) && !HURT.test(m.text)));
-    const rest = all.filter((m) => !imp.includes(m) && !COMBAT.test(m.text));
+    // DF tags every blow-by-blow line with a COMBAT_* report type; the text patterns catch the rest.
+    const isCombat = (m) => /^COMBAT/.test(m.type || "") || COMBAT.test(m.text);
+    const imp = all.filter((m) => (IMPORTANT.test(m.type || "") || IMPORTANT_TEXT.test(m.text)) && !(isCombat(m) && !HURT.test(m.text)));
+    const rest = all.filter((m) => !imp.includes(m) && !isCombat(m));
     const sparring = all.length - imp.length - rest.length;
     let out = `Ran ${ran.toFixed(2)} days in ${((Date.now() - t0) / 1000).toFixed(0)}s: ${reason}. Paused.\n`;
     if(now.isolated?.length) out+=`ACCESS WARNING: possibly trapped citizen(s): ${now.isolated.map(u=>`${u.name} #${u.id} at ${u.x},${u.y},${u.z}`).join("; ")}. Inspect with df_problems before further construction.\n`;
