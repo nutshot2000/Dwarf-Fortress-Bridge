@@ -36,7 +36,10 @@ async function dismissPopup() {
   return { n, text: txt, after: await count() };
 }
 
-tool("df_wait", "Unpause and let the game run for a number of in-game days (1 day = 1200 ticks), then pause again and report new announcements. Stops early if the game pauses itself, and (watch, default on) when a hostile becomes visible, real combat involves a citizen or owned tame animal (excluding hunting/sparring), a citizen dies or leaves, a strange mood starts, a caravan arrives, or a citizen newly loses walking connection to the majority citizen group (possibly trapped). on_threat=alert also turns on the civilian alert (burrow, default Inside) and puts squads on Ready when a hostile or fortress combat is detected. animal_fights=report reports owned-animal fights without stopping for them; citizen combat and new hostiles still stop the wait. upkeep=true tops up stocks (df_upkeep apply) afterwards. The camera director (df_camera) moves the player's view to the action while time runs. Announcement popups are clicked away. Capped at DF_WAIT_SECONDS (default 50) real seconds per call; call again to continue.",
+// Citizen name -> absolute tick of the last fight that stopped a wait (see "stop once per fight").
+const recentFights = new Map();
+
+tool("df_wait","Unpause and let the game run for a number of in-game days (1 day = 1200 ticks), then pause again and report new announcements. Stops early if the game pauses itself, and (watch, default on) when a hostile becomes visible, real combat involves a citizen or owned tame animal (excluding hunting/sparring), a citizen dies or leaves, a strange mood starts, a caravan arrives, or a citizen newly loses walking connection to the majority citizen group (possibly trapped). on_threat=alert also turns on the civilian alert (burrow, default Inside) and puts squads on Ready when a hostile or fortress combat is detected. animal_fights=report reports owned-animal fights without stopping for them; citizen combat and new hostiles still stop the wait. upkeep=true tops up stocks (df_upkeep apply) afterwards. The camera director (df_camera) moves the player's view to the action while time runs. Announcement popups are clicked away. Capped at DF_WAIT_SECONDS (default 50) real seconds per call; call again to continue.",
   { days: z.number().min(0.1).max(28).default(1), watch: z.boolean().default(true),
     animal_fights: z.enum(["stop", "report"]).default("stop"),
     on_threat: z.enum(["stop", "alert"]).default("stop"), burrow: z.string().default("Inside"),
@@ -55,8 +58,17 @@ tool("df_wait", "Unpause and let the game run for a number of in-game days (1 da
         await new Promise((r) => setTimeout(r, 700));
         now = await tick(now.last,a.animal_fights);
         for (const e of now.animal_combat ?? []) animalReports.set(e.report_id,e);
+        // Stop once per fight: a citizen already reported fighting within the last game day keeps
+        // being listed but does not stop the wait again on every blow.
+        const fresh = [];
+        for (const e of now.combat ?? []) {
+          const seen = recentFights.get(e.name);
+          if (seen !== undefined && now.abs - seen < 1200) animalReports.set(e.report_id ?? `${e.name}:${e.text}`, e);
+          else fresh.push(e);
+        }
         try { await directorStep(); } catch { /* the camera must never break a wait */ }
-        const event = waitDecision(start, now, target, a.watch !== false);
+        const event = waitDecision(start, { ...now, combat: fresh }, target, a.watch !== false);
+        for (const e of fresh) recentFights.set(e.name, now.abs);
         if (a.watch !== false) {
           if (event.reasons.length) {
             await setPause(true);
@@ -119,7 +131,7 @@ tool("df_wait", "Unpause and let the game run for a number of in-game days (1 da
     const sparring = all.length - imp.length - rest.length;
     let out = `Ran ${ran.toFixed(2)} days in ${((Date.now() - t0) / 1000).toFixed(0)}s: ${reason}. Paused.\n`;
     if(now.isolated?.length) out+=`ACCESS WARNING: possibly trapped citizen(s): ${now.isolated.map(u=>`${u.name} #${u.id} at ${u.x},${u.y},${u.z}`).join("; ")}. Inspect with df_problems before further construction.\n`;
-    if (animalReports.size) out += `Animal combat (${a.animal_fights} mode; citizen combat and new hostiles still stop waits):\n${[...animalReports.values()].slice(-3).map(e=>`${e.name}: ${e.text}`).join("\n")}\n`;
+    if (animalReports.size) out += `Ongoing fights (animal fights in ${a.animal_fights} mode; a citizen's fight stops a wait once per day; new hostiles always stop):\n${[...animalReports.values()].slice(-3).map(e=>`${e.name}: ${e.text}`).join("\n")}\n`;
     if (start.hostiles > 0) out += `(${start.hostiles} hostile(s) were already visible when the wait began: ${(start.hostile_names ?? []).join("; ")})\n`;
     // Migrant waves arrive as a big popup, not a regular report, so also compare the population.
     if (now.pop !== undefined && start.pop !== undefined && now.pop !== start.pop) {

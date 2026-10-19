@@ -70,8 +70,12 @@ for _, u in ipairs(cits) do
   for _, r in ipairs(u.specific_refs) do
     if r.type == df.specific_ref_type.ACTIVITY then
       local a = try(function() return r.data.activity end)
-      if a and try(function() return a.unit_noble end) == u.id and a.place == -1 then
-        add('high', ('%s is stuck in a diplomat meeting with no meeting room: give them an Office zone (Decent quality is best) or the meeting and depot trading stall.'):format(unit_name(u)))
+      -- Only a visiting actor (diplomat, liaison) blocks trade; citizens bringing matters to their leader
+      -- is routine and also reports place == -1.
+      local actor = a and try(function() return df.unit.find(a.unit_actor) end)
+      local visitor = actor and not dfhack.units.isCitizen(actor)
+      if a and visitor and try(function() return a.unit_noble end) == u.id and a.place == -1 then
+        add('high', ('%s is stuck in a meeting with %s and no meeting room: give them an Office zone (Decent quality is best) or the meeting and depot trading stall.'):format(unit_name(u), unit_name(actor)))
       end
     end
   end

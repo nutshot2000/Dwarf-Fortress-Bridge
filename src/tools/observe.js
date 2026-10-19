@@ -24,8 +24,10 @@ tool("df_look", "ASCII map slice of one z-level plus lists of units and building
     const aquifers = value.aquifer_tiles ?? [];
     const ice = value.ice_tiles ?? [];
     const flooded = value.flooded_buildings ?? [];
+    const sky = value.sky_holes ?? [];
     const hazardWarning = (ice.length ? `WARNING: ${ice.length} exposed frozen-water tiles. Ice can thaw and flood adjacent excavations. At: ${ice.slice(0,12).map(p => `${p.x},${p.y},${zz}`).join("; ")}\n` : "") +
-      (flooded.length ? `WARNING: ${flooded.length} building/stockpile tiles contain liquid. At: ${flooded.slice(0,12).map(p => `${p.x},${p.y},${zz} depth ${p.depth}`).join("; ")}\n` : "");
+      (flooded.length ? `WARNING: ${flooded.length} building/stockpile tiles contain liquid. At: ${flooded.slice(0,12).map(p => `${p.x},${p.y},${zz} depth ${p.depth}`).join("; ")}\n` : "") +
+      (sky.length ? `WARNING: ${sky.length} underground tile(s) open to the sky (rain, light and flyers get in; roof them with Cf on the level above). At: ${sky.slice(0,12).map(p => `${p.x},${p.y},${zz}`).join("; ")}\n` : "");
     // Only aquifer tiles touching open space can leak; walled-in ones are reported as sealed.
     const leaking = aquifers.filter((p) => p.open !== false);
     const sealed = aquifers.length - leaking.length;

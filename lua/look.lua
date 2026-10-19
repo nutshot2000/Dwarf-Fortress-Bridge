@@ -110,7 +110,7 @@ for _, u in ipairs(df.global.world.units.active) do
   end
 end
 
-local rows, aquifer_tiles, ice_tiles, flooded_buildings = {}, {}, {}, {}
+local rows, aquifer_tiles, ice_tiles, flooded_buildings, sky_holes = {}, {}, {}, {}, {}
 for y = y1, y2 do
   local line = {}
   for x = x1, x2 do
@@ -133,6 +133,17 @@ for y = y1, y2 do
       if fl.flow_size > 0 and grid_b[k] then
         flooded_buildings[#flooded_buildings+1] = {x=x,y=y,depth=fl.flow_size}
       end
+      -- A tile open to the sky right next to a covered room tile is a hole in that room's roof:
+      -- rain, light and flyers get in.
+      if fl.outside and tt and df.tiletype.attrs[tt].shape ~= SHAPE.WALL then
+        for _, d in ipairs({{1,0},{-1,0},{0,1},{0,-1}}) do
+          local nf = dfhack.maps.getTileFlags(x + d[1], y + d[2], z)
+          local nt = dfhack.maps.getTileType(x + d[1], y + d[2], z)
+          if nf and nt and not nf.outside and not nf.hidden and df.tiletype.attrs[nt].shape ~= SHAPE.WALL then
+            sky_holes[#sky_holes+1] = {x=x,y=y} break
+          end
+        end
+      end
     end
     -- Stockpile/building glyphs must not conceal dangerous liquid.
     local wet = fl and not fl.hidden and fl.flow_size > 0
@@ -144,5 +155,5 @@ end
 emit({
   z = z, x1 = x1, y1 = y1, x2 = x2, y2 = y2, map_size = {x = sx, y = sy, z = sz},
   rows = rows, units = ulist, buildings = blist, aquifer_tiles = aquifer_tiles,
-  ice_tiles = ice_tiles, flooded_buildings = flooded_buildings,
+  ice_tiles = ice_tiles, flooded_buildings = flooded_buildings, sky_holes = sky_holes,
 })

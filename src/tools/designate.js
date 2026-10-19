@@ -209,4 +209,20 @@ async function newIdNote(kind, a) {
 tool("df_blueprint", "Apply a free-form quickfort blueprint. rows are CSV lines (cells separated by commas) starting at x,y,z as the top-left. Use for irregular shapes. dry_run reports what would happen without changing the game.",
   { mode: z.enum(["dig", "build", "place", "zone"]), rows: z.array(z.string()).min(1),
     x: coord, y: coord, z: coord, dry_run: z.boolean().optional(),allow_room_changes:z.boolean().default(false) },
-  async (a) => text(await quickfort(a.mode, a.rows, a.x, a.y, a.z, a.dry_run ? ["--dry-run"] : [],{allow_room_changes:a.allow_room_changes})));
+  async (a) => {
+    const out = await quickfort(a.mode, a.rows, a.x, a.y, a.z, a.dry_run ? ["--dry-run"] : [],{allow_room_changes:a.allow_room_changes});
+    if (a.mode !== "build" || a.dry_run || !/Unsuitable tiles for building/.test(out)) return text(out);
+    // Name the cells that got no building, with what is on the tile, so they can be fixed or moved.
+    const cells = [];
+    a.rows.forEach((row, dy) => row.split(",").forEach((c, dx) => { if (c.trim() && c.trim() !== "`") cells.push({ x: a.x + dx, y: a.y + dy, key: c.trim() }); }));
+    const { value } = await lua(`local bad = {}
+      for _, c in ipairs(ARGS.cells) do
+        if not dfhack.buildings.findAtTile(c.x, c.y, ARGS.z) then
+          local tt = dfhack.maps.getTileType(c.x, c.y, ARGS.z)
+          local shape = tt and df.tiletype_shape[df.tiletype.attrs[tt].shape] or 'off map'
+          bad[#bad + 1] = c.key .. ' at ' .. c.x .. ',' .. c.y .. ': ' .. shape:lower()
+        end
+      end
+      emit(bad)`, { cells, z: a.z });
+    return text(out + (value?.length ? `\nNot placed: ${value.join("; ")} (saplings/shrubs block furniture; doors need a wall beside them)` : ""));
+  });

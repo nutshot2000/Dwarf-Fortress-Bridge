@@ -42,7 +42,10 @@ for _, u in ipairs(citizens()) do
   elseif jt and not IGNORE[jt] and dfhack.job.getHolder(j) then
     -- workshop work: the more skilled the dwarf, the better the show (legendary crafters make masterworks)
     local s = best_skill(u)
-    add('crafting', 1.5 + s / 6, u, name .. ': ' .. dfhack.job.getName(j) .. (s >= 15 and ' (legendary)' or ''))
+    -- "legendary" only when the dwarf is legendary at THIS job's skill, not at something else
+    local js = try(function() return df.job_type.attrs[j.job_type].skill end, -1)
+    local jsk = (js and js >= 0) and try(function() return dfhack.units.getNominalSkill(u, js, true) end, 0) or 0
+    add('crafting', 1.5 + s / 6, u, name .. ': ' .. dfhack.job.getName(j) .. (jsk >= 15 and ' (legendary)' or ''))
   elseif not jt then
     if u.military.squad_id >= 0 then add('military', 1.4, u, name .. ' training with the squad')
     elseif #u.social_activities > 0 then add('social', 2.0, u, name .. ' socialising')
