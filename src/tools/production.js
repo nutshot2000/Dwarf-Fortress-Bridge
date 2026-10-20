@@ -13,8 +13,12 @@ const CATEGORY_MATS = ["wood", "plant", "cloth", "silk", "leather", "bone", "she
 const EITHER_JOBS = /^(ConstructTable|ConstructThrone|ConstructDoor)$/;
 // Natural names the game spells differently.
 const JOB_ALIASES = { ConstructChair: "ConstructThrone", MakeChair: "ConstructThrone", ConstructCup: "MakeGoblet", MakeCup: "MakeGoblet" };
+// Furniture that DF models as tools: MakeTool with an item subtype (the workshop "make wooden bookcase"
+// entry from dfhack.workshops asks for the wrong log type and never runs).
+const TOOL_ALIASES = { MakeBookcase: "ITEM_TOOL_BOOKCASE", ConstructBookcase: "ITEM_TOOL_BOOKCASE",
+  MakePedestal: "ITEM_TOOL_PEDESTAL", MakeDisplayCase: "ITEM_TOOL_DISPLAY_CASE", MakeAltar: "ITEM_TOOL_ALTAR" };
 
-tool("df_order", "Queue a manager work order (needs a MANAGER; df_noble repair if the game says one is required). job is a df.job_type name, e.g. ConstructBed, MakeBarrel, ConstructTable, ConstructThrone, ConstructDoor, BrewDrink, PrepareMeal, ConstructBlocks. material: wood, stone, bone, leather, cloth, ... (defaults: wood for carpenter jobs, stone for mason jobs; tables, chairs and doors fall back to wood while no stone is free). Chairs are ConstructThrone (ConstructChair is accepted). repeat: daily/weekly/monthly/seasonally/yearly. Metal gear: job MakeArmor/MakeHelm/MakePants/MakeGloves/MakeShoes/MakeShield/MakeWeapon with item_subtype (ITEM_ARMOR_BREASTPLATE, ITEM_ARMOR_MAIL_SHIRT, ITEM_HELM_HELM, ITEM_PANTS_GREAVES, ITEM_GLOVES_GAUNTLETS, ITEM_SHOES_BOOTS, ITEM_SHIELD_SHIELD, ITEM_WEAPON_AXE_BATTLE, ITEM_WEAPON_SPEAR, ITEM_WEAPON_PICK...) and material INORGANIC:IRON. Brewing, cooking and many crafts are reactions: pass reaction instead of job (BREW_DRINK_FROM_PLANT, BREW_DRINK_FROM_PLANT_GROWTH, MAKE_SOAP...). Omit job to list orders; cancel_id removes an order (and its pending jobs). df_cmd 'workorder -l <filter>' lists job names.",
+tool("df_order", "Queue a manager work order (needs a MANAGER; df_noble repair if the game says one is required). job is a df.job_type name, e.g. ConstructBed, MakeBarrel, ConstructTable, ConstructThrone, ConstructDoor, BrewDrink, PrepareMeal, ConstructBlocks. material: wood, stone, bone, leather, cloth, ... (defaults: wood for carpenter jobs, stone for mason jobs; tables, chairs and doors fall back to wood while no stone is free). Chairs are ConstructThrone (ConstructChair is accepted); bookcases, pedestals, display cases and altars are MakeTool (MakeBookcase etc. are accepted). repeat: daily/weekly/monthly/seasonally/yearly. Metal gear: job MakeArmor/MakeHelm/MakePants/MakeGloves/MakeShoes/MakeShield/MakeWeapon with item_subtype (ITEM_ARMOR_BREASTPLATE, ITEM_ARMOR_MAIL_SHIRT, ITEM_HELM_HELM, ITEM_PANTS_GREAVES, ITEM_GLOVES_GAUNTLETS, ITEM_SHOES_BOOTS, ITEM_SHIELD_SHIELD, ITEM_WEAPON_AXE_BATTLE, ITEM_WEAPON_SPEAR, ITEM_WEAPON_PICK...) and material INORGANIC:IRON. Brewing, cooking and many crafts are reactions: pass reaction instead of job (BREW_DRINK_FROM_PLANT, BREW_DRINK_FROM_PLANT_GROWTH, MAKE_SOAP...). Omit job to list orders; cancel_id removes an order (and its pending jobs). df_cmd 'workorder -l <filter>' lists job names.",
   { job: z.string().optional(), reaction: z.string().optional(), item_subtype: z.string().optional(), amount: z.number().int().min(1).max(1000).optional(), material: z.string().optional(),
     repeat: z.enum(["daily", "weekly", "monthly", "seasonally", "yearly"]).optional(),
     cancel_id: z.number().int().optional() },
@@ -47,6 +51,7 @@ tool("df_order", "Queue a manager work order (needs a MANAGER; df_noble repair i
 async function queueOrder(a) {
   const { value: manager } = await lua("emit(#dfhack.units.getUnitsByNobleRole('manager') > 0)");
   if (!manager) throw new Error("No active MANAGER. Appoint one with df_noble action=appoint position=MANAGER unit_id=...; if already appointed, run df_noble action=repair. No order was queued.");
+  if (TOOL_ALIASES[a.job]) { a = { ...a, item_subtype: a.item_subtype ?? TOOL_ALIASES[a.job], job: "MakeTool" }; }
   const job = a.reaction ? "CustomReaction" : (JOB_ALIASES[a.job] ?? a.job);
   const order = { job, amount_total: a.amount ?? 1 };
   if (a.reaction) order.reaction = a.reaction.toUpperCase();

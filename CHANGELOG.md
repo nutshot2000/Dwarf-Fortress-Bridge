@@ -9,6 +9,8 @@
   furniture and the forge's anvil). DF drops the plan if a part never turns up.
 - `df_zone location=... name=...` gives the new location that name. Quickfort otherwise gives every location it
   creates the same generated name.
+- `df_order MakeBookcase` (also `MakePedestal`, `MakeDisplayCase`, `MakeAltar`) queues the right `MakeTool`
+  subtype. The workshop catalogue's "make wooden bookcase" asks for the wrong logs and never runs.
 
 ## 1.4.3
 
