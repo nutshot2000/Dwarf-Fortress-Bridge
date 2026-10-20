@@ -88,6 +88,9 @@ tool("df_petition", "Petitions (residency, citizenship, temples/guildhalls). lis
        emit(r)`);
     if (a.action === "list") return text(JSON.stringify({ petitions: list ?? [] }, null, 1));
     if (!list?.length) return fail("No pending petitions");
+    // Answering goes through the Petitions panel, which closes whatever panel is open: never mid-trade.
+    const { value: trading } = await lua(`emit(df.global.game.main_interface.trade.open)`);
+    if (trading) return fail("The trade screen is open: finish the trade (df_trade propose/close) first; answering a petition would close it. Petitions last a few days.");
     await luaFile("screen", { action: "close" });
     // The panel sometimes is not drawn yet on the first look: open it and search again a few times.
     let deny;
