@@ -43,10 +43,17 @@ local function unit_name(u)
       or ('unit ' .. u.id))
 end
 
+-- DF gives some jobs (cooking a meal) an empty name: fall back to the job type, split into words.
+local function job_name(j)
+  local n = try(function() return dfhack.job.getName(j) end, '')
+  if n == nil or n == '' then n = (df.job_type[j.job_type] or '?'):gsub('(%l)(%u)', '%1 %2') end
+  return n
+end
+
 local function unit_job(u)
   local j = u.job.current_job
   if not j then return nil end
-  return try(function() return dfhack.job.getName(j) end, df.job_type[j.job_type])
+  return job_name(j)
 end
 
 local function unit_stress(u)

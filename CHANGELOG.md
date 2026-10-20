@@ -26,6 +26,7 @@
 - `df_trade send`: goods stored in bins can be sent to the depot (they were skipped as "carried"), and an explicit
   `item_ids` list is no longer cut at 20. `df_trade action=release` cancels the trader request, so dwarves waiting
   at the depot go back to hauling.
+- Camera and unit job labels no longer go blank for jobs DF leaves unnamed (cooking shows "Prepare Meal").
 - `df_problems` reports forbidden weapons, armour and clothes on the floor (DF forbids the gear of everyone who dies,
   so after a siege it lies untouched), including "foreign" gear the undead dropped, which haulers ignore even unforbidden.
 - `df_workshop add` refuses an empty task: it used to match the first task alphabetically, at a smelter "Melt a metal
