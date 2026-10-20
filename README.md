@@ -278,7 +278,8 @@ Build previews identify invalid tiles, construction reviews distinguish allocate
   where they fell. Put a 1x1 tomb zone on every coffin, and remove any larger tomb zone over them: a coffin in two
   tomb zones is skipped. Ghosts rest once their engraved memorial slab is built (`~s`).
 - **Gear of the dead** (citizens and invaders) is forbidden where it falls; after a fight it stays on the floor until
-  unforbidden, and it needs a weapon/armour stockpile to go to. `df_problems` counts it.
+  unforbidden; gear the undead or invaders carried (even a raised citizen's own pick) is also flagged `foreign`,
+  which haulers ignore until it is cleared. It needs a weapon/armour stockpile to go to. `df_problems` counts it.
 - **`dfhack.workshops.getJobs`** prints a debug dump for every ore when listing smelter jobs; the bridge mutes it.
 
 </details>

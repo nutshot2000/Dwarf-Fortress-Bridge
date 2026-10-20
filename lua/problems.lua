@@ -149,10 +149,14 @@ local GEAR = {WEAPON = true, ARMOR = true, HELM = true, GLOVES = true, SHOES = t
   AMMO = true, AMULET = true, RING = true, EARRING = true, BRACELET = true, CROWN = true}
 local forbidden_gear = 0
 for _, it in ipairs(df.global.world.items.other.IN_PLAY) do
-  if it.flags.forbid and it.flags.on_ground and GEAR[df.item_type[it:getType()]] then forbidden_gear = forbidden_gear + 1 end
+  local f = it.flags
+  -- foreign: gear the undead or invaders carried (even a raised citizen's own pick); haulers ignore it.
+  if (f.forbid or f.foreign) and f.on_ground and not f.trader and not f.owned and GEAR[df.item_type[it:getType()]] then
+    forbidden_gear = forbidden_gear + 1
+  end
 end
 if forbidden_gear >= 5 then
-  add('low', ('%d forbidden weapons/armour/clothes on the floor (DF forbids the gear of the dead): unforbid them with df_lua (flags.forbid=false) and make sure a weapon/armour stockpile exists.'):format(forbidden_gear))
+  add('low', ('%d weapons/armour/clothes on the floor that haulers ignore (forbidden, or "foreign" gear dropped by the dead and the undead): clear flags.forbid and flags.foreign with df_lua and make sure a weapon/armour stockpile exists.'):format(forbidden_gear))
 end
 
 local ORDER = {high = 1, medium = 2, low = 3}
