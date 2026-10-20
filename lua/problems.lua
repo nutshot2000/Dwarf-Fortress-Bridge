@@ -102,7 +102,10 @@ for _, b in ipairs(df.global.world.buildings.all) do
   if b:getBuildStage() >= b:getMaxBuildStage() then counts[t] = (counts[t] or 0) + 1 end
 end
 local beds = counts.Bed or 0
-if beds < pop then add(beds == 0 and 'medium' or 'low', ('Only %d beds for %d dwarves.'):format(beds, pop)) end
+-- children and babies sleep with their parents: only adults need a bed of their own
+local adults = 0
+for _, u in ipairs(cits) do if not dfhack.units.isBaby(u) and not dfhack.units.isChild(u) then adults = adults + 1 end end
+if beds < adults then add(beds == 0 and 'medium' or 'low', ('Only %d beds for %d adult dwarves.'):format(beds, adults)) end
 local stills = 0
 for _, b in ipairs(df.global.world.buildings.other.WORKSHOP_STILL or {}) do
   if b:getBuildStage() >= b:getMaxBuildStage() then stills = stills + 1 end

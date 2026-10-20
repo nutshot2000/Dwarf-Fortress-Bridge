@@ -29,6 +29,7 @@
 - `df_military uniform` also releases the position's old assignments: re-applying a uniform used to leave the
   previous gear listed, so soldiers carried on fetching 20+ items. `equip` picks the most valuable fitting item (a
   bronze shield over a wooden one, steel over copper) instead of the first one found.
+- `df_problems` counts beds against adults only (children sleep with their parents).
 - `df_petition approve|deny` retries when the Petitions panel is not drawn yet ("buttons not found").
 - `df_order repeat` drops "weekly": DF only has daily, monthly, seasonally and yearly orders.
 - `df_dig kind=gather|chop` is no longer blocked by the bedroom-wall guard (neither digs anything).
