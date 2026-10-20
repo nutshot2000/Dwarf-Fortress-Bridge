@@ -8,7 +8,7 @@ tool("df_noble", "Fort positions. action=list shows every position and holder. a
   { action: z.enum(["list", "appoint", "remove", "repair"]).default("list"), position: z.string().optional(), unit_id: z.number().int().optional() },
   (a) => luaTool("noble", a));
 
-tool("df_labor", "Labors and work details. action=list shows work details (members, labors) and every citizen's enabled labors. enable/disable toggle labors (e.g. MINE, CUTWOOD, HAUL_FOOD, BREWER, COOK, CARPENTER, MASON, PLANT) for unit_id. detail_add/detail_remove put unit_id in a named work detail (e.g. 'Miners') and apply its labors.",
+tool("df_labor", "Labors and work details. action=list shows work details (members, labors) and every citizen's enabled labors. enable/disable toggle labors (e.g. MINE, CUTWOOD, HAUL_FOOD, BREWER, COOK, CARPENTER, MASON, PLANT) for unit_id. detail_add/detail_remove put unit_id in a named work detail (e.g. 'Miners') and apply its labors. Re-applying a work detail resets labors toggled one by one, so disable unwanted labors (e.g. BREWER on a miner) after any detail change.",
   { action: z.enum(["list", "enable", "disable", "detail_add", "detail_remove", "apply"]).default("list"),
     unit_id: z.number().int().optional(), labors: z.array(z.string()).optional(), detail: z.string().optional() },
   async (a) => {
