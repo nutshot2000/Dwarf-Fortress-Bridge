@@ -16,6 +16,20 @@ export function testWatchdog() {
   const replacement = waitDecision({ ...start, hostiles: 1, hostile_ids: [1] },
     { ...quiet, hostiles: 1, hostile_ids: [2], hostile_names: ["New enemy"] }, 200);
   assert.equal(replacement.threat, true);
+  // Siege: more hostiles at the map edge do not stop a wait; one newly within reach of the fort does.
+  const siegeStart = { ...start, hostiles: 10, hostile_ids: [1, 2], hostile_near_ids: [] };
+  const edge = waitDecision(siegeStart, { ...quiet, hostiles: 30, hostile_ids: [1, 2, 3, 4], hostile_near_ids: [] }, 200);
+  assert.equal(edge.stop, false);
+  const close = waitDecision(siegeStart, { ...quiet, hostiles: 30, hostile_ids: [1, 2, 3], hostile_near_ids: [3] }, 200);
+  assert.equal(close.stop, true);
+  assert.equal(close.threat, true);
+  assert.match(close.reasons.join(" "), /approaching the fort/);
+  // Already approaching: more of them closing in does not stop again, until the first reaches the gates.
+  const nearStart = { ...siegeStart, hostile_near_ids: [3], hostile_close_ids: [] };
+  assert.equal(waitDecision(nearStart, { ...quiet, hostiles: 30, hostile_ids: [1, 2, 3, 5], hostile_near_ids: [3, 5], hostile_close_ids: [] }, 200).stop, false);
+  const gates = waitDecision(nearStart, { ...quiet, hostiles: 30, hostile_ids: [1, 2, 3], hostile_near_ids: [3], hostile_close_ids: [3] }, 200);
+  assert.equal(gates.stop, true);
+  assert.match(gates.reasons.join(" "), /at the gates/);
   const trapped={id:42,name:"Builder",x:10,y:20,z:3};
   const lost=waitDecision(start,{...quiet,isolated:[trapped]},200);
   assert.equal(lost.stop,true);

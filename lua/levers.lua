@@ -50,6 +50,18 @@ if action == 'list' then
     hint = 'Each link needs 2 free mechanisms (mechanic\'s workshop: construct mechanisms).'}) return
 end
 
+-- lock / unlock a door or hatch (target_id, or x,y,z): forbidden doors stop every creature that is not a
+-- building destroyer, and the fort's own dwarves too, so lock entrances only once everyone is inside.
+if action == 'lock' or action == 'unlock' then
+  local b = ARGS.target_id and df.building.find(ARGS.target_id)
+    or (ARGS.x and dfhack.buildings.findAtTile(ARGS.x, ARGS.y, ARGS.z))
+  if not b or not b.door_flags then emit({error = 'No door or hatch at that id/position'}) return end
+  b.door_flags.forbidden = action == 'lock'
+  if action == 'lock' then b.door_flags.closed = true end
+  emit({ok = true, id = b.id, building = bname(b), locked = b.door_flags.forbidden,
+    note = action == 'lock' and 'Locked. Walk groups ignore locks, so reachability checks still pass; dwarves will not use it until unlocked.' or nil}) return
+end
+
 local lever = df.building.find(ARGS.lever_id or -1)
 if not lever or not df.building_trapst:is_instance(lever) or lever.trap_type ~= df.trap_type.Lever then
   emit({error = 'No lever ' .. tostring(ARGS.lever_id)}) return

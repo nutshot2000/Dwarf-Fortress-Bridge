@@ -4,6 +4,16 @@ if not need_map() then return end
 local r = df.global.world.status.reports
 local hostiles, names, hostile_ids, combat = 0, {}, {}, {}
 local animal_combat={}
+-- Hostiles within 40 tiles (and 6 levels) of a citizen: during a siege only these are worth a stop.
+local near_ids, close_ids = {}, {}
+local cits_pos = {}
+for _, c in ipairs(citizens()) do cits_pos[#cits_pos + 1] = c.pos end
+local function near_fort(p, r)
+  for _, c in ipairs(cits_pos) do
+    if math.abs(c.x - p.x) <= r and math.abs(c.y - p.y) <= r and math.abs(c.z - p.z) <= 6 then return true end
+  end
+  return false
+end
 for _, u in ipairs(df.global.world.units.active) do
   local flags = try(function() return dfhack.maps.getTileFlags(u.pos) end)
   if flags and not flags.hidden then
@@ -11,6 +21,8 @@ for _, u in ipairs(df.global.world.units.active) do
        and dfhack.units.isDanger(u) then
       hostiles = hostiles + 1
       hostile_ids[#hostile_ids + 1] = u.id
+      if near_fort(u.pos, 40) then near_ids[#near_ids + 1] = u.id end
+      if near_fort(u.pos, 12) then close_ids[#close_ids + 1] = u.id end
       if #names < 4 then names[#names + 1] = unit_name(u) .. ' at ' .. u.pos.x .. ',' .. u.pos.y .. ',' .. u.pos.z end
     end
     local ours = dfhack.units.isCitizen(u)
@@ -46,5 +58,6 @@ for _, u in ipairs(citizens()) do
 end
 emit({abs = df.global.cur_year * 403200 + df.global.cur_year_tick, paused = df.global.pause_state,
   pop = #citizens(), last = #r > 0 and r[#r - 1].id or -1,
-  hostiles = hostiles, hostile_names = names, hostile_ids = hostile_ids, combat = combat,animal_combat=animal_combat,
+  hostiles = hostiles, hostile_names = names, hostile_ids = hostile_ids, hostile_near_ids = near_ids, hostile_close_ids = close_ids,
+  combat = combat,animal_combat=animal_combat,
   moods = moods, caravans = #df.global.plotinfo.caravans,isolated=citizen_access_report().isolated})

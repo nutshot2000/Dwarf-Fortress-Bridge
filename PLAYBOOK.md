@@ -148,7 +148,11 @@ If something seems impossible without a cheat, tell the player instead.
 
 - `df_military`: squads, uniforms (re-equips automatically), `equip` for empty slots, station, kill, cancel. `df_squad_status` shows gear worn vs assigned.
 - Kill orders only work on targets the game counts as hostile (a werebeast in human form is not): station the squad nearby instead.
-- `df_schedule` (monthly orders, patrol routes, alert switch: alert ready when attacked), `df_levers` (link/pull),
+- Siege or undead attack with a weak military: `df_burrow alert_on burrow=Inside` (create the burrow over the
+  underground fort first), wait until no citizen is on the surface, then `df_levers action=lock` the entrance door or
+  hatch. Unlock and `alert_off` once `df_threats` shows the attackers gone. While hostiles are already on the map,
+  `df_wait` stops only for one newly within 40 tiles of a dwarf.
+- `df_schedule` (monthly orders, patrol routes, alert switch: alert ready when attacked), `df_levers` (link/pull/lock),
   `df_burrow alert_on burrow=...` keeps civilians inside; `alert_off` afterwards.
 
 ## Trade and diplomacy

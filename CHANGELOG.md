@@ -10,6 +10,9 @@
 - Tables, chairs and doors fall back to wood when no non-economic stone is free (economic stone no longer counts).
 - `df_wait`: wound lines from fights are routine (only deaths are flagged); `NO_BREAK_GRIP` counts as fight noise.
 - `df_look`: open ground beside a tree no longer counts as a hole in a roof.
+- `df_wait` during a siege: more hostiles arriving at the map edge no longer stop every wait; it stops once when the
+  first comes within 40 tiles of a dwarf and once when the first is within 12.
+- `df_levers action=lock|unlock` forbids or allows a door or hatch (by id or x,y,z) to seal an entrance.
 - `df_stocks` / `df_status` / upkeep: items inside bins, barrels and bags count as available again (DF marks them
   with the same flag as items a dwarf is carrying); `df_stocks` shows `in_container` vs `carried`.
 - `df_stocks` / `df_status`: stone and other items built into walls, floors or stairs no longer count as free stock.

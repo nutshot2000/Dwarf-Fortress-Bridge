@@ -24,9 +24,10 @@ tool("df_burrow", "Burrows and the civilian alert. list: burrows and alerts. cre
     unit_ids: z.array(z.number().int()).optional(), all_citizens: z.boolean().optional() },
   (a) => luaTool("burrow", a));
 
-tool("df_levers", "Levers and mechanisms. list: levers (state, what each is linked to, pending jobs), buildings that can be linked (bridges, doors, hatches, floodgates, grates, bars, cages) and free mechanisms. link: queue the job linking lever_id to target_id (uses 2 mechanisms). pull: queue a dwarf to pull lever_id (urgent=true for top priority). Build a lever with df_build key=Tl; a drawbridge with key g / gw / gd / gx / ga.",
-  { action: z.enum(["list", "link", "pull"]).default("list"), lever_id: z.number().int().optional(),
-    target_id: z.number().int().optional(), urgent: z.boolean().optional() },
+tool("df_levers", "Levers and mechanisms. list: levers (state, what each is linked to, pending jobs), buildings that can be linked (bridges, doors, hatches, floodgates, grates, bars, cages) and free mechanisms. link: queue the job linking lever_id to target_id (uses 2 mechanisms). pull: queue a dwarf to pull lever_id (urgent=true for top priority). lock / unlock: forbid or allow a door or hatch (target_id, or x,y,z) to seal an entrance during a siege; get everyone inside first (df_burrow alert_on). Build a lever with df_build key=Tl; a drawbridge with key g / gw / gd / gx / ga.",
+  { action: z.enum(["list", "link", "pull", "lock", "unlock"]).default("list"), lever_id: z.number().int().optional(),
+    target_id: z.number().int().optional(), urgent: z.boolean().optional(), x: z.number().int().optional(),
+    y: z.number().int().optional(), z: z.number().int().optional() },
   (a) => luaTool("levers", a));
 
 tool("df_threats", "Threat report: visible hostiles (and how many unseen), night creatures and cursed units on the map including werebeasts/vampires disguised as visitors, residents or even citizens, and every killer of the last N days (default 60) with victim counts and whether they are still alive and on the map.",
