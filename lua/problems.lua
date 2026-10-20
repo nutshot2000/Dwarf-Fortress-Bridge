@@ -171,6 +171,34 @@ if forbidden_gear >= 5 then
   add('low', ('%d weapons/armour/clothes on the floor that haulers ignore (forbidden, or "foreign" gear dropped by the dead and the undead): clear flags.forbid and flags.foreign with df_lua and make sure a weapon/armour stockpile exists.'):format(forbidden_gear))
 end
 
+-- Tree felling needs an axe per woodcutter; squad weapon slots (the game's own pass likes battle axes) can
+-- reserve every axe in the fort, and the felling jobs then wait forever.
+local fell = 0
+for _, j in require('utils').listpairs(df.global.world.jobs.list) do
+  if j.job_type == df.job_type.FellTree and not dfhack.job.getWorker(j) then fell = fell + 1 end
+end
+if fell > 0 then
+  local reserved = {}
+  for _, id in ipairs(df.global.plotinfo.equipment.items_assigned.WEAPON) do reserved[id] = true end
+  local free_axes = 0
+  for _, it in ipairs(df.global.world.items.other.WEAPON) do
+    if it.subtype.id:find('AXE') and not it.subtype.id:find('TRAINING') and not reserved[it.id] and not it.flags.trader
+       and not it.flags.forbid and not dfhack.items.getHolderUnit(it) then free_axes = free_axes + 1 end
+  end
+  local armed_cutter = false
+  for _, u in ipairs(cits) do
+    if u.status.labors[df.unit_labor.CUTWOOD] then
+      for _, inv in ipairs(u.inventory) do
+        local it = inv.item
+        if it:getType() == df.item_type.WEAPON and it.subtype.id:find('AXE') then armed_cutter = true end
+      end
+    end
+  end
+  if free_axes == 0 and not armed_cutter then
+    add('medium', ('%d trees marked for felling but no free axe: every axe is carried or reserved for a squad. Free one (give a soldier another weapon) or make/buy axes.'):format(fell))
+  end
+end
+
 -- Corpses and body parts never go away by themselves: without a refuse stockpile or the dump standing orders
 -- (and gather_refuse_outside for the surface) they lie where they fell and give "saw a dead body" thoughts.
 local lying = 0
