@@ -43,7 +43,7 @@
   README explain coffins, tombs and memorial slabs (`~s`) for ghosts.
 - `df_stocks` / `df_status`: stone and other items built into walls, floors or stairs no longer count as free stock.
 - The shared Lua prelude reloads when edited, like the tool scripts.
-- `df_build` names the finished parts a building consumes and which ones the fort has none of right now (a well
+- `df_build` names the finished parts a building consumes (now also cage, stone-fall and weapon traps) and which ones the fort has none of right now (a well
   needs a bucket, a chain or rope, a mechanism and stone blocks; a lever a mechanism; a hatch a hatch cover; plus
   furniture and the forge's anvil). DF drops the plan if a part never turns up.
 - `df_zone location=... name=...` gives the new location that name. Quickfort otherwise gives every location it

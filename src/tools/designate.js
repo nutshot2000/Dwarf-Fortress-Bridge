@@ -175,7 +175,8 @@ tool("df_stockpile", "Create a stockpile rectangle. type is one or more #place l
 const BUILD_PARTS = {
   l: [["BUCKET", "a bucket (carpenter)"], ["CHAIN", "a chain or rope"], ["TRAPPARTS", "a mechanism (mechanic)"],
     ["BLOCKS", "stone blocks (mason)"]],
-  Tl: [["TRAPPARTS", "a mechanism (mechanic)"]],
+  Tl: [["TRAPPARTS", "a mechanism (mechanic)"]], Tc: [["TRAPPARTS", "a mechanism (mechanic)"]],
+  Ts: [["TRAPPARTS", "a mechanism (mechanic)"]], Tw: [["TRAPPARTS", "a mechanism (mechanic)"]],
   H: [["HATCH_COVER", "a hatch cover (carpenter or mason)"]],
   d: [["DOOR", "a door"]], b: [["BED", "a bed (carpenter)"]], t: [["TABLE", "a table"]], c: [["CHAIR", "a chair"]],
   f: [["CABINET", "a cabinet"]], h: [["BOX", "a chest"]], s: [["STATUE", "a statue"]], n: [["COFFIN", "a coffin"]],
