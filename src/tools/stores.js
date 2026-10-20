@@ -12,8 +12,13 @@ tool("df_stocks", "Item inventory, with total and available counts kept separate
 tool("df_workshop", "Workshops and furnaces. action=list shows each with queued jobs (pass building_id or show_tasks=true to see task names it accepts). action=add queues a task directly at building_id, like the in-game Add task button (no manager needed): task is a name or substring (e.g. 'bed', 'barrel', 'brew', 'prepare easy meal', 'rock table'); count up to 10; repeat=true keeps redoing it. action=cancel removes the job at index.",
   { action: z.enum(["list", "add", "cancel"]).default("list"), building_id: z.number().int().optional(),
     task: z.string().optional(), count: z.number().int().min(1).max(10).optional(), repeat: z.boolean().optional(),
-    index: z.number().int().optional(), show_tasks: z.boolean().optional(), filter: z.string().optional() },
+    index: z.number().int().optional(), show_tasks: z.boolean().optional(), filter: z.string().optional(),
+    job: z.string().optional().describe("alias for task; a job type like ConstructMechanisms is split into words"),
+    quantity: z.number().int().min(1).max(10).optional().describe("alias for count") },
   async (a) => {
+    // Unknown keys are dropped silently, and an empty task used to match the first task alphabetically.
+    if (!a.task && a.job) a.task = a.job.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
+    if (a.count === undefined && a.quantity !== undefined) a.count = a.quantity;
     if (a.action !== "add") return luaTool("workshop", a);
     const { value, log } = await luaFile("workshop", a);
     if (value?.error) return fail(value.error);

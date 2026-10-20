@@ -88,6 +88,8 @@ end
 if action == 'add' then
   if b:getBuildStage() < b:getMaxBuildStage() then emit({error = 'Workshop is not built yet'}) return end
   local want = dfhack.utf2df((ARGS.task or '')):lower()
+  -- An empty name matches every task, and the first alphabetically can be destructive ("Melt a metal object").
+  if want == '' then emit({error = 'task is required (a task name or substring). List tasks with action=list building_id=' .. b.id}) return end
   local pick
   for _, t in ipairs(task_list(b)) do
     if t.name:lower() == want then pick = t break end

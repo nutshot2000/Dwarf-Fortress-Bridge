@@ -26,6 +26,8 @@
 - `df_trade send`: goods stored in bins can be sent to the depot (they were skipped as "carried"), and an explicit
   `item_ids` list is no longer cut at 20. `df_trade action=release` cancels the trader request, so dwarves waiting
   at the depot go back to hauling.
+- `df_workshop add` refuses an empty task: it used to match the first task alphabetically, at a smelter "Melt a metal
+  object" (which melts down weapons and armour). `job` and `quantity` work as aliases for `task` and `count`.
 - `df_wait` lists pending petitions on every wait until they are answered (DF only announces one when it expires).
 - `df_zone type=T`: tomb zones bigger than one tile get a warning (DF buries one body per tomb zone, and skips a coffin inside two tomb zones); the playbook and
   README explain coffins, tombs and memorial slabs (`~s`) for ghosts.
