@@ -30,8 +30,8 @@ tool("df_levers", "Levers and mechanisms. list: levers (state, what each is link
     y: z.number().int().optional(), z: z.number().int().optional() },
   (a) => luaTool("levers", a));
 
-tool("df_threats", "Threat report: visible hostiles (and how many unseen), night creatures and cursed units on the map including werebeasts/vampires disguised as visitors, residents or even citizens, and every killer of the last N days (default 60) with victim counts and whether they are still alive and on the map.",
-  { days: z.number().int().min(1).max(400).optional() }, (a) => luaTool("threats", a));
+tool("df_threats", "Threat report: visible hostiles (and how many unseen), night creatures and cursed units on the map including werebeasts/vampires disguised as visitors, residents or even citizens, and the killers of the last N days (default 60) with victim counts and whether they are still alive and on the map: living ones on the map first, then by victims, top 8 unless limit is given.",
+  { days: z.number().int().min(1).max(400).optional(), limit: z.number().int().min(1).max(100).optional() }, (a) => luaTool("threats", a));
 
 tool("df_squad_status", "Every squad (or squad_id): routine, active orders, and per soldier the gear worn vs assigned, empty uniform slots, position and current activity.",
   { squad_id: z.number().int().optional() }, (a) => luaTool("military", { ...a, action: "status" }));

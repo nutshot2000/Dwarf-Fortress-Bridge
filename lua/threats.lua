@@ -53,8 +53,16 @@ for _, i in ipairs(df.global.world.incidents.all) do
 end
 local klist = {}
 for _, e in pairs(killers) do if e.killer ~= 'unit -1' then table.insert(klist, e) end end
-table.sort(klist, function(a, b) return a.victims > b.victims end)
+-- Living killers that are still on the map come first (they are the ongoing danger), then by victims.
+table.sort(klist, function(a, b)
+  local la, lb = a.alive and a.on_map, b.alive and b.on_map
+  if la ~= lb then return la end
+  return a.victims > b.victims
+end)
+local total = #klist
+local limit = ARGS.limit or 8
+while #klist > limit do table.remove(klist) end
 
 emit({visible_hostiles = hostiles, unseen_hostiles = unseen, cursed_or_night_creatures = curses,
-  killers_last_days = days, killers = klist,
+  killers_last_days = days, killers = klist, killers_not_shown = total > #klist and (total - #klist) or nil,
   hint = 'Cursed units in human form are not hostile: kill orders are ignored until they transform. Keep a squad stationed nearby and civilians in a burrow (df_burrow alert_on).'})
