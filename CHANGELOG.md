@@ -18,6 +18,8 @@
   economic stone.
 - `df_burrow alert_off` warns that burrow-assigned dwarves still only work inside their burrows; `clear_units=true`
   releases them. `df_jobs` reports building jobs (e.g. "Destroy building") at the building, not -30000.
+- `df_dig kind=undesignate` also cancels unclaimed dig, smooth, engrave and stair jobs in the area (a designation
+  that became a job no longer shows on the tile, so clearing flags alone left the work queued).
 - `df_levers action=lock|unlock` forbids or allows a door or hatch (by id or x,y,z) to seal an entrance.
 - `df_stocks` / `df_status` / upkeep: items inside bins, barrels and bags count as available again (DF marks them
   with the same flag as items a dwarf is carrying); `df_stocks` shows `in_container` vs `carried`.

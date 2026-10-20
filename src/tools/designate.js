@@ -92,16 +92,29 @@ tool("df_dig", "Designate a rectangle for digging (or channel/stairs/ramp/chop/g
             if dfhack.designations.isPlantMarked(p) then n=n+1 end
           end
         end
-        local tiles=0
+        local tiles,cancelled=0,0
         if ARGS.kind=='undesignate' then
           for zz=ARGS.z,ARGS.z-(ARGS.levels or 1)+1,-1 do for xx=ARGS.x,ARGS.x+ARGS.w-1 do for yy=ARGS.y,ARGS.y+ARGS.h-1 do
             local f=dfhack.maps.getTileFlags(xx,yy,zz)
             if f and (f.dig~=0 or f.smooth~=0) then tiles=tiles+1 end
           end end end
+          -- A designation a dwarf has turned into a job no longer shows on the tile, so clearing flags leaves
+          -- the job queued: cancel unclaimed dig/smooth/engrave/stair jobs in the footprint too.
+          local KINDS={Dig=1,DigChannel=1,CarveUpwardStaircase=1,CarveDownwardStaircase=1,CarveUpDownStaircase=1,
+            CarveRamp=1,SmoothWall=1,SmoothFloor=1,DetailWall=1,DetailFloor=1,CarveFortification=1,RemoveStairs=1,
+            CarveTrack=1}
+          local doomed={}
+          for _,j in require('utils').listpairs(df.global.world.jobs.list) do
+            local p=j.pos
+            if KINDS[df.job_type[j.job_type]] and not dfhack.job.getWorker(j)
+               and p.z<=ARGS.z and p.z>=ARGS.z-(ARGS.levels or 1)+1
+               and p.x>=ARGS.x and p.x<ARGS.x+ARGS.w and p.y>=ARGS.y and p.y<ARGS.y+ARGS.h then doomed[#doomed+1]=j end
+          end
+          for _,j in ipairs(doomed) do dfhack.job.removeJob(j) cancelled=cancelled+1 end
         end
-        emit({marked_plants=n,tile_designations=tiles})`,{...a,x,y,w,h});
+        emit({marked_plants=n,tile_designations=tiles,cancelled_jobs=cancelled})`,{...a,x,y,w,h});
       return text(out + `\nVerified: ${value.marked_plants} marked plant(s) in the requested footprint.` +
-        (a.kind === "undesignate" ? ` ${value.tile_designations} tile designation(s) remain.` : "") +
+        (a.kind === "undesignate" ? ` ${value.tile_designations} tile designation(s) remain; ${value.cancelled_jobs} queued job(s) cancelled.` : "") +
         (a.kind !== "undesignate" && value.marked_plants === 0 ? " No tree/plant work is marked. Select tree bases, not canopy or another elevation; use df_designations to inspect." : ""));
     }
     await cameraTo(x + (w >> 1), y + (h >> 1), a.z, `dig ${a.kind} at ${x},${y},${a.z}`);

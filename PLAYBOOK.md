@@ -152,7 +152,8 @@ If something seems impossible without a cheat, tell the player instead.
   underground fort first), wait until no citizen is on the surface, then `df_levers action=lock` the entrance door or
   hatch. Unlock and `alert_off clear_units=true` once `df_threats` shows the attackers gone (without clear_units the
   dwarves stay confined to their burrows and jobs elsewhere silently wait). A lock did NOT hold reliably while tavern
-  visitors were coming and going (it was found unlocked twice and the undead walked in): re-check it with
+  visitors were coming and going (it was found unlocked twice and the undead walked in, and a locked cavern hatch was
+  later found unlocked too; the bridge never clears locks): re-check locks with
   `df_levers` and prefer a real barrier (raised drawbridge, hatch over a stair, or walls with no door) for sieges.
   A light militia loses to an undead horde; miners with picks did better than the squad. Build armour first. While hostiles are already on the map,
   `df_wait` stops only for one newly within 40 tiles of a dwarf.
