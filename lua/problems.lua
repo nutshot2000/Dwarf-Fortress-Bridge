@@ -168,6 +168,27 @@ if forbidden_gear >= 5 then
   add('low', ('%d weapons/armour/clothes on the floor that haulers ignore (forbidden, or "foreign" gear dropped by the dead and the undead): clear flags.forbid and flags.foreign with df_lua and make sure a weapon/armour stockpile exists.'):format(forbidden_gear))
 end
 
+-- Corpses and body parts never go away by themselves: without a refuse stockpile or the dump standing orders
+-- (and gather_refuse_outside for the surface) they lie where they fell and give "saw a dead body" thoughts.
+local lying = 0
+for _, t in ipairs({'CORPSE', 'CORPSEPIECE'}) do
+  for _, it in ipairs(df.global.world.items.other[t]) do
+    local f = it.flags
+    if f.on_ground and not f.in_building and not f.dead_dwarf and not f.dump then lying = lying + 1 end
+  end
+end
+local refuse_pile = false
+for _, b in ipairs(df.global.world.buildings.other.STOCKPILE) do if b.settings.flags.refuse then refuse_pile = true end end
+local dump_zone = false
+for _, b in ipairs(df.global.world.buildings.all) do
+  if df.building_civzonest:is_instance(b) and b.type == df.civzone_type.Dump then dump_zone = true break end
+end
+local dumping = (df.global.standing_orders_dump_corpses or 0) ~= 0 and dump_zone
+if lying >= 20 and not refuse_pile and not dumping then
+  add('low', ('%d corpses/body parts lying around%s. They stay forever: make a refuse stockpile (df_stockpile type=r) or a dump zone with df_standing dump_corpses/dump_bones/dump_skulls=1, plus gather_refuse_outside=1 for the surface.'):format(
+    lying, refuse_pile and '' or ' and no refuse stockpile'))
+end
+
 local ORDER = {high = 1, medium = 2, low = 3}
 local construction = suspended_construction()
 if #construction.review > 0 then
