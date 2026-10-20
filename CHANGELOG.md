@@ -29,6 +29,11 @@
 - `df_military uniform` also releases the position's old assignments: re-applying a uniform used to leave the
   previous gear listed, so soldiers carried on fetching 20+ items. `equip` picks the most valuable fitting item (a
   bronze shield over a wooden one, steel over copper) instead of the first one found.
+- `df_military uniform` copies the template's `exact_matches` flag: without it the game filled "metal armor" body
+  slots with wool dresses and cloth gloves over the bridge's assignments. It no longer sets the game's
+  re-assignment flags (equip assigns instead).
+- `df_military equip` uses gear stored in bins (they carry the same flag as gear a dwarf is holding).
+- `df_military add` works while the leader slot is vacant (it tries each free slot after it).
 - `df_squad_status` releases dwarves who point at a squad without holding a position in it (left by a failed add);
   they went off to train with the squad instead of working.
 - Camera and unit job labels no longer go blank for jobs DF leaves unnamed (cooking shows "Prepare Meal").

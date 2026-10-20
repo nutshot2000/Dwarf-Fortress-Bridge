@@ -129,7 +129,14 @@ if action == 'add' then
   if #ids == 0 then emit({error = 'add needs unit_id or unit_ids'}) return end
   local failed = {}
   for _, id in ipairs(ids) do
-    if not dfhack.military.addToSquad(id, sq.id, -1) then failed[#failed + 1] = id end
+    -- With the leader slot (0) vacant, "first free slot" picks it and fails: the leader slot is reserved for the
+    -- squad's noble. Fall back to each free slot after it.
+    local ok = dfhack.military.addToSquad(id, sq.id, -1)
+    for i = 1, #sq.positions - 1 do
+      if ok then break end
+      if sq.positions[i].occupant == -1 then ok = dfhack.military.addToSquad(id, sq.id, i) end
+    end
+    if not ok then failed[#failed + 1] = id end
   end
   if #failed == #ids then emit({error = 'addToSquad failed (unit already in a squad, squad full, or leader slot vacant)', unit_ids = failed}) return end
   emit({ok = true, failed = #failed > 0 and failed or nil, squad = squad_info(sq)}) return
@@ -174,11 +181,12 @@ if action == 'equip' then
   end
   local function fits(sp, it, u)
     if it.flags.forbid or it.flags.trader or it.flags.removed then return false end
+    if it.flags.in_job then return false end
     if it.flags.in_inventory then
-      -- only gear this soldier is already carrying may be (re)assigned to them
+      -- in_inventory also marks items in bins (fine); of gear a creature carries, only this soldier's own counts
       local holder = dfhack.items.getHolderUnit(it)
-      if not (holder and u and holder.id == u.id) then return false end
-    elseif it.flags.in_job then return false end
+      if holder and not (u and holder.id == u.id) then return false end
+    end
     if sp.item_subtype >= 0 and it:getSubtype() ~= sp.item_subtype then return false end
     if sp.mattype >= 0 and (it:getMaterial() ~= sp.mattype or it:getMaterialIndex() ~= sp.matindex) then return false end
     if df.item_type[sp.item_type] == 'WEAPON' then
@@ -300,16 +308,18 @@ if action == 'uniform' then
         spec.material_class = info.material_class
         spec.mattype = info.mattype
         spec.matindex = info.matindex
+        spec.color = info.item_color
         pcall(function() spec.indiv_choice:assign(info.indiv_choice) end)
         slot:insert('#', spec)
       end
     end
     eq.flags.replace_clothing = ARGS.replace_clothing or false
+    -- Without exact_matches the game fills a "metal armor" body slot with any ARMOR item, wool dresses included.
+    eq.flags.exact_matches = u.flags.exact_matches
     set = set + 1
   end
-  -- tell the game to redo equipment assignment (its Military screen sets these when a uniform changes)
-  local upd = df.global.plotinfo.equipment.update
-  for _, k in ipairs({'weapon', 'armor', 'shoes', 'shield', 'helm', 'gloves', 'ammo', 'pants', 'backpack', 'quiver', 'flask'}) do upd[k] = true end
+  -- Do not set plotinfo.equipment.update here: the game's own pass then re-fills "metal armor" body slots with
+  -- wool dresses and cloth gloves over our assignments. The JS side runs action=equip right after this.
   emit({ok = true, squad = squad_info(sq), uniform = u.name, positions = set,
     hint = 'Dwarves equip whatever matching items exist; make or buy armour and weapons.'}) return
 end
