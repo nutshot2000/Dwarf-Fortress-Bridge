@@ -52,7 +52,8 @@ tool("df_order", "Queue a manager work order (needs a MANAGER; df_noble repair i
 async function queueOrder(a) {
   const { value: manager } = await lua("emit(#dfhack.units.getUnitsByNobleRole('manager') > 0)");
   if (!manager) throw new Error("No active MANAGER. Appoint one with df_noble action=appoint position=MANAGER unit_id=...; if already appointed, run df_noble action=repair. No order was queued.");
-  if (TOOL_ALIASES[a.job]) { a = { ...a, item_subtype: a.item_subtype ?? TOOL_ALIASES[a.job], job: "MakeTool" }; }
+  // Without a material the manager never validates a MakeTool order: these furniture tools default to wood.
+  if (TOOL_ALIASES[a.job]) { a = { ...a, item_subtype: a.item_subtype ?? TOOL_ALIASES[a.job], job: "MakeTool", material: a.material ?? "wood" }; }
   const job = a.reaction ? "CustomReaction" : (JOB_ALIASES[a.job] ?? a.job);
   const order = { job, amount_total: a.amount ?? 1 };
   if (a.reaction) order.reaction = a.reaction.toUpperCase();

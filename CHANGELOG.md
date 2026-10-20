@@ -32,6 +32,8 @@
 - `df_problems` counts beds against adults only (children sleep with their parents).
 - `df_petition approve|deny` refuses while the trade screen is open (it used to close it mid-trade).
 - `df_petition approve|deny` retries when the Petitions panel is not drawn yet ("buttons not found").
+- `df_order MakeBookcase/MakeDisplayCase/MakePedestal/MakeAltar` default to wood: with no material the manager
+  never validated the order.
 - `df_order repeat` drops "weekly": DF only has daily, monthly, seasonally and yearly orders.
 - `df_dig kind=gather|chop` is no longer blocked by the bedroom-wall guard (neither digs anything).
 - `df_military uniform` copies the template's `exact_matches` flag: without it the game filled "metal armor" body
