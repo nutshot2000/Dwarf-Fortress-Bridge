@@ -143,6 +143,18 @@ local idle = 0
 for _, u in ipairs(cits) do if not u.job.current_job then idle = idle + 1 end end
 if pop > 0 and idle > pop / 2 then add('low', ('%d of %d dwarves idle: designate more work.'):format(idle, pop)) end
 
+-- DF forbids the gear of everyone who dies (citizens and invaders), so after a fight weapons, armour and clothes
+-- lie on the floor untouched until someone unforbids them.
+local GEAR = {WEAPON = true, ARMOR = true, HELM = true, GLOVES = true, SHOES = true, PANTS = true, SHIELD = true,
+  AMMO = true, AMULET = true, RING = true, EARRING = true, BRACELET = true, CROWN = true}
+local forbidden_gear = 0
+for _, it in ipairs(df.global.world.items.other.IN_PLAY) do
+  if it.flags.forbid and it.flags.on_ground and GEAR[df.item_type[it:getType()]] then forbidden_gear = forbidden_gear + 1 end
+end
+if forbidden_gear >= 5 then
+  add('low', ('%d forbidden weapons/armour/clothes on the floor (DF forbids the gear of the dead): unforbid them with df_lua (flags.forbid=false) and make sure a weapon/armour stockpile exists.'):format(forbidden_gear))
+end
+
 local ORDER = {high = 1, medium = 2, low = 3}
 local construction = suspended_construction()
 if #construction.review > 0 then
