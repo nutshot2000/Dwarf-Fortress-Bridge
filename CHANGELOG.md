@@ -12,6 +12,10 @@
 - `df_look`: open ground beside a tree no longer counts as a hole in a roof.
 - `df_wait` during a siege: more hostiles arriving at the map edge no longer stop every wait; it stops once when the
   first comes within 40 tiles of a dwarf and once when the first is within 12.
+- Material preflight: item checks use a filter without material fields (a fresh job_item defaults to subtype 0
+  and, with material type 0 plus "hard", rejected all stone); `economic_stone` is compared to 1 (0 is truthy in
+  Lua, so every stone counted as economic, and stone furniture fell back to wood); mechanisms and blocks accept
+  economic stone.
 - `df_levers action=lock|unlock` forbids or allows a door or hatch (by id or x,y,z) to seal an entrance.
 - `df_stocks` / `df_status` / upkeep: items inside bins, barrels and bags count as available again (DF marks them
   with the same flag as items a dwarf is carrying); `df_stocks` shows `in_container` vs `carried`.

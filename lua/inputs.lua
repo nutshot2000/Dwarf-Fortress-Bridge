@@ -11,6 +11,9 @@ local FLAG_SETS = {flags1 = df.job_item_flags1, flags2 = df.job_item_flags2, fla
 -- Plain-table filter -> df.job_item (caller deletes it).
 local function to_job_item(f)
   local ji = df.job_item:new()
+  -- A new job_item defaults to subtype 0 (one specific subtype), which makes isSuitableItem reject almost
+  -- everything; -1 means "any" unless the filter names one.
+  ji.item_subtype, ji.mat_type, ji.mat_index = -1, -1, -1
   for _, k in ipairs({'item_type', 'item_subtype', 'mat_type', 'mat_index', 'metal_ore'}) do
     if f[k] then ji[k] = f[k] end
   end
@@ -79,6 +82,9 @@ local function count(f)
     vec = try(function() return df.global.world.items.other[IT[f.item_type]] end, vec)
   end
   local ji = to_job_item(f)
+  -- isSuitableItem answers "is this the right kind of item"; given material fields too (mat_type 0 plus the
+  -- hard flag) it rejects good stone, so it gets a filter with the item fields only.
+  local ji_item = to_job_item({item_type = f.item_type, item_subtype = f.item_subtype})
   local usable, held, economic = 0, 0, {}
   for _, it in ipairs(vec) do
     local itype = it:getType()
@@ -88,20 +94,20 @@ local function count(f)
       local want_noneco = false
       for _, n in ipairs(f2) do if n == 'non_economic' then want_noneco = true end end
       if mat_ok(f, mt, mi)
-         and try(function() return dfhack.job.isSuitableItem(ji, itype, it:getSubtype()) end, true) then
+         and try(function() return dfhack.job.isSuitableItem(ji_item, itype, it:getSubtype()) end, true) then
         local ok_mat = try(function() return dfhack.job.isSuitableMaterial(ji, mt, mi, itype) end, true)
         local st = state(it)
         if st and ok_mat then
           if st == 'usable' then usable = usable + 1 else held = held + 1 end
           if usable > 0 then break end
-        elseif st == 'usable' and want_noneco and mt == 0 and df.global.plotinfo.economic_stone[mi] then
+        elseif st == 'usable' and want_noneco and mt == 0 and df.global.plotinfo.economic_stone[mi] == 1 then
           local name = dfhack.matinfo.decode(mt, mi):toString()
           economic[name] = (economic[name] or 0) + 1
         end
       end
     end
   end
-  ji:delete()
+  ji:delete() ji_item:delete()
   return usable, held, economic
 end
 
@@ -247,7 +253,9 @@ for _, f in ipairs(items) do
   f.flags1, f.flags2, f.flags3 = f.flags1 or {}, f.flags2 or {}, f.flags3 or {}
   if not (f.item_type == IT.BAR and f.mat_type == COAL and ARGS.magma) then
   -- Masons and stone crafts take only non-economic stone (ores, flux and other economic stone are kept back).
+  -- (Mechanisms and blocks are made from any stone: lignite mechanisms and dolomite blocks in play.)
   if f.item_type == IT.BOULDER and f.mat_type == 0 and (f.mat_index or -1) < 0 and job_type ~= df.job_type.CustomReaction
+     and job_type ~= df.job_type.ConstructMechanisms and job_type ~= df.job_type.ConstructBlocks
      and (f.reaction_class or '') == '' and (f.metal_ore or -1) < 0 then
     local has = false
     for _, n in ipairs(f.flags2) do if n == 'non_economic' then has = true end end

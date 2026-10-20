@@ -62,7 +62,7 @@ async function queueOrder(a) {
     const { value: stone } = await lua(`local n=0
       for _,it in ipairs(df.global.world.items.other.BOULDER) do
         local f=it.flags
-        local eco=it:getMaterial()==0 and df.global.plotinfo.economic_stone[it:getMaterialIndex()]
+        local eco=it:getMaterial()==0 and df.global.plotinfo.economic_stone[it:getMaterialIndex()] == 1
         if not (f.forbid or f.in_job or f.dump or f.construction or f.garbage_collect or eco) then n=n+1 end
       end
       emit(n)`);
