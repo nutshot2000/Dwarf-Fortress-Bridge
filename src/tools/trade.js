@@ -61,8 +61,20 @@ tool("df_trade", "Trading. goods previews tradeable goods and contents; send mar
     return res;
   });
 
-tool("df_justice", "Crimes involving the fort: type, criminal, accused, victim, witnesses, punishment. Use df_cmd 'justice' for convicts serving sentences and 'justice pardon --unit <id>' to pardon.",
-  {}, () => luaTool("justice"));
+tool("df_justice", "Crimes involving the fort: type, criminal, accused, victim, witnesses, punishment. Use df_cmd 'justice' for convicts serving sentences and 'justice pardon --unit <id>' to pardon. action=exile unit_id banishes a citizen (the game has no expel button for citizens; this uses DFHack's emigration: they give up citizenship and walk off the map for good). Not for nobles, soldiers or children. Use for a dangerous citizen, e.g. a necromancer who raises nearby corpses as hostile undead when startled.",
+  { action: z.enum(["crimes", "exile"]).default("crimes"), unit_id: z.number().int().optional() },
+  async (a) => {
+    if (a.action !== "exile") return luaTool("justice");
+    if (a.unit_id === undefined) return fail("exile needs unit_id");
+    const { value } = await lua(`local em = reqscript('emigration')
+      local u = df.unit.find(ARGS.unit_id)
+      if not u then emit({error = 'no unit ' .. ARGS.unit_id}) return end
+      if not em.canLeave(u) then emit({error = unit_name(u) .. ' cannot be exiled (not an active adult citizen, or a noble or soldier: remove them from the post or squad first)'}) return end
+      em.desert(u, 'wild', u.civ_id)
+      emit({ok = true, unit = unit_name(u), citizen = dfhack.units.isCitizen(u)})`, a);
+    if (value?.error) return fail(value.error);
+    return text(`Exiled: ${value.unit}. They leave the map and cannot return to this fort.`);
+  });
 
 tool("df_petition", "Petitions (residency, citizenship, temples/guildhalls). list: pending petitions with who asks, race, profession, age, syndromes and a CURSED warning for disguised werebeasts/vampires. approve / deny: answer the oldest pending one through the game's Petitions screen (the same buttons a player clicks).",
   { action: z.enum(["list", "approve", "deny"]).default("list") },

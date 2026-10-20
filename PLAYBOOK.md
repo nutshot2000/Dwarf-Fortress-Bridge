@@ -136,6 +136,9 @@ If something seems impossible without a cheat, tell the player instead.
   out of it (attacking a visiting noble is far worse), and ride it out with `df_wait watch=false` in short steps,
   checking deaths with df_threats in between.
 - `df_location` staffs hospitals, taverns, temples and libraries. `df_petition` vets petitioners for curses before approving.
+- After every migrant wave run df_threats: a necromancer can arrive as a citizen. Startled, they raise nearby corpses
+  as hostile undead; banish them with `df_justice action=exile` (or keep them far from any corpses and out of the library,
+  where they may write a book that makes more necromancers).
 - `df_jobs action=suspended` separates construction needing review from plans waiting for items. After interruptions, review the cause and resume specific job IDs only when safe; jobs are never automatically restarted. `df_problems` and `df_wait` flag these candidates.
 - Suspended construction lists its own `materials` separately from `other_ground_items`.
   The latter can be reserved by a different unfinished building. Dumping skips those
