@@ -27,7 +27,8 @@ for _, it in ipairs(df.global.world.items.other.IN_PLAY) do
             local x, y, z = dfhack.items.getPosition(it)
             table.insert(where, {item = desc, id = it.id, x = x, y = y, z = z,
               forbidden = it.flags.forbid or nil, in_use = it.flags.in_job or nil,
-              installed = it.flags.in_building or nil, carried = it.flags.in_inventory or nil,
+              installed = it.flags.in_building or nil, carried = (it.flags.in_inventory and dfhack.items.getHolderUnit(it)) and true or nil,
+              in_container = (it.flags.in_inventory and not dfhack.items.getHolderUnit(it)) and true or nil,
               available = stock_available(it)})
           end
         end

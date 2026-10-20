@@ -98,7 +98,11 @@ local function stock_usable(it)
   return not (f.rotten or f.forbid or f.garbage_collect or f.trader or f.dump
     or f.hostile or f.removed or f.spider_web or f.in_building or f.owned or f.construction)
 end
-local function stock_available(it) return stock_usable(it) and not it.flags.in_job and not it.flags.in_inventory end
+-- in_inventory also marks items inside bins, barrels and bags; only an item a unit is holding is unavailable.
+local function stock_available(it)
+  return stock_usable(it) and not it.flags.in_job
+    and not (it.flags.in_inventory and dfhack.items.getHolderUnit(it))
+end
 
 local function container_warning(empty, pending, drink, pop, target)
   target = target or 5
