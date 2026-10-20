@@ -38,7 +38,10 @@ end
 local function tradeable(it, depot)
   local f = it.flags
   if f.hostile or f.removed or f.dead_dwarf or f.spider_web or f.construction or f.encased or f.murder
-     or f.trader or f.owned or f.garbage_collect or f.on_fire or f.in_job or f.in_inventory then return false end
+     or f.trader or f.owned or f.garbage_collect or f.on_fire or f.in_job then return false end
+  -- in_inventory also marks items inside bins; those can be traded (haulers take them out). Only refuse items
+  -- a creature is holding.
+  if f.in_inventory and dfhack.items.getHolderUnit(it) then return false end
   if f.in_building and dfhack.items.getHolderBuilding(it) ~= depot then return false end
   local x, y, z = dfhack.items.getPosition(it)
   return x and dfhack.maps.canWalkBetween(xyz2pos(x, y, z), xyz2pos(depot.centerx, depot.centery, depot.z))
@@ -61,7 +64,8 @@ if action == 'send' or action == 'goods' then
   if ARGS.depot_id then depot = df.building.find(ARGS.depot_id) end
   if not depot then emit({error = 'No trade depot. Build one with df_build key=D.'}) return end
   local text = (ARGS.search or ''):lower()
-  local limit = math.min(ARGS.limit or 20, 200)
+  -- An explicit item_ids list is the request itself: do not cut it at the default 20.
+  local limit = math.min(ARGS.limit or (ARGS.item_ids and #ARGS.item_ids) or 20, 200)
   local sent,protected = {},{}
   for _, it in ipairs(df.global.world.items.other.IN_PLAY) do
     if #sent >= limit then break end

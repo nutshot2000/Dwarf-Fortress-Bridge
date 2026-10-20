@@ -23,6 +23,8 @@
 - `df_levers action=lock|unlock` forbids or allows a door or hatch (by id or x,y,z) to seal an entrance.
 - `df_stocks` / `df_status` / upkeep: items inside bins, barrels and bags count as available again (DF marks them
   with the same flag as items a dwarf is carrying); `df_stocks` shows `in_container` vs `carried`.
+- `df_trade send`: goods stored in bins can be sent to the depot (they were skipped as "carried"), and an explicit
+  `item_ids` list is no longer cut at 20.
 - `df_stocks` / `df_status`: stone and other items built into walls, floors or stairs no longer count as free stock.
 - The shared Lua prelude reloads when edited, like the tool scripts.
 - `df_build` names the finished parts a building consumes and which ones the fort has none of right now (a well
