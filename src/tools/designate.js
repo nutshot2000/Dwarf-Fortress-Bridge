@@ -248,7 +248,7 @@ tool("df_zone", "Create a zone rectangle. Bedroom zones require dry floor and co
     }
     // A tomb zone is one grave: DF assigns it to a single body whatever its size or coffin count.
     const tombNote = a.type === "T" && a.w * a.h > 1
-      ? "\nNOTE: a tomb zone holds ONE burial however many coffins it covers. Make a 1x1 tomb zone on each coffin." : "";
+      ? "\nNOTE: a tomb zone holds ONE burial however many coffins it covers. Make a 1x1 tomb zone on each coffin and no zone over the row: a coffin inside two tomb zones gets no burials." : "";
     return text(out + await newIdNote("zone", a) + locNote + tombNote + await skippedTilesNote(out, a));
   });
 

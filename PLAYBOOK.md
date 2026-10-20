@@ -141,7 +141,7 @@ If something seems impossible without a cheat, tell the player instead.
   the original job's own materials. Unchanged warnings are suppressed within one
   server session.
 - The dead: build coffins (key `n`) in a crypt and put a 1x1 tomb zone (`df_zone type=T`) on EACH coffin; one tomb
-  zone holds one body. Enable HAUL_BODY on a few dwarves. A ghost rests once a memorial slab is engraved for them
+  zone holds one body, and a coffin also covered by a larger tomb zone is never used. Enable HAUL_BODY on a few dwarves. A ghost rests once a memorial slab is engraved for them
   (`df_order` EngraveSlab, after ConstructSlab) and built with `df_build key=~s`. With few dwarves, construction jobs
   can sit untaken for days behind workshop work; `df_jobs` do_now moves them up.
 - For distant animal fights, `df_wait animal_fights=report` reports owned-animal
