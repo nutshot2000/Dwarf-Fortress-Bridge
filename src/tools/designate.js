@@ -216,7 +216,7 @@ async function skippedTilesNote(out, a) {
     (value.length > 8 ? "; ..." : "") + ". Wait for digging to finish, then remove it (df_remove allow_built=true) and place it again.";
 }
 
-tool("df_zone", "Create a zone rectangle. Bedroom zones require dry floor and completed walls/doors; repair with df_room_plan first. type: m meeting area, b bedroom, h dining hall, n pasture, p pit/pond, w water source, f fishing, o office, D dormitory, B barracks, d garbage dump, T tomb, g gather fruit, s sand, c clay. Optional location: tavern, hospital, temple, library, guildhall.",
+tool("df_zone", "Create a zone rectangle. Bedroom zones require dry floor and completed walls/doors; repair with df_room_plan first. type: m meeting area, b bedroom, h dining hall, n pasture, p pit/pond, w water source, f fishing, o office, D dormitory, B barracks, d garbage dump, T tomb (one burial per zone: 1x1 on each coffin), g gather fruit, s sand, c clay. Optional location: tavern, hospital, temple, library, guildhall.",
   { type: z.string().min(1), x: coord, y: coord, z: coord,
     w: z.number().int().min(1), h: z.number().int().min(1),
     name: z.string().optional(), location: z.enum(["tavern", "hospital", "temple", "library", "guildhall"]).optional() },
@@ -246,7 +246,10 @@ tool("df_zone", "Create a zone rectangle. Bedroom zones require dry floor and co
         if loc then loc.name.nickname = ARGS.name emit(dfhack.translation.translateName(loc.name, true)) else emit(nil) end`, a);
       if (value) locNote = `\nLocation named: ${value}`;
     }
-    return text(out + await newIdNote("zone", a) + locNote + await skippedTilesNote(out, a));
+    // A tomb zone is one grave: DF assigns it to a single body whatever its size or coffin count.
+    const tombNote = a.type === "T" && a.w * a.h > 1
+      ? "\nNOTE: a tomb zone holds ONE burial however many coffins it covers. Make a 1x1 tomb zone on each coffin." : "";
+    return text(out + await newIdNote("zone", a) + locNote + tombNote + await skippedTilesNote(out, a));
   });
 
 // Report the id of the zone/stockpile just made, so follow-up calls (assign, barracks, presets) need no listing.

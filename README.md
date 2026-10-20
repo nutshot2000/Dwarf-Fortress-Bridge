@@ -274,6 +274,8 @@ Build previews identify invalid tiles, construction reviews distinguish allocate
   by hand, and labors no detail covers (brewing, cooking) come back on. Disable them again afterwards.
 - **Location names**: every location quickfort creates gets the same generated name; `df_zone` sets the requested
   name as the location's nickname.
+- **Tombs** hold one body each: a big tomb zone over a row of coffins buries one dwarf and leaves the rest lying
+  where they fell. Put a 1x1 tomb zone on every coffin. Ghosts rest once their engraved memorial slab is built (`~s`).
 - **`dfhack.workshops.getJobs`** prints a debug dump for every ore when listing smelter jobs; the bridge mutes it.
 
 </details>

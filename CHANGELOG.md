@@ -26,6 +26,8 @@
 - `df_trade send`: goods stored in bins can be sent to the depot (they were skipped as "carried"), and an explicit
   `item_ids` list is no longer cut at 20. `df_trade action=release` cancels the trader request, so dwarves waiting
   at the depot go back to hauling.
+- `df_zone type=T`: tomb zones bigger than one tile get a warning (DF buries one body per tomb zone); the playbook and
+  README explain coffins, tombs and memorial slabs (`~s`) for ghosts.
 - `df_stocks` / `df_status`: stone and other items built into walls, floors or stairs no longer count as free stock.
 - The shared Lua prelude reloads when edited, like the tool scripts.
 - `df_build` names the finished parts a building consumes and which ones the fort has none of right now (a well
