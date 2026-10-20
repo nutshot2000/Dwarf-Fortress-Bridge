@@ -141,7 +141,9 @@ tool("df_build", "Place a building, or dry_run=true for a real non-mutating nati
     // Placement passed preflight, so only the parts worth reading: counters that fired and anything on the ground.
     const fired = Object.fromEntries(Object.values(check.stats ?? {}).filter((s) => s?.value && !/would be designated/.test(s.label)).map((s) => [s.label, s.value]));
     const preflight = { ...(Object.keys(fired).length ? { stats: fired } : {}), ...(check.ground_items?.length ? { ground_items: check.ground_items } : {}) };
-    return text(await quickfort("build", [cell], a.x, a.y, a.z) + (Object.keys(preflight).length ? "\nPreflight: " + JSON.stringify(preflight) : "") +`\nAfter construction finishes: df_screenshot x=${a.x} y=${a.y} z=${a.z}, then df_problems/df_rooms audit. Check workers can leave and passages remain open.`);
+    // Check parts before placing: the new plan reserves free parts at once, which would look like "none free".
+    const parts = await partsNote(a.key);
+    return text(await quickfort("build", [cell], a.x, a.y, a.z) + (Object.keys(preflight).length ? "\nPreflight: " + JSON.stringify(preflight) : "") + parts +`\nAfter construction finishes: df_screenshot x=${a.x} y=${a.y} z=${a.z}, then df_problems/df_rooms audit. Check workers can leave and passages remain open.`);
   });
 
 tool("df_stockpile", "Create a stockpile rectangle. type is one or more #place letters: a animal, f food, u furniture, n coins, y corpses, r refuse, s stone, w wood, e gems, b bars/blocks, h cloth, l leather, z ammo, S sheets, g finished goods, p weapons, d armor, c custom. e.g. 'fw' = food+wood.",
@@ -154,6 +156,33 @@ tool("df_stockpile", "Create a stockpile rectangle. type is one or more #place l
     const out = await quickfort("place", [`${cell}(${a.w}x${a.h})`], a.x, a.y, a.z);
     return text(out + await newIdNote("stockpile", a) + await skippedTilesNote(out, a));
   });
+
+// Finished items some buildings consume. Without them the plan waits and is eventually dropped
+// ("unable to complete the Well ... Needs mechanisms"), so say up front what is missing.
+const BUILD_PARTS = {
+  l: [["BUCKET", "a bucket (carpenter)"], ["CHAIN", "a chain or rope"], ["TRAPPARTS", "a mechanism (mechanic)"],
+    ["BLOCKS", "stone blocks (mason)"]],
+  Tl: [["TRAPPARTS", "a mechanism (mechanic)"]],
+  H: [["HATCH_COVER", "a hatch cover (carpenter or mason)"]],
+  d: [["DOOR", "a door"]], b: [["BED", "a bed (carpenter)"]], t: [["TABLE", "a table"]], c: [["CHAIR", "a chair"]],
+  f: [["CABINET", "a cabinet"]], h: [["BOX", "a chest"]], s: [["STATUE", "a statue"]], n: [["COFFIN", "a coffin"]],
+  r: [["WEAPONRACK", "a weapon rack"]], a: [["ARMORSTAND", "an armor stand"]], j: [["CAGE", "a cage"]],
+  wf: [["ANVIL", "an anvil"]],
+};
+async function partsNote(key) {
+  const parts = BUILD_PARTS[key];
+  if (!parts) return "";
+  const { value: missing } = await lua(`local out = {}
+    for _, p in ipairs(ARGS.parts) do
+      local n = 0
+      for _, it in ipairs(df.global.world.items.other.IN_PLAY) do
+        if df.item_type[it:getType()] == p[1] and stock_available(it) then n = n + 1 break end
+      end
+      if n == 0 then out[#out + 1] = p[2] end
+    end
+    emit(out)`, { parts });
+  return missing?.length ? `\nNeeds (none free now): ${missing.join(", ")}. The plan waits for them; queue them first or it may be dropped.` : "";
+}
 
 // Quickfort silently leaves unusable tiles out of a stockpile or zone, which leaves a ragged edge.
 // Name them, usually undug rock or tiles still being mined, so the area can be laid again once ready.
@@ -189,7 +218,22 @@ tool("df_zone", "Create a zone rectangle. Bedroom zones require dry floor and co
     const cell = a.type + (props.length ? `{${props.join(" ")}}` : "") + `(${a.w}x${a.h})`;
     await cameraTo(a.x + (a.w >> 1), a.y + (a.h >> 1), a.z, `zone at ${a.x},${a.y},${a.z}`);
     const out = await quickfort("zone", [cell], a.x, a.y, a.z);
-    return text(out + await newIdNote("zone", a) + await skippedTilesNote(out, a));
+    let locNote = "";
+    if (a.location && a.name) {
+      // Quickfort gives every new location the same generated name; use the requested name as its nickname.
+      const { value } = await lua(`local best
+        for x = ARGS.x, ARGS.x + ARGS.w - 1 do for y = ARGS.y, ARGS.y + ARGS.h - 1 do
+          for _, b in ipairs(dfhack.buildings.findCivzonesAt(xyz2pos(x, y, ARGS.z)) or {}) do
+            if not best or b.id > best.id then best = b end
+          end
+        end end
+        local site = dfhack.world.getCurrentSite()
+        local loc
+        for _, l in ipairs(site and site.buildings or {}) do if best and l.id == best.location_id then loc = l end end
+        if loc then loc.name.nickname = ARGS.name emit(dfhack.translation.translateName(loc.name, true)) else emit(nil) end`, a);
+      if (value) locNote = `\nLocation named: ${value}`;
+    }
+    return text(out + await newIdNote("zone", a) + locNote + await skippedTilesNote(out, a));
   });
 
 // Report the id of the zone/stockpile just made, so follow-up calls (assign, barracks, presets) need no listing.

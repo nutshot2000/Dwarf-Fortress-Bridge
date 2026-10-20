@@ -267,6 +267,11 @@ Build previews identify invalid tiles, construction reviews distinguish allocate
   built.
 - **Caravans** have a weight limit: stone mugs and crafts are heavy, cut gems and metal crafts are light.
 - **Seasonal autosave** freezes time for a while at the start of each season.
+- **Wells** need a bucket, a chain or rope, a mechanism and stone blocks. If one of them never turns up, the plan is
+  dropped ("unable to complete the Well"), so make them first. A one-tile channel into a light aquifer under the well
+  makes a safe water source.
+- **Location names**: every location quickfort creates gets the same generated name; `df_zone` sets the requested
+  name as the location's nickname.
 - **`dfhack.workshops.getJobs`** prints a debug dump for every ore when listing smelter jobs; the bridge mutes it.
 
 </details>
