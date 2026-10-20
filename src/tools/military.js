@@ -33,7 +33,7 @@ tool("df_levers", "Levers and mechanisms. list: levers (state, what each is link
 tool("df_threats", "Threat report: visible hostiles (and how many unseen), night creatures and cursed units on the map including werebeasts/vampires disguised as visitors, residents or even citizens, and the killers of the last N days (default 60) with victim counts and whether they are still alive and on the map: living ones on the map first, then by victims, top 8 unless limit is given.",
   { days: z.number().int().min(1).max(400).optional(), limit: z.number().int().min(1).max(100).optional() }, (a) => luaTool("threats", a));
 
-tool("df_squad_status", "Every squad (or squad_id): routine, active orders, and per soldier the gear worn vs assigned, empty uniform slots, position and current activity.",
+tool("df_squad_status", "Every squad (or squad_id): routine, active orders, and per soldier the gear worn vs assigned, empty uniform slots, position and current activity. Also releases dwarves linked to a squad without holding a position in it (released_stale)."
   { squad_id: z.number().int().optional() }, (a) => luaTool("military", { ...a, action: "status" }));
 
 tool("df_schedule", "Military schedules and alerts. Each squad has one schedule per alert routine (Off duty, Staggered training, Constant training, Ready), with orders per month. list: schedules (squad_id/routine to filter). set: for squad_id + routine, set months (list of month names, or omit for all) to order train | patrol (route_id) | defend (burrow name or id) | station (x,y,z) | off, with min_count soldiers (default all). alert: switch EVERY squad to a routine (e.g. 'ready' when under attack, 'staggered' after). routes / add_point (name,x,y,z) / add_route (name, point_ids) manage patrol waypoints.",
