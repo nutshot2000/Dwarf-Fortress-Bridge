@@ -29,6 +29,9 @@
 - `df_military uniform` also releases the position's old assignments: re-applying a uniform used to leave the
   previous gear listed, so soldiers carried on fetching 20+ items. `equip` picks the most valuable fitting item (a
   bronze shield over a wooden one, steel over copper) instead of the first one found.
+- `df_rooms action=display building_id item_id` puts an item (an artifact) on a display case or pedestal through
+  the game's own panel; writing the building's list directly made a display job nobody took. Display cases are
+  key `F`. One platinum artifact turned a shrine into a temple complex.
 - `df_justice action=exile unit_id=...` banishes a citizen through DFHack's emigration script (the game has no
   expel button for citizens): they give up citizenship and walk off the map. Refuses nobles, soldiers and children.
 - `df_problems` warns when trees wait for felling but no woodcutter has an axe and none is free (squad weapon slots
