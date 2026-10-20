@@ -26,6 +26,11 @@
 - `df_trade send`: goods stored in bins can be sent to the depot (they were skipped as "carried"), and an explicit
   `item_ids` list is no longer cut at 20. `df_trade action=release` cancels the trader request, so dwarves waiting
   at the depot go back to hauling.
+- `df_military uniform` also releases the position's old assignments: re-applying a uniform used to leave the
+  previous gear listed, so soldiers carried on fetching 20+ items. `equip` picks the most valuable fitting item (a
+  bronze shield over a wooden one, steel over copper) instead of the first one found.
+- `df_squad_status` releases dwarves who point at a squad without holding a position in it (left by a failed add);
+  they went off to train with the squad instead of working.
 - Camera and unit job labels no longer go blank for jobs DF leaves unnamed (cooking shows "Prepare Meal").
 - `df_problems` names idle dwarves without item hauling (the miners' work detail leaves it off), the usual reason a
   small fort's hauling backlog never shrinks.

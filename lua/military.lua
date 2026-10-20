@@ -58,8 +58,22 @@ if action == 'status' then
             at = u.pos.x .. ',' .. u.pos.y .. ',' .. u.pos.z, doing = unit_job(u)}
         end
       end
+      -- A failed add (or a death in the squad) can leave a dwarf pointing at the squad without holding a
+      -- position: they go off to "train with the squad" instead of working. Clear the stale link.
+      local stale = {}
+      for _, u in ipairs(citizens()) do
+        if u.military.squad_id == s.id then
+          local held = false
+          for _, p in ipairs(s.positions) do if p.occupant == u.hist_figure_id then held = true end end
+          if not held then
+            u.military.squad_id, u.military.squad_position = -1, -1
+            stale[#stale + 1] = unit_name(u)
+          end
+        end
+      end
       out[#out + 1] = {id = s.id, name = dfhack.df2utf(s.alias ~= '' and s.alias or dfhack.translation.translateName(s.name, true)),
-        routine = rt and rt.name, orders = orders, members = members}
+        routine = rt and rt.name, orders = orders, members = members,
+        released_stale = #stale > 0 and stale or nil}
     end
   end
   emit({squads = out, hint = 'worn < assigned: soldiers still fetching; empty_slots: run action=equip or make that gear.'}) return
@@ -191,17 +205,22 @@ if action == 'equip' then
           local want = (tname == 'GLOVES' or tname == 'SHOES') and 2 or 1
           while #sp.assigned < want do
             -- search every item of the type: freed gear can be missing from the unassigned index
-            local pick
-            -- prefer what the soldier already wears, then anything free
+            -- the most valuable fitting item (a bronze shield over a wooden one, steel over copper); what the
+            -- soldier already wears wins ties, so a re-equip does not swap gear for nothing
+            local pick, best = nil, -1
             if u then
               for _, inv in ipairs(u.inventory) do
                 local it = inv.item
-                if it:getType() == sp.item_type and not taken[it.id] and fits(sp, it, u) then pick = it break end
+                if it:getType() == sp.item_type and not taken[it.id] and fits(sp, it, u) then
+                  local v = dfhack.items.getValue(it)
+                  if v > best then pick, best = it, v end
+                end
               end
             end
-            if not pick then
-              for _, it in ipairs(df.global.world.items.other[df.item_type[sp.item_type]]) do
-                if not taken[it.id] and fits(sp, it, u) then pick = it break end
+            for _, it in ipairs(df.global.world.items.other[df.item_type[sp.item_type]]) do
+              if not taken[it.id] and fits(sp, it, u) then
+                local v = dfhack.items.getValue(it)
+                if v > best then pick, best = it, v end
               end
             end
             if not pick then break end
@@ -251,8 +270,24 @@ if action == 'uniform' then
     emit({error = 'No uniform template ' .. want, templates = names}) return
   end
   local set = 0
+  local E = df.global.plotinfo.equipment
   for _, pos in ipairs(sq.positions) do
     local eq = pos.equipment
+    -- Wiping the slots alone leaves the old gear in assigned_items, and soldiers keep fetching all of it:
+    -- release every old assignment back to the unassigned index too.
+    for i = #eq.assigned_items - 1, 0, -1 do
+      local id = eq.assigned_items[i]
+      local it = df.item.find(id)
+      if it then
+        local t = it:getType()
+        local as = E.items_assigned[t]
+        local k = as and utils.linear_index(as, id)
+        if k then as:erase(k) end
+        local un = E.items_unassigned[t]
+        if un and not utils.linear_index(un, id) then utils.insert_sorted(un, id) end
+      end
+      eq.assigned_items:erase(i)
+    end
     for s = 0, 6 do
       local slot = eq.uniform[s]
       for i = #slot - 1, 0, -1 do local sp = slot[i] slot:erase(i) sp:delete() end
