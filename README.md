@@ -280,6 +280,9 @@ Build previews identify invalid tiles, construction reviews distinguish allocate
 - **Gear of the dead** (citizens and invaders) is forbidden where it falls; after a fight it stays on the floor until
   unforbidden; gear the undead or invaders carried (even a raised citizen's own pick) is also flagged `foreign`,
   which haulers ignore until it is cleared. It needs a weapon/armour stockpile to go to. `df_problems` counts it.
+- **Cave plants indoors**: soil floors underground grow shrubs and fungiwood/tower-cap saplings. Shrubs can be
+  gathered (`df_dig kind=gather`; quarry bush, cave wheat, sweet pod are food and brewing stock). Saplings cannot be
+  chopped; a constructed floor (`df_build key=Cf`) over the tile removes them along with the grass.
 - **Corpses and bones** lie where they fell forever: only vermin remains rot. They get cleaned up with a refuse
   stockpile or a dump zone plus the `dump_corpses/bones/skulls` standing orders; `gather_refuse_outside` starts off,
   so bodies on the surface stay even then.

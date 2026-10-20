@@ -29,6 +29,7 @@
 - `df_military uniform` also releases the position's old assignments: re-applying a uniform used to leave the
   previous gear listed, so soldiers carried on fetching 20+ items. `equip` picks the most valuable fitting item (a
   bronze shield over a wooden one, steel over copper) instead of the first one found.
+- `df_dig kind=gather|chop` is no longer blocked by the bedroom-wall guard (neither digs anything).
 - `df_military uniform` copies the template's `exact_matches` flag: without it the game filled "metal armor" body
   slots with wool dresses and cloth gloves over the bridge's assignments. It no longer sets the game's
   re-assignment flags (equip assigns instead).
