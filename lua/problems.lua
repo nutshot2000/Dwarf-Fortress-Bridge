@@ -142,6 +142,15 @@ if (counts.Table or 0) == 0 or (counts.Chair or 0) == 0 then add('low', 'No tabl
 local idle = 0
 for _, u in ipairs(cits) do if not u.job.current_job then idle = idle + 1 end end
 if pop > 0 and idle > pop / 2 then add('low', ('%d of %d dwarves idle: designate more work.'):format(idle, pop)) end
+-- An idle dwarf without item hauling cannot help with the backlog (miners' details often drop it).
+local nohaul = {}
+for _, u in ipairs(cits) do
+  if not u.job.current_job and not dfhack.units.isBaby(u) and not dfhack.units.isChild(u)
+     and not u.status.labors[df.unit_labor.HAUL_ITEM] then nohaul[#nohaul + 1] = ('%s #%d'):format(unit_name(u), u.id) end
+end
+if #nohaul > 0 then
+  add('low', ('Idle without item hauling: %s. df_labor enable HAUL_ITEM (and HAUL_STONE/WOOD/FOOD/FURNITURE) so they help with hauling.'):format(table.concat(nohaul, '; ')))
+end
 
 -- DF forbids the gear of everyone who dies (citizens and invaders), so after a fight weapons, armour and clothes
 -- lie on the floor untouched until someone unforbids them.

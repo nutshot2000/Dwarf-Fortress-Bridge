@@ -27,6 +27,8 @@
   `item_ids` list is no longer cut at 20. `df_trade action=release` cancels the trader request, so dwarves waiting
   at the depot go back to hauling.
 - Camera and unit job labels no longer go blank for jobs DF leaves unnamed (cooking shows "Prepare Meal").
+- `df_problems` names idle dwarves without item hauling (the miners' work detail leaves it off), the usual reason a
+  small fort's hauling backlog never shrinks.
 - `df_problems` reports forbidden weapons, armour and clothes on the floor (DF forbids the gear of everyone who dies,
   so after a siege it lies untouched), including "foreign" gear the undead dropped, which haulers ignore even unforbidden.
 - `df_workshop add` refuses an empty task: it used to match the first task alphabetically, at a smelter "Melt a metal
