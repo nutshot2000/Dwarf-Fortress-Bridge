@@ -43,7 +43,7 @@ tool("df_help", "Help. topic=keys (default): quickfort build keys, dig kinds and
 
 const HELP = `BUILD KEYS (df_build): b bed, c chair, t table, d door, h container/box, f cabinet, r weapon rack, a armor stand,
 n coffin, s statue, l well, H hatch, j cage, v restraint, A archery target, k vermin catcher, D trade depot (5x5),
-Tl lever, Tc cage trap, Ts stone-fall trap, ~s slab (memorial), g drawbridge
+Tl lever, Tc cage trap, Ts stone-fall trap, ~s slab (memorial), g drawbridge, F display case (df_rooms display)
 Workshops (3x3, centre tile): wc carpenter, wm stoneworker(mason), wl still, wz kitchen, ww farmer, wu butcher,
 wn tanner, we leatherworks, ~c bookcase, wr craftsdwarf, wf metalsmith (forge), wj jeweler, wt mechanic, wo loom, wk clothier,
 wq quern, wM millstone, wb bowyer, wh fishery, wy ashery, wd dyer, wS soap maker, wp screw press, ws siege

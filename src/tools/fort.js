@@ -32,11 +32,35 @@ tool("df_labor", "Labors and work details. action=list shows work details (membe
     return text(`Re-applied work detail "${detail}" through the Labor screen (labors and tool assignment updated).`);
   });
 
-tool("df_rooms", "Zones. action=list shows all zones with owners. action=assign gives zone_id to unit_id; unassign clears the owner. action=audit checks EVERY zone against the wiki requirements (required furniture per zone type, owners, overlaps that zero room value, room quality rank, tavern/temple/hospital/library needs incl. dance floor and stocked goblets/instruments/supplies, staff) , every noble's room demands, and untidy stockpiles (fragmented, stray, on stairs). Run audit after building or changing rooms. action=bedroom_wing builds a tidy wing of private 3x3 bedrooms either side of a corridor (z, x1=west end, y=corridor row, per_side, shaft_x to keep clear): phase dig, then furnish (door/bed/cabinet/chest), then zone (zones + assigns adults without a room).",
-  { action: z.enum(["list", "assign", "unassign", "audit", "bedroom_wing"]).default("list"), zone_id: z.number().int().optional(), unit_id: z.number().int().optional(),
+tool("df_rooms", "Zones. action=list shows all zones with owners. action=assign gives zone_id to unit_id; unassign clears the owner. action=audit checks EVERY zone against the wiki requirements (required furniture per zone type, owners, overlaps that zero room value, room quality rank, tavern/temple/hospital/library needs incl. dance floor and stocked goblets/instruments/supplies, staff) , every noble's room demands, and untidy stockpiles (fragmented, stray, on stairs). Run audit after building or changing rooms. action=display puts item_id (e.g. an artifact) on display case or pedestal building_id; artifacts on show in a temple or guildhall raise its value a lot. action=bedroom_wing builds a tidy wing of private 3x3 bedrooms either side of a corridor (z, x1=west end, y=corridor row, per_side, shaft_x to keep clear): phase dig, then furnish (door/bed/cabinet/chest), then zone (zones + assigns adults without a room).",
+  { action: z.enum(["list", "assign", "unassign", "audit", "bedroom_wing", "display"]).default("list"), zone_id: z.number().int().optional(), unit_id: z.number().int().optional(),
     phase: z.enum(["dig", "furnish", "zone"]).optional(), z: optCoord, x1: optCoord, y: optCoord, per_side: z.number().int().min(1).max(15).optional(),
-    shaft_x: optCoord, priority: z.number().int().min(1).max(7).optional() },
+    shaft_x: optCoord, priority: z.number().int().min(1).max(7).optional(),
+    building_id: z.number().int().optional().describe("display: the display case or pedestal"),
+    item_id: z.number().int().optional().describe("display: the item (e.g. an artifact) to put on show") },
   async (a) => {
+    if (a.action === "display") {
+      // Through the game's own "Assign new display items" panel: writing displayed_items directly made a
+      // "Put item on display" job that nobody ever took.
+      if (a.building_id === undefined || a.item_id === undefined) return fail("display needs building_id and item_id");
+      const { value: ok } = await lua(`local b = df.building.find(ARGS.building_id)
+        if not b or not df.building_display_furniturest:is_instance(b) then emit('not a display case or pedestal') return end
+        if not df.item.find(ARGS.item_id) then emit('no item ' .. ARGS.item_id) return end
+        local v = df.global.game.main_interface.view_sheets
+        v.open = true v.active_sheet = df.view_sheet_type.BUILDING v.active_id = b.id v.active_sub_tab = 0
+        emit(true)`, a);
+      if (ok !== true) return fail(String(ok));
+      await luaFile("screen", { action: "click", text: "Assign new display items" });
+      const { value: set } = await lua(`local p = df.global.game.main_interface.assign_display_item
+        if not p.open then emit(false) return end
+        p.new_display_itid:insert('#', ARGS.item_id) emit(true)`, a);
+      await luaFile("screen", { action: "key", keys: ["LEAVESCREEN"] });
+      await luaFile("screen", { action: "close" });
+      const { value: shown } = await lua(`local b = df.building.find(ARGS.building_id)
+        for _, id in ipairs(b.displayed_items) do if id == ARGS.item_id then emit(true) return end end emit(false)`, a);
+      if (!set || !shown) return fail("The display panel did not take the item (is the building finished?).");
+      return text(`Item ${a.item_id} assigned to display ${a.building_id}; a dwarf carries it there.`);
+    }
     if (a.action === "audit") {
       const {value:report}=await luaFile("audit",a);
       const {value:layout}=await luaFile("room_plan",{action:"status"});
