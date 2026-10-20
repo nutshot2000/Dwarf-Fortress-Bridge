@@ -150,7 +150,8 @@ If something seems impossible without a cheat, tell the player instead.
 - Kill orders only work on targets the game counts as hostile (a werebeast in human form is not): station the squad nearby instead.
 - Siege or undead attack with a weak military: `df_burrow alert_on burrow=Inside` (create the burrow over the
   underground fort first), wait until no citizen is on the surface, then `df_levers action=lock` the entrance door or
-  hatch. Unlock and `alert_off` once `df_threats` shows the attackers gone. A lock did NOT hold reliably while tavern
+  hatch. Unlock and `alert_off clear_units=true` once `df_threats` shows the attackers gone (without clear_units the
+  dwarves stay confined to their burrows and jobs elsewhere silently wait). A lock did NOT hold reliably while tavern
   visitors were coming and going (it was found unlocked twice and the undead walked in): re-check it with
   `df_levers` and prefer a real barrier (raised drawbridge, hatch over a stair, or walls with no door) for sieges.
   A light militia loses to an undead horde; miners with picks did better than the squad. Build armour first. While hostiles are already on the map,

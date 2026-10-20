@@ -44,7 +44,21 @@ if action == 'create' then
 end
 
 if action == 'alert_on' or action == 'alert_off' then
-  if action == 'alert_off' then A.civ_alert_idx = 0 emit({ok = true, alerts = alert_info()}) return end
+  if action == 'alert_off' then
+    A.civ_alert_idx = 0
+    -- Ending the alert does not free anyone: a dwarf assigned to a burrow still only works inside it, which
+    -- quietly stops jobs elsewhere (a door removal waited days). Release them with clear_units=true.
+    local tied, cleared = 0, 0
+    for _, u in ipairs(citizens()) do
+      for _, b in ipairs(df.global.plotinfo.burrows.list) do
+        if dfhack.burrows.isAssignedUnit(b, u) then
+          if ARGS.clear_units then dfhack.burrows.setAssignedUnit(b, u, false) cleared = cleared + 1 else tied = tied + 1 end
+        end
+      end
+    end
+    emit({ok = true, alerts = alert_info(), released_assignments = cleared > 0 and cleared or nil,
+      warning = tied > 0 and (tied .. ' citizen burrow assignment(s) remain: those dwarves still work only inside their burrows. Repeat with clear_units=true to release them.') or nil}) return
+  end
   local b = find(ARGS.burrow)
   if not b then emit({error = 'No burrow ' .. tostring(ARGS.burrow)}) return end
   -- reuse or create an alert that restricts civilians to this burrow

@@ -17,11 +17,11 @@ tool("df_military", "Squads. list: squads, members, orders and leader positions.
     return text(json({ uniform: u.uniform, positions: u.positions, equip: e }));
   });
 
-tool("df_burrow", "Burrows and the civilian alert. list: burrows and alerts. create (name). add_rect / remove_rect: tiles x1,y1..x2,y2 on z (or z1..z2) for burrow (name or id). add_units / remove_units (unit_ids or all_citizens=true), clear_tiles, clear_units. alert_on burrow=<name>: civilians stay inside it (use in sieges); alert_off ends it.",
+tool("df_burrow", "Burrows and the civilian alert. list: burrows and alerts. create (name). add_rect / remove_rect: tiles x1,y1..x2,y2 on z (or z1..z2) for burrow (name or id). add_units / remove_units (unit_ids or all_citizens=true), clear_tiles, clear_units. alert_on burrow=<name>: civilians stay inside it (use in sieges); alert_off ends it (clear_units=true also releases every citizen from burrows: assigned dwarves keep working only inside their burrow even with no alert).",
   { action: z.enum(["list", "create", "add_rect", "remove_rect", "clear_tiles", "add_units", "remove_units", "clear_units", "alert_on", "alert_off"]).default("list"),
     burrow: z.union([z.string(), z.number().int()]).optional(), name: z.string().optional(),
     x1: optCoord, y1: optCoord, x2: optCoord, y2: optCoord, z: optCoord, z1: optCoord, z2: optCoord,
-    unit_ids: z.array(z.number().int()).optional(), all_citizens: z.boolean().optional() },
+    unit_ids: z.array(z.number().int()).optional(), all_citizens: z.boolean().optional(), clear_units: z.boolean().optional() },
   (a) => luaTool("burrow", a));
 
 tool("df_levers", "Levers and mechanisms. list: levers (state, what each is linked to, pending jobs), buildings that can be linked (bridges, doors, hatches, floodgates, grates, bars, cages) and free mechanisms. link: queue the job linking lever_id to target_id (uses 2 mechanisms). pull: queue a dwarf to pull lever_id (urgent=true for top priority). lock / unlock: forbid or allow a door or hatch (target_id, or x,y,z) to seal an entrance during a siege; get everyone inside first (df_burrow alert_on). Build a lever with df_build key=Tl; a drawbridge with key g / gw / gd / gx / ga.",

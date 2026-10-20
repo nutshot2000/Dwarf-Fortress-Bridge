@@ -16,6 +16,8 @@
   and, with material type 0 plus "hard", rejected all stone); `economic_stone` is compared to 1 (0 is truthy in
   Lua, so every stone counted as economic, and stone furniture fell back to wood); mechanisms and blocks accept
   economic stone.
+- `df_burrow alert_off` warns that burrow-assigned dwarves still only work inside their burrows; `clear_units=true`
+  releases them. `df_jobs` reports building jobs (e.g. "Destroy building") at the building, not -30000.
 - `df_levers action=lock|unlock` forbids or allows a door or hatch (by id or x,y,z) to seal an entrance.
 - `df_stocks` / `df_status` / upkeep: items inside bins, barrels and bags count as available again (DF marks them
   with the same flag as items a dwarf is carrying); `df_stocks` shows `in_container` vs `carried`.
