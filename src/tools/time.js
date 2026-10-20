@@ -139,6 +139,17 @@ tool("df_wait","Unpause and let the game run for a number of in-game days (1 day
       const d = now.pop - start.pop;
       imp.unshift({ text: `Population ${start.pop} -> ${now.pop} (${d > 0 ? `+${d}: migrants or births` : `${d}: deaths or departures`}). Check df_units and bedrooms.` });
     }
+    // DF announces a petition only when it expires unanswered: list pending ones on every wait until answered.
+    const { value: pet } = await lua(`local r = {}
+      for _, id in ipairs(df.global.plotinfo.petitions) do
+        local ag = df.agreement.find(id)
+        local ids = ag and #ag.parties > 0 and ag.parties[0].histfig_ids
+        local hf = ids and #ids > 0 and df.historical_figure.find(ids[0])
+        local u = hf and df.unit.find(hf.unit_id)
+        r[#r + 1] = u and unit_name(u) or ('petition ' .. id)
+      end
+      emit(r)`);
+    if (pet?.length) imp.push({ text: `Pending petition(s), they expire if ignored: ${pet.join("; ")}. Vet and answer with df_petition.` });
     if (camera.mode !== "off" && camera.log.length) out += `Camera (${camera.mode}) showed: ${camera.log.slice(-6).join(" | ")}\n`;
     if (popups.length) out += `POPUPS (dismissed so time could run):\n${popups.map((t) => `! ${t}`).join("\n")}\n`;
     if (imp.length) out += `IMPORTANT:\n${imp.map((m) => `! ${m.text}`).join("\n")}\n`;
