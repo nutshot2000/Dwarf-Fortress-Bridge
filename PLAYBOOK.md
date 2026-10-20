@@ -154,7 +154,9 @@ If something seems impossible without a cheat, tell the player instead.
   dwarves stay confined to their burrows and jobs elsewhere silently wait). A lock did NOT hold reliably while tavern
   visitors were coming and going (it was found unlocked twice and the undead walked in, and a locked cavern hatch was
   later found unlocked too; the bridge never clears locks): re-check locks with
-  `df_levers` and prefer a real barrier (raised drawbridge, hatch over a stair, or walls with no door) for sieges.
+  `df_levers` and prefer a real barrier for sieges: a raising drawbridge (`df_build key=ga/gw/gd/gx`) in the entrance,
+  linked to a lever inside (`df_levers link`, 2 mechanisms; the lever itself needs 1); `df_levers pull` raises it into
+  a wall nothing can open.
   A light militia loses to an undead horde; miners with picks did better than the squad. Build armour first. While hostiles are already on the map,
   `df_wait` stops only for one newly within 40 tiles of a dwarf.
 - `df_schedule` (monthly orders, patrol routes, alert switch: alert ready when attacked), `df_levers` (link/pull/lock),
