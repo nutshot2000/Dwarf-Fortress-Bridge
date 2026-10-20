@@ -131,6 +131,10 @@ If something seems impossible without a cheat, tell the player instead.
 - `df_rooms` assigns bedrooms/offices, builds bedroom wings and audits every room against the wiki's rules. Keep rooms tidy:
   walled, clean rectangles, no overlapping zones (they are worth nothing).
 - `df_animals` (pastures, slaughter, training), `df_standing` (standing orders), `df_jobs` (all tasks).
+- A tavern that serves drink invites brawls: drunk visitors and dwarves (children too) trade punches for days,
+  and newcomers join in. They are fistfights (bruises, no deaths so far); staff the hospital first, keep soldiers
+  out of it (attacking a visiting noble is far worse), and ride it out with `df_wait watch=false` in short steps,
+  checking deaths with df_threats in between.
 - `df_location` staffs hospitals, taverns, temples and libraries. `df_petition` vets petitioners for curses before approving.
 - `df_jobs action=suspended` separates construction needing review from plans waiting for items. After interruptions, review the cause and resume specific job IDs only when safe; jobs are never automatically restarted. `df_problems` and `df_wait` flag these candidates.
 - Suspended construction lists its own `materials` separately from `other_ground_items`.
