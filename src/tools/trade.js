@@ -89,9 +89,14 @@ tool("df_petition", "Petitions (residency, citizenship, temples/guildhalls). lis
     if (a.action === "list") return text(JSON.stringify({ petitions: list ?? [] }, null, 1));
     if (!list?.length) return fail("No pending petitions");
     await luaFile("screen", { action: "close" });
-    await luaFile("screen", { action: "click", text: "PETITIONS" });
-    const { value: f } = await luaFile("screen", { action: "find", text: "Deny" });
-    const deny = (f?.hits ?? [])[0];
+    // The panel sometimes is not drawn yet on the first look: open it and search again a few times.
+    let deny;
+    for (let i = 0; i < 3 && !deny; i++) {
+      if (i) await new Promise((r) => setTimeout(r, 300));
+      await luaFile("screen", { action: "click", text: "PETITIONS" });
+      const { value: f } = await luaFile("screen", { action: "find", text: "Deny" });
+      deny = (f?.hits ?? [])[0];
+    }
     if (!deny) { await luaFile("screen", { action: "close" }); return fail("Petition buttons not found on screen"); }
     // the buttons sit side by side: [ Approve ][ Deny ]
     const x = a.action === "deny" ? deny.x + 1 : deny.x - 9;
