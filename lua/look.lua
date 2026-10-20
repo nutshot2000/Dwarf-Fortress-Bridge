@@ -139,7 +139,12 @@ for y = y1, y2 do
         for _, d in ipairs({{1,0},{-1,0},{0,1},{0,-1}}) do
           local nf = dfhack.maps.getTileFlags(x + d[1], y + d[2], z)
           local nt = dfhack.maps.getTileType(x + d[1], y + d[2], z)
-          if nf and nt and not nf.outside and not nf.hidden and df.tiletype.attrs[nt].shape ~= SHAPE.WALL then
+          -- the neighbour must be under a real roof (rock, soil, construction), not a tree canopy
+          local rt = nf and dfhack.maps.getTileType(x + d[1], y + d[2], z + 1)
+          local ra = rt and df.tiletype.attrs[rt]
+          local roofed = ra and ra.material ~= MAT.TREE and ra.material ~= MAT.PLANT
+            and (ra.shape == SHAPE.WALL or ra.shape == SHAPE.FLOOR)
+          if roofed and nt and not nf.outside and not nf.hidden and df.tiletype.attrs[nt].shape ~= SHAPE.WALL then
             sky_holes[#sky_holes+1] = {x=x,y=y} break
           end
         end

@@ -123,10 +123,11 @@ tool("df_wait","Unpause and let the game run for a number of in-game days (1 day
     const IMPORTANT_TEXT = /caravan|merchants|migrant|siege|ambush|stolen|thief|snatcher|invad|attack|dead|died|killed|been slaughtered by|mood|berserk|insane|tantrum|withdraw|born|given birth|artifact|diplomat|liaison|petition|arrived|has become|struck|forgotten beast|titan|vampire|were/i;
     // Blow-by-blow combat lines (mostly squad sparring) are noise unless someone actually got hurt.
     const COMBAT = /lightly tapping|misses the|charges at|collides with|strikes at|parried|deflected|rolls away|jumps away|attacks the .* but|no longer stunned|is knocked over|punches|kicks|scratches|bites|grabs|releases the grip/i;
-    const HURT = /dead|killed|struck down|severed|mangled|torn|shattered|unconscious|bleeding/i;
     // DF tags every blow-by-blow line with a COMBAT_* report type; the text patterns catch the rest.
-    const isCombat = (m) => /^(COMBAT|BREAK_GRIP|EXHAUSTION|VOMIT|NOT_STUNNED|STAND_UP|LOSE_EMOTION|.*CONSCIOUS|PASS_OUT)/.test(m.type || "") || COMBAT.test(m.text);
-    const imp = all.filter((m) => (IMPORTANT.test(m.type || "") || IMPORTANT_TEXT.test(m.text)) && !(isCombat(m) && !HURT.test(m.text)));
+    const isCombat = (m) => /^(COMBAT|BREAK_GRIP|NO_BREAK_GRIP|EXHAUSTION|VOMIT|NOT_STUNNED|STAND_UP|LOSE_EMOTION|.*CONSCIOUS|PASS_OUT)/.test(m.type || "") || COMBAT.test(m.text);
+    // A wound line is routine in any fight; only a death is news (a hurt citizen already stops the wait).
+    const DEATH = /\b(dies|died|killed|struck down|has been slain|is dead)\b/i;
+    const imp = all.filter((m) => (IMPORTANT.test(m.type || "") || IMPORTANT_TEXT.test(m.text)) && !(isCombat(m) && !DEATH.test(m.text)));
     const rest = all.filter((m) => !imp.includes(m) && !isCombat(m));
     const sparring = all.length - imp.length - rest.length;
     let out = `Ran ${ran.toFixed(2)} days in ${((Date.now() - t0) / 1000).toFixed(0)}s: ${reason}. Paused.\n`;
