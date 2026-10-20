@@ -2,7 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { DF_DIR } from "../dfhack.js";
-import { tool, luaTool, text, fail, z, command, lua, luaFile } from "../core.js";
+import { tool, luaTool, text, fail, z, command, lua, luaFile, inputWarnings } from "../core.js";
 
 // Orders without a material never get dispatched (the game's own UI always sets one), so pick a
 // sensible default per job and let the caller override it.
@@ -44,7 +44,8 @@ tool("df_order", "Queue a manager work order (needs a MANAGER; df_noble repair i
     if (a.reaction) { a.job = "CustomReaction"; }
     if (!a.job) return luaTool("orders");
     const { out, order } = await queueOrder(a);
-    return text((out.trim() || "Queued") + `\norder: ${JSON.stringify(order)}`);
+    const warn = await inputWarnings({ order });
+    return text((out.trim() || "Queued") + `\norder: ${JSON.stringify(order)}` + warn.map((w) => `\nWARNING: ${w}`).join(""));
   });
 
 // Build and queue a manager order (shared by df_order and df_upkeep).
@@ -61,7 +62,8 @@ async function queueOrder(a) {
     const { value: stone } = await lua(`local n=0
       for _,it in ipairs(df.global.world.items.other.BOULDER) do
         local f=it.flags
-        if not (f.forbid or f.in_job or f.dump or f.construction or f.garbage_collect) then n=n+1 end
+        local eco=it:getMaterial()==0 and df.global.plotinfo.economic_stone[it:getMaterialIndex()]
+        if not (f.forbid or f.in_job or f.dump or f.construction or f.garbage_collect or eco) then n=n+1 end
       end
       emit(n)`);
     if (!stone) { a.material = "wood"; fallback = " (no free stone boulders: defaulted to wood; pass material=stone to override)"; }

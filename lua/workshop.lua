@@ -128,6 +128,12 @@ if action == 'add' then
     b.jobs:insert('#', job)
     dfhack.job.linkIntoWorld(job, true)
   end
-  emit({ok = true, added = dfhack.df2utf(pick.name), count = count, jobs = queued(b)}) return
+  -- The JS side runs lua/inputs.lua over these filters and appends missing-material warnings.
+  local inputs = {}
+  for _, item in ipairs(pick.items or {}) do table.insert(inputs, job_item_filter(item)) end
+  local magma = df.building_furnacest:is_instance(b) and df.furnace_type[b.type]:find('^Magma') ~= nil
+  emit({ok = true, added = dfhack.df2utf(pick.name), count = count, jobs = queued(b),
+    preflight = {items = inputs, building_id = b.id, magma = magma,
+      job_type = pick.job_fields and pick.job_fields.job_type or nil}}) return
 end
 emit({error = 'Unknown action ' .. action})

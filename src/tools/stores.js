@@ -1,5 +1,5 @@
 // Tools: stores.
-import { tool, luaTool, text, fail, optCoord, z, command } from "../core.js";
+import { tool, luaTool, luaFile, text, fail, json, optCoord, z, command, inputWarnings } from "../core.js";
 
 tool("df_crop", "Farming. list reports built state, light/dark tiles, incompatible crops and seeds. set requires a completed plot and compatible light/dark conditions; unbuilt plots reset on completion, and roofing surface soil does NOT make it dark. Set plot_id, plant name/id or fallow, seasons (default all).",
   { action: z.enum(["list", "set"]).default("list"), plot_id: z.number().int().optional(), plant: z.string().optional(),
@@ -13,7 +13,14 @@ tool("df_workshop", "Workshops and furnaces. action=list shows each with queued 
   { action: z.enum(["list", "add", "cancel"]).default("list"), building_id: z.number().int().optional(),
     task: z.string().optional(), count: z.number().int().min(1).max(10).optional(), repeat: z.boolean().optional(),
     index: z.number().int().optional(), show_tasks: z.boolean().optional(), filter: z.string().optional() },
-  (a) => luaTool("workshop", a));
+  async (a) => {
+    if (a.action !== "add") return luaTool("workshop", a);
+    const { value, log } = await luaFile("workshop", a);
+    if (value?.error) return fail(value.error);
+    const { preflight, ...rest } = value;
+    const warn = preflight ? await inputWarnings(preflight) : [];
+    return text(json(rest) + warn.map((w) => `\nWARNING: ${w}`).join("") + (log ? `\n--- log ---\n${log}` : ""));
+  });
 
 tool("df_animals", "Livestock and pets. list: own animals (race, sex, age, grazer/milkable/egg-layer, pasture, training) and pastures/ponds. pasture: put unit_id/unit_ids into pen zone_id (make one with df_zone type n). unpasture, slaughter / unslaughter (butcher marks), train (assign a trainer). Grazers starve without a grassy pasture.",
   { action: z.enum(["list", "pasture", "unpasture", "slaughter", "unslaughter", "train"]).default("list"),
