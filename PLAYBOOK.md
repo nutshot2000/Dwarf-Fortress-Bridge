@@ -168,7 +168,10 @@ If something seems impossible without a cheat, tell the player instead.
   valuable goods (cut gems, cloth, small metal or bone crafts). The merchant line shown before you propose is the reply
   to the previous offer; judge a new selection only by the reply to `propose`.
 - `df_trade`: send goods to the depot, call the broker, open the trade screen, select, propose, close.
-  `request_anyone` when the broker is busy. Merchants want a clear profit and refuse loads over their weight.
+  `request_anyone` when the broker is busy (a broker in a meeting with the liaison keeps going back to it). A requested
+  trader waits at the depot and hauls nothing, so call them once the goods are there, and `release` them if hauling
+  stalls or after the deal. Merchants want a clear profit and refuse loads over their weight. Your own civilisation's
+  merchants value cut gems far above their listed price: the native footer is the real number.
 - Preview `df_trade action=goods` or `send dry_run=true`. Nonempty containers are
   protected unless `allow_contents=true` is explicitly set after inspecting contents.
   `value_with_contents` includes contents; bare `value` does not. No fixed price ratio

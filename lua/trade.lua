@@ -59,6 +59,17 @@ if action == 'status' then
     hint = 'Mark goods with action=send. Trading happens on the in-game trade screen: open it from the depot, then use action=screen / select.'}) return
 end
 
+-- A requested trader stands at the depot until trading starts and hauls nothing meanwhile: release them while
+-- goods are still on their way, and after the deal.
+if action == 'release' then
+  local n = 0
+  for _, d in ipairs(depots()) do d.trade_flags.trader_requested = false d.trade_flags.anyone_can_trade = false end
+  for _, j in require('utils').listpairs(df.global.world.jobs.list) do
+    if j.job_type == df.job_type.TradeAtDepot then dfhack.job.removeJob(j) n = n + 1 end
+  end
+  emit({ok = true, released = n}) return
+end
+
 if action == 'send' or action == 'goods' then
   local depot = depots()[1]
   if ARGS.depot_id then depot = df.building.find(ARGS.depot_id) end
