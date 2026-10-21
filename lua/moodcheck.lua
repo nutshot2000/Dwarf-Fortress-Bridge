@@ -54,6 +54,25 @@ local function count_suitable(ji)
   return n, size
 end
 
+-- Which workshop each mood wants (showmood text), and whether the fort has one: a mood for a workshop the fort
+-- lacks (a Clothier's Shop, say) never starts until one is built.
+local wanted = {}
+do
+  local sm = try(function() return dfhack.run_command_silent('showmood') end, '') or ''
+  for line in sm:gmatch('[^\n]+') do
+    local who, shop = line:match('^(.-) is currently .- to claim an? (.-) and become')
+    if who and shop then wanted[#wanted + 1] = {who = who, shop = shop} end
+  end
+end
+local function have_shop(name)
+  for _, list in ipairs({'WORKSHOP_ANY', 'FURNACE_ANY'}) do
+    for _, b in ipairs(df.global.world.buildings.other[list]) do
+      if dfhack.buildings.getName(b) == name and b:getBuildStage() >= b:getMaxBuildStage() then return true end
+    end
+  end
+  return false
+end
+
 local moods = {}
 for _, u in ipairs(citizens()) do
   if u.mood >= 0 and df.mood_type[u.mood] ~= 'Baby' then
@@ -81,6 +100,15 @@ for _, u in ipairs(citizens()) do
         (missing .. ' item type(s) missing: get them before days_left runs out')
     else
       entry.verdict = 'no workshop claimed yet (needs a free workshop of the right type: see df_mood)'
+    end
+    local first = unit_name(u):match('^(%S+)')
+    for _, w in ipairs(wanted) do
+      if first and dfhack.df2utf(w.who):find(first, 1, true) then
+        entry.workshop = w.shop
+        if not have_shop(w.shop) then
+          entry.workshop_missing = 'No finished ' .. w.shop .. ' in the fort: build one now (df_help topic=keys) or the mood cannot start.'
+        end
+      end
     end
     moods[#moods + 1] = entry
   end
