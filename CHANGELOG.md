@@ -34,6 +34,8 @@
   a stockpile (take/give), `condition` sets departure rules (push/ride/guide, direction, load %, timeout), `assign`
   puts a free cart on a route, `list` shows routes, stops, links, conditions and carts. `df_order job=MakeMinecart`
   makes carts. Tested live: a cart loaded stone, was guided along 17 tiles and unloaded into the far pile.
+- `df_trade propose` finds the Trade button in any window size (a smaller window put it where the tool did not look,
+  so proposals failed); the verdict notes that an unskilled trader's footer values are guesses.
 - `df_dig` treats minecart track carving as harmless near protected rooms.
 - `df_problems` reports indoor tiles with open sky above them: invaders climb walls in v50 and drop in behind a
   raised drawbridge (an unroofed stair top let an undead siege into the fort).

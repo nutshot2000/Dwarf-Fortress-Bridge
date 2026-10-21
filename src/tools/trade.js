@@ -47,14 +47,17 @@ tool("df_trade", "Trading. goods previews tradeable goods and contents; send mar
       return text(v?.trade_screen_open ? "Trade screen open. Use action=screen, select, propose." : "Trade screen did not open (broker not at the depot yet?)");
     }
     if (a.action === "propose") {
-      // the bottom-row "Trade" button, not "[Ctrl+t: DFHack trade UI]"
+      // the bottom-row "Trade" button (between Seize and Offer as gift), not "[Ctrl+t: DFHack trade UI]" above
+      // it: the lowest hit on screen, whatever the window size (a small window puts it on row 60)
       const { value: f } = await luaFile("screen", { action: "find", text: "Trade" });
-      const btn = (f?.hits ?? []).filter((h) => h.y > 60).sort((p, q) => q.y - p.y)[0];
+      const btn = (f?.hits ?? []).filter((h) => h.y > 20).sort((p, q) => q.y - p.y)[0];
       if (!btn) return fail("Trade button not found: is the trade screen open?");
       await luaFile("screen", { action: "click", x: btn.x + 2, y: btn.y });
       const { value: s } = await luaFile("screen", { action: "read", y1: 0, y2: 1 });
       if (s?.focus?.some((x) => x.includes("MessageBox"))) await luaFile("screen", { action: "key", keys: ["SELECT"] });
-      return text(`Proposed the trade. Merchant says:\n${await verdict()}\n(Excess Weight = offer lighter goods or buy heavier ones; "not enough" = offer more or take less.)`);
+      return text(`Proposed the trade. Merchant says:\n${await verdict()}\n(Excess Weight = offer lighter goods or buy heavier ones; "not enough" = offer more or take less. ` +
+        `With an unskilled trader (no appraisal skill, e.g. a child answering request_anyone) the footer values are guesses: ` +
+        `judge by the item values from action=screen, or use the broker.)`);
     }
     const res = await luaTool("trade", a);
     if (!res.isError && (a.action === "select" || a.action === "deselect")) res.content[0].text += `\n--- footer (propose to get the merchant's answer) ---\n${await verdict(false)}`;
