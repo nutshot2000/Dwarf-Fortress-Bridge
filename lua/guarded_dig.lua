@@ -10,8 +10,11 @@ for iy,row in ipairs(ARGS.cells) do
     -- "`" is quickfort's explicit empty cell; the raw command API would report it as an invalid key.
     if text~='' and text~='`' then
       data[iy-1][ix-1]=text
-      -- Erasing, smoothing, engraving, gathering plants (p) and chopping trees (t) do not breach walls.
-      if not text:match('^[xsept]%s*%(') and not ({x=true,s=true,e=true,p=true,t=true})[text] then hazard[iy-1][ix-1]=text end
+      -- Erasing, smoothing, engraving, gathering plants (p), chopping trees (t) and carving minecart track (T) do
+      -- not breach walls.
+      if not text:match('^[xseptT]%s*%(') and not text:match('^track') and not ({x=true,s=true,e=true,p=true,t=true,T=true})[text] then
+        hazard[iy-1][ix-1]=text
+      end
     end
   end
 end

@@ -171,6 +171,36 @@ if forbidden_gear >= 5 then
   add('low', ('%d weapons/armour/clothes on the floor that haulers ignore (forbidden, or "foreign" gear dropped by the dead and the undead): clear flags.forbid and flags.foreign with df_lua and make sure a weapon/armour stockpile exists.'):format(forbidden_gear))
 end
 
+-- Sky holes: an indoor tile the dwarves can walk to with open sky right above it. Invaders climb walls in v50 and
+-- drop through such holes behind a raised drawbridge (an unroofed stair top let an undead siege in).
+do
+  local anchor = cits[1] and cits[1].pos
+  if anchor then
+    local x1, y1, z1, x2, y2, z2 = anchor.x, anchor.y, anchor.z, anchor.x, anchor.y, anchor.z
+    for _, u in ipairs(cits) do
+      x1, y1, z1 = math.min(x1, u.pos.x), math.min(y1, u.pos.y), math.min(z1, u.pos.z)
+      x2, y2, z2 = math.max(x2, u.pos.x), math.max(y2, u.pos.y), math.max(z2, u.pos.z)
+    end
+    local S = df.tiletype_shape
+    local walk = {[S.FLOOR] = true, [S.STAIR_UP] = true, [S.STAIR_DOWN] = true, [S.STAIR_UPDOWN] = true, [S.RAMP] = true}
+    local open = {[S.EMPTY] = true, [S.STAIR_DOWN] = true, [S.RAMP_TOP] = true}
+    local holes = {}
+    for z = z1, z2 do for x = x1 - 5, x2 + 5 do for y = y1 - 5, y2 + 5 do
+      local tt = dfhack.maps.getTileType(x, y, z)
+      local above = dfhack.maps.getTileType(x, y, z + 1)
+      if tt and above and walk[df.tiletype.attrs[tt].shape] and open[df.tiletype.attrs[above].shape] then
+        local f, fa = dfhack.maps.getTileFlags(x, y, z), dfhack.maps.getTileFlags(x, y, z + 1)
+        if not f.outside and not f.hidden and fa.outside and #holes < 5 and dfhack.maps.canWalkBetween(xyz2pos(x, y, z), anchor) then
+          holes[#holes + 1] = ('%d,%d,%d'):format(x, y, z)
+        end
+      end
+    end end end
+    if #holes > 0 then
+      add('medium', ('Open sky above indoor tiles (%s): climbers can drop in there even with the gate shut. Build a floor (df_build key=Cf) on the open tile one level up.'):format(table.concat(holes, '; ')))
+    end
+  end
+end
+
 -- Tree felling needs an axe per woodcutter; squad weapon slots (the game's own pass likes battle axes) can
 -- reserve every axe in the fort, and the felling jobs then wait forever.
 local fell = 0

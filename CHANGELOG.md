@@ -29,6 +29,16 @@
 - `df_military uniform` also releases the position's old assignments: re-applying a uniform used to leave the
   previous gear listed, so soldiers carried on fetching 20+ items. `equip` picks the most valuable fitting item (a
   bronze shield over a wooden one, steel over copper) instead of the first one found.
+- New `df_minecart` tool: `track` carves a straight track line, `stop` builds a track stop and adds it to a named
+  hauling route (loading from `take_from` piles, or set to want nothing so carts unload there), `link` ties a stop to
+  a stockpile (take/give), `condition` sets departure rules (push/ride/guide, direction, load %, timeout), `assign`
+  puts a free cart on a route, `list` shows routes, stops, links, conditions and carts. `df_order job=MakeMinecart`
+  makes carts. Tested live: a cart loaded stone, was guided along 17 tiles and unloaded into the far pile.
+- `df_dig` treats minecart track carving as harmless near protected rooms.
+- `df_problems` reports indoor tiles with open sky above them: invaders climb walls in v50 and drop in behind a
+  raised drawbridge (an unroofed stair top let an undead siege into the fort).
+- `df_wait`: "hostiles at the gates" only counts hostiles with a walking path to a dwarf, so a sealed fort is not
+  stopped over and over by undead standing above it.
 - `df_rooms action=display building_id item_id` puts an item (an artifact) on a display case or pedestal through
   the game's own panel; writing the building's list directly made a display job nobody took. Display cases are
   key `F`. One platinum artifact turned a shrine into a temple complex.

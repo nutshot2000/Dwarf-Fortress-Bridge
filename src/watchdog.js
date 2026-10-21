@@ -9,7 +9,7 @@ export function watchdogEvents(start, now) {
   if ((start.hostiles ?? 0) > 0 && now.hostile_near_ids) {
     const nearNow = now.hostile_near_ids.length > 0, nearBefore = (start.hostile_near_ids ?? []).length > 0;
     const closeNow = (now.hostile_close_ids ?? []).length > 0, closeBefore = (start.hostile_close_ids ?? []).length > 0;
-    stage = closeNow && !closeBefore ? "at the gates (within 12 tiles of a citizen)"
+    stage = closeNow && !closeBefore ? "at the gates (within 12 tiles of a citizen they can walk to)"
       : nearNow && !nearBefore ? "approaching the fort (within 40 tiles of a citizen)" : "";
     newHostile = stage !== "";
   }

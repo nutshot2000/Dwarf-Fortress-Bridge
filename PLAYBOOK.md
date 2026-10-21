@@ -124,6 +124,11 @@ If something seems impossible without a cheat, tell the player instead.
 - Farm plots reset to fallow when construction finishes: set crops with `df_crop` after the plot is built.
 - Inventory: `df_stocks` reports both total and available counts. `df_status` wood/stone/bars exclude installed building materials and job reservations. Where something is and why nobody uses it: `df_items`.
 - Empty-container warnings distinguish an actual lack of containers from a small reserve and account for queued production. Queued items are not yet available.
+- Minecarts (`df_minecart`) haul bulk (ore, stone) over long runs. A working line: `track` x1,y1 -> x2,y2 (natural
+  floor, straight legs), `stop` at the loading end with `take_from=[pile]`, `stop` at the far end (no take_from: it is
+  set to want nothing so the cart unloads there), `link` that stop to the receiving pile with `mode=give`, a
+  `condition` per stop (guide is the reliable mode on flat track: e.g. guide east when 25% full, guide back when
+  empty), a cart (`df_order job=MakeMinecart`) and `assign`. Each track stop takes one mechanism.
 
 ## People, animals, rooms
 
@@ -168,6 +173,10 @@ If something seems impossible without a cheat, tell the player instead.
   `df_levers` and prefer a real barrier for sieges: a raising drawbridge (`df_build key=ga/gw/gd/gx`) in the entrance,
   linked to a lever inside (`df_levers link`, 2 mechanisms; the lever itself needs 1); `df_levers pull` raises it into
   a wall nothing can open. Hatches over a cavern shaft go on a lever the same way, so no lock has to hold.
+  A raised bridge is not a seal if the shaft behind it is open to the sky: invaders (undead too) CLIMB walls in v50,
+  walk the wall tops one level up and drop in. Roof every stair top and enclosure (`Cf` on the open tiles one level
+  above; builders need a way up, e.g. a temporary ramp `Cr` against the wall, removed afterwards) and look for any
+  indoor tile with open sky above (`df_look` warns about sky holes). One open shaft cost a fort 24 dwarves.
   Cage traps (`Tc`, 1 mechanism) on every tile next to the gate catch what gets that far; each also needs an empty
   cage (carpenter) loaded into it after it is built, or it catches nothing. Keep traps off the wagon path to the depot.
   A light militia loses to an undead horde; miners with picks did better than the squad. Build armour first. While hostiles are already on the map,

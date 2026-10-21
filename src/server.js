@@ -12,6 +12,7 @@ import "./tools/trade.js";
 import "./tools/screen.js";
 import "./tools/time.js";
 import "./tools/misc.js";
+import "./tools/minecart.js";
 
 const transport = new StdioServerTransport();
 await server.connect(transport);

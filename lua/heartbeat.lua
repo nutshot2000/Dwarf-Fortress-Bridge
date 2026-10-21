@@ -8,9 +8,12 @@ local animal_combat={}
 local near_ids, close_ids = {}, {}
 local cits_pos = {}
 for _, c in ipairs(citizens()) do cits_pos[#cits_pos + 1] = c.pos end
-local function near_fort(p, r)
+-- reachable=true also requires a walking path: behind a raised drawbridge the undead stay "close" in straight-line
+-- distance to dwarves under their feet, but they cannot get at them.
+local function near_fort(p, r, reachable)
   for _, c in ipairs(cits_pos) do
-    if math.abs(c.x - p.x) <= r and math.abs(c.y - p.y) <= r and math.abs(c.z - p.z) <= 6 then return true end
+    if math.abs(c.x - p.x) <= r and math.abs(c.y - p.y) <= r and math.abs(c.z - p.z) <= 6
+       and (not reachable or dfhack.maps.canWalkBetween(p, c)) then return true end
   end
   return false
 end
@@ -22,7 +25,7 @@ for _, u in ipairs(df.global.world.units.active) do
       hostiles = hostiles + 1
       hostile_ids[#hostile_ids + 1] = u.id
       if near_fort(u.pos, 40) then near_ids[#near_ids + 1] = u.id end
-      if near_fort(u.pos, 12) then close_ids[#close_ids + 1] = u.id end
+      if near_fort(u.pos, 12, true) then close_ids[#close_ids + 1] = u.id end
       if #names < 4 then names[#names + 1] = unit_name(u) .. ' at ' .. u.pos.x .. ',' .. u.pos.y .. ',' .. u.pos.z end
     end
     local ours = dfhack.units.isCitizen(u)
