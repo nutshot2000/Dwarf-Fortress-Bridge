@@ -16,17 +16,27 @@ local function excl_list()
   return out
 end
 
--- DF forbids cooking every seed type by default; those ~100 entries are summarised as a count.
+-- DF forbids cooking every seed type by default, and DFHack's seedwatch forbids cooking each crop whose seeds run
+-- low (often 100+ plants): both are summarised so the answer stays readable.
 local function excl_summary()
-  local other, seeds = {}, 0
-  for _, e in ipairs(excl_list()) do if e.item == 'SEEDS' and e.forbidden == 'Cook' then seeds = seeds + 1 else table.insert(other, e) end end
-  return other, seeds .. ' seed types (DF default)'
+  local other, seeds, plants = {}, 0, {}
+  for _, e in ipairs(excl_list()) do
+    if e.item == 'SEEDS' and e.forbidden == 'Cook' then seeds = seeds + 1
+    elseif e.item == 'PLANT' and e.forbidden == 'Cook' then plants[#plants + 1] = (e.material:gsub(' plant$', ''))
+    else table.insert(other, e) end
+  end
+  local pc = #plants == 0 and 'none' or ('%d crops: %s'):format(#plants, table.concat(plants, ', '):sub(1, 300) .. (#plants > 12 and ' ...' or ''))
+  return other, seeds .. ' seed types (DF default)', pc
+end
+local function seedwatch_on()
+  local out = try(function() return dfhack.run_command_silent('seedwatch') end, '') or ''
+  return out:find('seedwatch is enabled', 1, true) and 'enabled (forbids cooking crops below 30 seeds)' or 'disabled'
 end
 
 if action == 'list' then
-  local other, seeds = excl_summary()
-  emit({exclusions = other, seed_cooking_forbidden = seeds,
-  hint = 'set plant=<name> cook=false|true brew=false|true. seedwatch can manage this automatically.'}) return end
+  local other, seeds, plants = excl_summary()
+  emit({exclusions = other, seed_cooking_forbidden = seeds, plant_cooking_forbidden = plants, seedwatch = seedwatch_on(),
+  hint = 'set plant=<name> cook=false|true brew=false|true. With seedwatch enabled it re-forbids cooking crops whose seeds are below target; cooks then rely on meat, fish and cheese.'}) return end
 
 if action == 'set' then
   local want = (ARGS.plant or ''):upper()
@@ -54,7 +64,8 @@ if action == 'set' then
       table.insert(changes, ('%s: %s'):format(kind, excluded and 'forbidden' or 'allowed'))
     end
   end
-  local other, seeds = excl_summary()
-  emit({ok = true, plant = p.name, changes = changes, exclusions = other, seed_cooking_forbidden = seeds}) return
+  local other, seeds, plants = excl_summary()
+  emit({ok = true, plant = p.name, changes = changes, exclusions = other, seed_cooking_forbidden = seeds,
+    plant_cooking_forbidden = plants, seedwatch = seedwatch_on()}) return
 end
 emit({error = 'Unknown action ' .. action})
