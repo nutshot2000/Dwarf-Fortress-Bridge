@@ -39,17 +39,19 @@ local function material_ok(ji, it)
   return true
 end
 
+-- Cloth, thread and bars are asked for by size (one whole cloth is 10000), not by count: sum their dimensions.
 local function count_suitable(ji)
-  local n = 0
-  if ji.item_type < 0 then return 0 end
+  local n, size = 0, 0
+  if ji.item_type < 0 then return 0, 0 end
   for _, it in ipairs(df.global.world.items.other[df.item_type[ji.item_type]]) do
     local f = it.flags
     if it:getType() == ji.item_type and not (f.forbid or f.rotten or f.trader or f.removed or f.garbage_collect or f.artifact)
        and (ji.item_subtype < 0 or it:getSubtype() == ji.item_subtype) and material_ok(ji, it) then
       n = n + (it.stack_size or 1)
+      size = size + (try(function() return it.dimension end, 0) or 0)
     end
   end
-  return n
+  return n, size
 end
 
 local moods = {}
@@ -65,8 +67,10 @@ for _, u in ipairs(citizens()) do
         local m = dfhack.matinfo.decode(ji.mat_type, ji.mat_index)
         local kind = fl(ji, "flags2", "plant") and 'plant fiber ' or fl(ji, "flags2", "silk") and 'silk ' or fl(ji, "flags2", "yarn") and 'yarn ' or ''
         local desc = (m and (m:toString() .. ' ') or (kind == '' and 'any ' or '')) .. kind .. (df.item_type[ji.item_type] or 'item'):lower()
-        local have = count_suitable(ji)
+        local count, size = count_suitable(ji)
         local need = math.max(ji.quantity, 1)
+        -- a size-based need (e.g. 10000 for one cloth) is met by the items' summed dimensions
+        local have = (need >= 1000 and size > 0) and size or count
         entry.items[#entry.items + 1] = {need = need, item = dfhack.df2utf(desc), in_fort = have,
           ok = have >= need or nil, how = have < need and hint(desc) or nil}
       end

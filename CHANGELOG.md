@@ -34,6 +34,8 @@
   a stockpile (take/give), `condition` sets departure rules (push/ride/guide, direction, load %, timeout), `assign`
   puts a free cart on a route, `list` shows routes, stops, links, conditions and carts. `df_order job=MakeMinecart`
   makes carts. Tested live: a cart loaded stone, was guided along 17 tiles and unloaded into the far pile.
+- `df_mood check=true` measures cloth, thread and bars by size: a mood asking for 10000 silk cloth was reported
+  missing with four whole cloths in the fort.
 - `df_kitchen` summarises seedwatch's crop cooking bans (often 100+) and says whether seedwatch is on: cooks that
   "need unrotten cookable" items usually have only plants they may not cook.
 - `df_trade propose` finds the Trade button in any window size (a smaller window put it where the tool did not look,
