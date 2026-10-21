@@ -44,7 +44,8 @@ if (ARGS.action or 'list') == 'list' then
   for _, b in ipairs(df.global.world.buildings.other.FARM_PLOT) do table.insert(plots, plot_info(b)) end
   local seeds = {}
   for _, it in ipairs(df.global.world.items.other.SEEDS) do
-    if not it.flags.forbid and not it.flags.rotten then
+    -- in_building = already planted in a plot: not stock
+    if not it.flags.forbid and not it.flags.rotten and not it.flags.in_building then
       local mi = dfhack.matinfo.decode(it)
       if mi and mi.plant then
         local k = mi.plant.id
@@ -95,4 +96,14 @@ for _, s in ipairs(seasons) do
     if name == s:lower() then b.plant_id[i - 1] = pid end
   end
 end
-emit({ok = true, plot = plot_info(b), plant = pid >= 0 and plant_info(pid) or 'fallow'})
+-- A crop with no seeds in stock is set without complaint, and farmers then cancel "Plant seeds" over and over.
+local warning
+if pid >= 0 then
+  local n = 0
+  for _, it in ipairs(df.global.world.items.other.SEEDS) do
+    local mi = dfhack.matinfo.decode(it)
+    if mi and mi.plant and mi.index == pid and not it.flags.forbid and not it.flags.rotten and not it.flags.in_building then n = n + it.stack_size end
+  end
+  if n == 0 then warning = ('No %s seeds in stock: farmers will cancel planting. Pick a crop from seeds_in_stock (df_crop list) or buy seeds.'):format(plants[pid].name) end
+end
+emit({ok = true, plot = plot_info(b), plant = pid >= 0 and plant_info(pid) or 'fallow', warning = warning})

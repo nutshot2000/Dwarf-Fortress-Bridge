@@ -34,6 +34,8 @@
   a stockpile (take/give), `condition` sets departure rules (push/ride/guide, direction, load %, timeout), `assign`
   puts a free cart on a route, `list` shows routes, stops, links, conditions and carts. `df_order job=MakeMinecart`
   makes carts. Tested live: a cart loaded stone, was guided along 17 tiles and unloaded into the far pile.
+- `df_crop`: seed stock excludes seeds already planted in plots, and `set` warns when the crop has no free seeds
+  (farmers otherwise cancel "Plant seeds" over and over).
 - `df_mood check=true` names the workshop each mood wants and warns when the fort has none (a mood for a Clothier's
   Shop waited until one was built).
 - `df_mood check=true` measures cloth, thread and bars by size: a mood asking for 10000 silk cloth was reported
