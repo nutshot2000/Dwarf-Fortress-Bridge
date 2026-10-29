@@ -190,7 +190,11 @@ do
       local above = dfhack.maps.getTileType(x, y, z + 1)
       if tt and above and walk[df.tiletype.attrs[tt].shape] and open[df.tiletype.attrs[above].shape] then
         local f, fa = dfhack.maps.getTileFlags(x, y, z), dfhack.maps.getTileFlags(x, y, z + 1)
-        if not f.outside and not f.hidden and fa.outside and #holes < 5 and dfhack.maps.canWalkBetween(xyz2pos(x, y, z), anchor) then
+        -- a hatch cover on the opening is a gate of its own (lock it in a siege), not a hole
+        local b = dfhack.buildings.findAtTile(xyz2pos(x, y, z + 1))
+        local hatch = b and b:getType() == df.building_type.Hatch
+        if not hatch and not f.outside and not f.hidden and fa.outside and #holes < 5
+           and dfhack.maps.canWalkBetween(xyz2pos(x, y, z), anchor) then
           holes[#holes + 1] = ('%d,%d,%d'):format(x, y, z)
         end
       end

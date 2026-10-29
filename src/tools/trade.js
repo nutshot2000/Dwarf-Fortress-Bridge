@@ -86,8 +86,12 @@ tool("df_petition", "Petitions (residency, citizenship, temples/guildhalls). lis
       `local r = {}
        for _, id in ipairs(df.global.plotinfo.petitions) do
          local ag = df.agreement.find(id)
-         local hid = ag and ag.parties[0].histfig_ids[0]
+         -- a temple or guildhall request comes from a group (religion, guild): its party lists an entity, no figure
+         local p = ag and #ag.parties > 0 and ag.parties[0]
+         local hid = p and #p.histfig_ids > 0 and p.histfig_ids[0]
+         local eid = p and #p.entity_ids > 0 and p.entity_ids[0]
          local hf = hid and df.historical_figure.find(hid)
+         local ent = eid and df.historical_entity.find(eid)
          local u = hf and df.unit.find(hf.unit_id)
          local det = {}
          for _, d in ipairs(ag and ag.details or {}) do det[#det + 1] = df.agreement_details_type[d.type] end
@@ -96,7 +100,8 @@ tool("df_petition", "Petitions (residency, citizenship, temples/guildhalls). lis
          if u then for _, sa in ipairs(u.syndromes.active) do local sy = df.syndrome.find(sa.type) syn[#syn + 1] = sy and sy.syn_name or '?' end end
          local cursed = hf and try(function() return hf.info.curse ~= nil end, false) or false
          local race = hf and df.creature_raw.find(hf.race).creature_id
-         r[#r + 1] = {id = id, who = u and unit_name(u) or (hf and dfhack.df2utf(dfhack.translation.translateName(hf.name, true))) or '?',
+         r[#r + 1] = {id = id, who = u and unit_name(u) or (hf and dfhack.df2utf(dfhack.translation.translateName(hf.name, true)))
+             or (ent and dfhack.df2utf(dfhack.translation.translateName(ent.name, true)) .. ' (' .. df.historical_entity_type[ent.type] .. ')') or '?',
            race = race, age = u and math.floor(dfhack.units.getAge(u)), wants = det, syndromes = syn,
            warning = (cursed or (race or ''):find('NIGHT_CREATURE')) and 'CURSED: likely a werebeast or vampire, deny' or nil}
        end

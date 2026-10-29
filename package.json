@@ -1,6 +1,6 @@
 {
   "name": "df-bridge",
-  "version": "1.4.7",
+  "version": "1.4.8",
   "description": "MCP server that lets any AI agent play Dwarf Fortress through DFHack, with a camera director for watching",
   "scripts": {
     "start": "node src/server.js",

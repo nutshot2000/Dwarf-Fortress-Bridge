@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.4.8
+
+- `df_problems`: a stair opening with a hatch cover on it is no longer reported as open sky; the hatch is its gate.
+- `df_dig` verification counts tiles a dwarf has already claimed: with the game running, a fresh designation can
+  turn into a dig job at once (clearing the tile flag), and the check reported "NOTHING was designated".
+- `df_petition` no longer crashes on a temple or guildhall request: those come from a group (religion, guild), not a
+  single figure; the petition names the group, e.g. "The Creed of Pulp (Religion)".
+
 ## 1.4.7
 
 - `df_trade send`: goods stored in bins now reach the depot. Marking an item inside a bin never created a haul

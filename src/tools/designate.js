@@ -118,14 +118,21 @@ tool("df_dig", "Designate a rectangle for digging (or channel/stairs/ramp/chop/g
         (a.kind !== "undesignate" && value.marked_plants === 0 ? " No tree/plant work is marked. Select tree bases, not canopy or another elevation; use df_designations to inspect." : ""));
     }
     await cameraTo(x + (w >> 1), y + (h >> 1), a.z, `dig ${a.kind} at ${x},${y},${a.z}`);
-    // verify: count tiles in the area that now actually carry a designation of this kind
+    // verify: count tiles in the area that now actually carry a designation of this kind. While the game runs a
+    // dwarf can claim a designation at once, which turns it into a job and clears the tile flag: count those too.
     const field = a.kind === "smooth" ? "smooth" : "dig";
     let { value: v } = await lua(
       `local n, under = 0, {}
+       local KINDS = {Dig=1, DigChannel=1, CarveUpwardStaircase=1, CarveDownwardStaircase=1, CarveUpDownStaircase=1,
+         CarveRamp=1, SmoothWall=1, SmoothFloor=1, DetailWall=1, DetailFloor=1, CarveFortification=1, RemoveStairs=1}
+       local claimed = {}
+       for _, j in require('utils').listpairs(df.global.world.jobs.list) do
+         if KINDS[df.job_type[j.job_type]] then claimed[j.pos.x .. ',' .. j.pos.y .. ',' .. j.pos.z] = true end
+       end
        for zz = ${a.z}, ${a.z} - ${(a.levels ?? 1) - 1}, -1 do
          for x = ${x}, ${x + w - 1} do for y = ${y}, ${y + h - 1} do
            local f = dfhack.maps.getTileFlags(x, y, zz)
-           if f and f.${field} ~= 0 then
+           if f and (f.${field} ~= 0 or claimed[x .. ',' .. y .. ',' .. zz]) then
              n = n + 1
              -- v50 aquifers leak downward too: a dug tile under a revealed aquifer tile slowly floods
              local up = dfhack.maps.getTileFlags(x, y, zz + 1)
