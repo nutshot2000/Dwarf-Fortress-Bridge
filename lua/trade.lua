@@ -39,8 +39,8 @@ local function tradeable(it, depot)
   local f = it.flags
   if f.hostile or f.removed or f.dead_dwarf or f.spider_web or f.construction or f.encased or f.murder
      or f.trader or f.owned or f.garbage_collect or f.on_fire or f.in_job then return false end
-  -- in_inventory also marks items inside bins; those can be traded (haulers take them out). Only refuse items
-  -- a creature is holding.
+  -- in_inventory also marks items inside bins; those can be traded (send takes them out of the bin first).
+  -- Only refuse items a creature is holding.
   if f.in_inventory and dfhack.items.getHolderUnit(it) then return false end
   if f.in_building and dfhack.items.getHolderBuilding(it) ~= depot then return false end
   local x, y, z = dfhack.items.getPosition(it)
@@ -99,6 +99,11 @@ if action == 'send' or action == 'goods' then
         if #protected<20 then protected[#protected+1]=entry end
       else
         if action=='send' and not ARGS.dry_run then
+          -- an item marked inside a bin is never hauled (no job appears): set it on the bin's own tile first
+          if dfhack.items.getContainer(it) then
+            local x, y, z = dfhack.items.getPosition(it)
+            if x and dfhack.items.moveToGround(it, xyz2pos(x, y, z)) then entry.unpacked = true end
+          end
           it.flags.forbid = false dfhack.items.markForTrade(it,depot)
         end
         sent[#sent+1]=entry

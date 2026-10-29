@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4.7
+
+- `df_trade send`: goods stored in bins now reach the depot. Marking an item inside a bin never created a haul
+  job (crafts sat in their bins all caravan long while send reported them as marked); send now sets the item
+  on the bin's own tile first and reports `unpacked: true`.
+
 ## 1.4.6
 
 - `df_military equip` (and `uniform`) fills armour slots with real armour before clothing: it ranked by value
