@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.4.9
+
+- `df_location action=dedicate`: dedicate a temple to a religion (`religion=<name or id>`, which keeps an approved
+  temple petition from it), to one deity (`deity=`), or back to all faiths (`all_faiths=true`). Without a target it
+  lists the religions and deities citizens follow, with follower counts. `action=list` shows each temple's dedication.
+- PLAYBOOK: how to answer a temple petition (dig, zone, dedicate).
+
 ## 1.4.8
 
 - `df_problems`: a stair opening with a hatch cover on it is no longer reported as open sky; the hatch is its gate.

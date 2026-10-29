@@ -141,6 +141,9 @@ If something seems impossible without a cheat, tell the player instead.
   out of it (attacking a visiting noble is far worse), and ride it out with `df_wait watch=false` in short steps,
   checking deaths with df_threats in between.
 - `df_location` staffs hospitals, taverns, temples and libraries. `df_petition` vets petitioners for curses before approving.
+- An approved temple petition from a religion is kept by giving that religion its own temple: dig a room,
+  `df_zone location=temple`, then `df_location action=dedicate religion=<name>`. Keep one temple on all faiths
+  for everyone else (`action=dedicate` with no target lists the fort's religions and their followers).
 - After every migrant wave run df_threats: a necromancer can arrive as a citizen. Startled, they raise nearby corpses
   as hostile undead; banish them with `df_justice action=exile` (or keep them far from any corpses and out of the library,
   where they may write a book that makes more necromancers).

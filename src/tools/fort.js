@@ -158,7 +158,9 @@ tool("df_mood", "Strange moods: which dwarf is in a mood, which workshop they cl
   { check: z.boolean().optional() },
   async (a) => a.check ? luaTool("moodcheck", {}) : text((await command("showmood")).trim() || "No dwarf is in a strange mood."));
 
-tool("df_location", "Locations and their occupations. list: taverns, hospitals, temples, libraries, guildhalls with their zones and occupation slots (create a location with df_zone location=...). assign: give unit_id an occupation at location_id: DOCTOR, DIAGNOSTICIAN, SURGEON, BONE_DOCTOR (hospital), TAVERN_KEEPER, PERFORMER (tavern), SCHOLAR, SCRIBE (library). remove: clear unit_id (or occupation_id) from location_id. attach: put location_id on zone_id (a purpose-built room), detach_others=true to release its old zones; keeps name and staff.",
-  { action: z.enum(["list", "assign", "remove", "attach"]).default("list"), location_id: z.number().int().optional(), zone_id: z.number().int().optional(), detach_others: z.boolean().optional(),
-    unit_id: z.number().int().optional(), occupation: z.string().optional(), occupation_id: z.number().int().optional() },
+tool("df_location", "Locations and their occupations. list: taverns, hospitals, temples, libraries, guildhalls with their zones and occupation slots (create a location with df_zone location=...). assign: give unit_id an occupation at location_id: DOCTOR, DIAGNOSTICIAN, SURGEON, BONE_DOCTOR (hospital), TAVERN_KEEPER, PERFORMER (tavern), SCHOLAR, SCRIBE (library). remove: clear unit_id (or occupation_id) from location_id. attach: put location_id on zone_id (a purpose-built room), detach_others=true to release its old zones; keeps name and staff. dedicate: set what temple location_id is for: religion=<name or id> (this answers an approved temple petition from that religion), deity=<name or id>, or all_faiths=true; with none of these it lists the religions and deities citizens follow, with follower counts.",
+  { action: z.enum(["list", "assign", "remove", "attach", "dedicate"]).default("list"), location_id: z.number().int().optional(), zone_id: z.number().int().optional(), detach_others: z.boolean().optional(),
+    unit_id: z.number().int().optional(), occupation: z.string().optional(), occupation_id: z.number().int().optional(),
+    religion: z.union([z.string(), z.number().int()]).optional(), deity: z.union([z.string(), z.number().int()]).optional(),
+    all_faiths: z.boolean().optional() },
   (a) => luaTool("location", a));

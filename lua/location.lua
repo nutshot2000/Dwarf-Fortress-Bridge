@@ -22,6 +22,66 @@ local function occ_info(o)
   local u = o.unit_id >= 0 and df.unit.find(o.unit_id)
   return {id = o.id, type = df.occupation_type[o.type], holder = u and unit_name(u) or 'vacant'}
 end
+local function ename(n)
+  local s = try(function() return dfhack.translation.translateName(n, true) end)
+  return s and dfhack.df2utf(s) or '?'
+end
+-- what a temple is dedicated to: a religion, one deity, or every faith (the game's default)
+local P = df.religious_practice_type
+local function dedication(b)
+  if not df.abstract_building_templest:is_instance(b) then return nil end
+  if b.deity_type == P.RELIGION_ENID then
+    local e = df.historical_entity.find(b.deity_data.Religion)
+    return e and ename(e.name) .. ' (religion)' or 'religion ' .. b.deity_data.Religion
+  elseif b.deity_type == P.WORSHIP_HFID then
+    local hf = df.historical_figure.find(b.deity_data.Deity)
+    return hf and ename(hf.name) .. ' (deity)' or 'deity ' .. b.deity_data.Deity
+  end
+  return 'all faiths'
+end
+-- religions and deities citizens follow, with follower counts (what a temple can be dedicated to)
+local function faiths()
+  local rel, gods = {}, {}
+  for _, u in ipairs(citizens()) do
+    local hf = df.historical_figure.find(u.hist_figure_id)
+    for _, l in ipairs(hf and hf.entity_links or {}) do
+      local e = df.historical_entity.find(l.entity_id)
+      if e and e.type == df.historical_entity_type.Religion then
+        rel[e.id] = rel[e.id] or {id = e.id, name = ename(e.name), followers = 0, gods = {}}
+        rel[e.id].followers = rel[e.id].followers + 1
+      end
+    end
+    for _, l in ipairs(hf and hf.histfig_links or {}) do
+      if df.histfig_hf_link_deityst:is_instance(l) then
+        local g = df.historical_figure.find(l.target_hf)
+        if g then
+          gods[g.id] = gods[g.id] or {id = g.id, name = ename(g.name), worshippers = 0}
+          gods[g.id].worshippers = gods[g.id].worshippers + 1
+        end
+      end
+    end
+  end
+  local r, d = {}, {}
+  for _, v in pairs(rel) do
+    local e = df.historical_entity.find(v.id)
+    for _, gid in ipairs(e.relations.deities) do
+      local g = df.historical_figure.find(gid)
+      if g then v.gods[#v.gods + 1] = ename(g.name) end
+    end
+    r[#r + 1] = v
+  end
+  for _, v in pairs(gods) do d[#d + 1] = v end
+  table.sort(r, function(a, b) return a.followers > b.followers end)
+  table.sort(d, function(a, b) return a.worshippers > b.worshippers end)
+  return r, d
+end
+local function pick(list, want)
+  if want == nil then return nil end
+  for _, v in ipairs(list) do if v.id == want then return v end end
+  local w = tostring(want):lower()
+  for _, v in ipairs(list) do if v.name:lower():find(w, 1, true) then return v end end
+end
+
 local function zones_of(b)
   local z = {}
   for _, zone in ipairs(df.global.world.buildings.other.ANY_ZONE) do
@@ -36,7 +96,7 @@ if action == 'list' then
     local occ = {}
     for _, o in ipairs(b.occupations) do table.insert(occ, occ_info(o)) end
     table.insert(out, {id = b.id, type = df.abstract_building_type[b:getType()], name = lname(b),
-      zones = zones_of(b), occupations = occ})
+      zones = zones_of(b), occupations = occ, dedicated_to = dedication(b)})
   end
   emit({locations = out, hint = 'Create one with df_zone location=tavern|hospital|temple|library|guildhall.'}) return
 end
@@ -100,6 +160,31 @@ if action == 'assign' then
   slot.histfig_id = u.hist_figure_id
   u.occupations:insert('#', slot)
   emit({ok = true, location = lname(loc), occupation = occ_info(slot)}) return
+end
+
+if action == 'dedicate' then
+  -- the Locations screen's "dedicated to" choice: a religion (answers a temple petition from it), one deity,
+  -- or all_faiths. Without a target, list what citizens follow.
+  if not df.abstract_building_templest:is_instance(loc) then emit({error = lname(loc) .. ' is not a temple'}) return end
+  local rel, gods = faiths()
+  if ARGS.all_faiths then
+    loc.deity_type = -1
+    loc.deity_data.Religion = -1
+  elseif ARGS.religion ~= nil then
+    local r = pick(rel, ARGS.religion)
+    if not r then emit({error = 'No religion matching ' .. tostring(ARGS.religion) .. ' among citizens', religions = rel}) return end
+    loc.deity_type = P.RELIGION_ENID
+    loc.deity_data.Religion = r.id
+  elseif ARGS.deity ~= nil then
+    local g = pick(gods, ARGS.deity)
+    if not g then emit({error = 'No deity matching ' .. tostring(ARGS.deity) .. ' among citizens', deities = gods}) return end
+    loc.deity_type = P.WORSHIP_HFID
+    loc.deity_data.Deity = g.id
+  else
+    emit({location = lname(loc), dedicated_to = dedication(loc), religions = rel, deities = gods,
+      hint = 'Pass religion=<name or id>, deity=<name or id> or all_faiths=true.'}) return
+  end
+  emit({ok = true, location = lname(loc), dedicated_to = dedication(loc)}) return
 end
 
 if action == 'remove' then
