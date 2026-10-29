@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.4.6
+
+- `df_military equip` (and `uniform`) fills armour slots with real armour before clothing: it ranked by value
+  alone, so silk dresses took the body slot and new leather armour stayed in the stockpile.
+
 ## 1.4.5
 
 - Camera director is calmer and says what it shows:

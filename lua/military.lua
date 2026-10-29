@@ -215,19 +215,23 @@ if action == 'equip' then
             -- search every item of the type: freed gear can be missing from the unassigned index
             -- the most valuable fitting item (a bronze shield over a wooden one, steel over copper); what the
             -- soldier already wears wins ties, so a re-equip does not swap gear for nothing
+            -- real armour before clothing: a silk dress is worth more than leather armour but protects nothing
+            local function score(it)
+              return try(function() return it.subtype.armorlevel end, 0) * 1e6 + dfhack.items.getValue(it)
+            end
             local pick, best = nil, -1
             if u then
               for _, inv in ipairs(u.inventory) do
                 local it = inv.item
                 if it:getType() == sp.item_type and not taken[it.id] and fits(sp, it, u) then
-                  local v = dfhack.items.getValue(it)
+                  local v = score(it)
                   if v > best then pick, best = it, v end
                 end
               end
             end
             for _, it in ipairs(df.global.world.items.other[df.item_type[sp.item_type]]) do
               if not taken[it.id] and fits(sp, it, u) then
-                local v = dfhack.items.getValue(it)
+                local v = score(it)
                 if v > best then pick, best = it, v end
               end
             end
