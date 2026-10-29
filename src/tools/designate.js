@@ -120,15 +120,22 @@ tool("df_dig", "Designate a rectangle for digging (or channel/stairs/ramp/chop/g
     await cameraTo(x + (w >> 1), y + (h >> 1), a.z, `dig ${a.kind} at ${x},${y},${a.z}`);
     // verify: count tiles in the area that now actually carry a designation of this kind
     const field = a.kind === "smooth" ? "smooth" : "dig";
-    const { value: v } = await lua(
-      `local n = 0
+    let { value: v } = await lua(
+      `local n, under = 0, {}
        for zz = ${a.z}, ${a.z} - ${(a.levels ?? 1) - 1}, -1 do
          for x = ${x}, ${x + w - 1} do for y = ${y}, ${y + h - 1} do
            local f = dfhack.maps.getTileFlags(x, y, zz)
-           if f and f.${field} ~= 0 then n = n + 1 end
+           if f and f.${field} ~= 0 then
+             n = n + 1
+             -- v50 aquifers leak downward too: a dug tile under a revealed aquifer tile slowly floods
+             local up = dfhack.maps.getTileFlags(x, y, zz + 1)
+             if up and up.water_table and not up.hidden then under[#under + 1] = x .. ',' .. y .. ',' .. zz end
+           end
          end end
        end
-       emit(n)`);
+       emit({n = n, under = under})`);
+    const under = v.under ?? [];
+    v = v.n;
     const want = w * h * (a.levels ?? 1);
     const note = ["chop", "gather"].includes(a.kind) ? "" :
       a.kind === "undesignate" ? `
@@ -136,7 +143,11 @@ Verified: ${v} tile(s) still designated.` :
       `
 Verified: ${v} of ${want} tile(s) now carry a ${a.kind} designation` +
       (v === 0 ? " - NOTHING was designated (wrong tile type? already dug? smooth needs rough stone)." : ".");
-    return text(out + note);
+    const leak = under.length && field === "dig"
+      ? `\nWARNING: ${under.length} designated tile(s) lie directly under aquifer tiles; once dug, water drips down into them. ` +
+        `Undesignate them or dig one level lower. At: ${under.slice(0, 12).join("; ")}${under.length > 12 ? "; ..." : ""}`
+      : "";
+    return text(out + note + leak);
   });
 
 tool("df_build", "Place a building, or dry_run=true for a real non-mutating native preview with invalid tile coordinates, terrain/occupancy reasons and ground-item reservations. No placement occurs when preflight rejects the footprint. Keys: wc carpenter, wm mason, wl still, wz kitchen, wu BUTCHER, wb BOWYER, wr craftsdwarf, D trade depot. See df_help topic=keys for the full list. Workshops use their CENTRE tile. Area buildings (p farm, Cw wall, Cf floor) use top-left plus w,h.",

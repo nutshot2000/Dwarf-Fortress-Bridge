@@ -38,7 +38,8 @@ const weight = (cat) => camera.prefs[cat] ?? 1;
 // Show the player a spot, optionally with a caption in the game's announcement log.
 export async function cameraTo(x, y, z, why, caption) {
   if (camera.mode === "off" || x === undefined || x < 0) return;
-  const cap = caption ? `dfhack.gui.showAnnouncement(${JSON.stringify(`[${SETTINGS.agentName}] ` + caption)}, COLOR_LIGHTCYAN, false)` : "";
+  // DF strings are CP437: utf2df keeps names such as Alåth readable
+  const cap = caption ? `dfhack.gui.showAnnouncement(dfhack.utf2df(${JSON.stringify(`[${SETTINGS.agentName}] ` + caption)}), COLOR_LIGHTCYAN, false)` : "";
   await lua(`dfhack.gui.revealInDwarfmodeMap(xyz2pos(${x}, ${y}, ${z}), true, true) ${cap} emit(true)`);
   camera.last = { x, y, z };
   if (why && camera.log.at(-1) !== why) camera.log.push(why);
@@ -54,7 +55,8 @@ const SCAN = (since, followId) => `
     {'has come', 'hostiles'}, {'thief', 'hostiles'}, {'ambush', 'hostiles'}, {'siege', 'hostiles'},
     {'caravan', 'diplomacy'}, {'merchant', 'diplomacy'}, {'diplomat', 'diplomacy'}, {'liaison', 'diplomacy'},
     {'meets with', 'diplomacy'}, {'treasurer', 'diplomacy'}, {'petition', 'diplomacy'}, {'trade', 'diplomacy'},
-    {'found dead', 'news'}, {'has been', 'news'}, {'struck', 'news'}, {'is visiting', 'visitors'}}
+    {'found dead', 'news'}, {'has been stolen', 'news'}, {'has been slaughtered', 'news'}, {'struck', 'news'},
+    {'is visiting', 'visitors'}}
   local out = {}
   for _, u in ipairs(df.global.world.units.active) do
     if dfhack.units.isActive(u) and not dfhack.units.isDead(u) and not u.flags1.caged
@@ -82,18 +84,35 @@ const SCAN = (since, followId) => `
   out.last = #r > 0 and r[#r - 1].id or ${since}
   local f = ${followId ?? -1} >= 0 and df.unit.find(${followId ?? -1})
   if f and not dfhack.units.isDead(f) then out.follow = {id = f.id, x = f.pos.x, y = f.pos.y, z = f.pos.z, label = unit_name(f)} end
+  out.view = ${VIEW}
   emit(out)`;
+// The visible map rectangle, so a walking subject only moves the view when it nears the edge.
+const VIEW = `try(function() local v = df.global.gps.main_viewport
+  return {x = df.global.window_x, y = df.global.window_y, z = df.global.window_z, w = v.dim_x, h = v.dim_y} end)`;
 
 let lastReport = -1;
 export function directorReset(reportId) { lastReport = reportId; camera.log = []; }
 
-const moved = (p) => p && (p.z !== camera.last.z || Math.abs(p.x - camera.last.x) > 4 || Math.abs(p.y - camera.last.y) > 4);
+// Re-centre only when the subject changes level or walks into the outer quarter of the screen: re-centring
+// on every few steps made the view lurch while a dwarf walked across a room.
+let view = null;
+const moved = (p) => {
+  if (!p) return false;
+  if (!view?.w) return p.z !== camera.last.z || Math.abs(p.x - camera.last.x) > 4 || Math.abs(p.y - camera.last.y) > 4;
+  const mx = Math.floor(view.w / 4), my = Math.floor(view.h / 4);
+  return p.z !== view.z || p.x < view.x + mx || p.x >= view.x + view.w - mx || p.y < view.y + my || p.y >= view.y + view.h - my;
+};
+
+// A tour shot lasts at least TOUR_MIN; it keeps going up to TOUR_MAX while the dwarf is still doing the same thing.
+const TOUR_MIN = 20000, TOUR_MAX = 45000, TOUR_CHECK = 5000;
+let lastTourCheck = 0;
 
 export async function directorStep() {
   if (camera.mode === "off") return;
   const { value: s } = await lua(SCAN(lastReport, camera.followId));
   if (!s) return;
   lastReport = s.last ?? lastReport;
+  view = s.view ?? view;
   const now = Date.now();
 
   if (camera.mode === "follow") {
@@ -118,6 +137,8 @@ export async function directorStep() {
     if (cur?.kind !== "hostile" || cur.id !== s.hostile.id) {
       camera.subject = { kind: "hostile", cat: "hostiles", id: s.hostile.id, label: s.hostile.label };
       camera.lastSwitch = now;
+      return cameraTo(s.hostile.x, s.hostile.y, s.hostile.z, `tracking hostile ${s.hostile.label}`,
+        `Camera: hostile ${s.hostile.label}`);
     }
     if (moved(s.hostile)) await cameraTo(s.hostile.x, s.hostile.y, s.hostile.z, `tracking hostile ${s.hostile.label}`);
     return;
@@ -129,9 +150,13 @@ export async function directorStep() {
     return cameraTo(s.event.x, s.event.y, s.event.z, s.event.text);
   }
   // 4. quiet: tour the most interesting activity, rotating between subjects
-  if (camera.tour && (!cur || cur.kind === "tour" ? held > 9000 : held > 12000)) {
+  const touring = cur?.kind === "tour";
+  if (camera.tour && (!cur || (touring ? held > TOUR_MIN : held > 12000)) && now - lastTourCheck > TOUR_CHECK) {
+    lastTourCheck = now;
     const { value: scenes } = await luaFile("scenes", {});
-    const pick = (scenes ?? [])
+    // stay on a dwarf who is still busy with the same thing, up to TOUR_MAX
+    const still = touring && held < TOUR_MAX && (scenes ?? []).some((sc) => sc.id === cur.id && sc.label === cur.label);
+    const pick = still ? null : (scenes ?? [])
       .map((sc) => ({ ...sc, w: sc.score * weight(sc.cat) * (camera.recent.includes(sc.id) ? 0.25 : 1) }))
       .filter((sc) => sc.w > 0)
       .sort((a, b) => b.w - a.w)[0];
@@ -139,7 +164,8 @@ export async function directorStep() {
       camera.subject = { kind: "tour", cat: pick.cat, id: pick.id, label: pick.label };
       camera.lastSwitch = now;
       camera.recent = [pick.id, ...camera.recent].slice(0, 6);
-      return cameraTo(pick.x, pick.y, pick.z, `tour (${pick.cat}): ${pick.label}`);
+      // say on screen what the new shot is, so a cut is never a mystery
+      return cameraTo(pick.x, pick.y, pick.z, `tour (${pick.cat}): ${pick.label}`, `Camera: ${pick.label}`);
     }
   }
   // while touring, keep the subject in view as it walks around

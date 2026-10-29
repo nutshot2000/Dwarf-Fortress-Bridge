@@ -81,7 +81,27 @@ local function count(f)
   if f.item_type and f.item_type >= 0 then
     vec = try(function() return df.global.world.items.other[IT[f.item_type]] end, vec)
   end
-  local ji = to_job_item(f)
+  -- isSuitableMaterial rejects wood under flags2.plant ("any plant material", e.g. the log of 'make wooden
+  -- chair') although the game accepts it: check that flag against the material here instead.
+  local want_edged = false
+  for _, n in ipairs(f.flags3 or {}) do if n == 'edged' then want_edged = true end end
+  local function edged(it)
+    return try(function()
+      for _, a in ipairs(it.subtype.attacks) do if a.edged then return true end end
+      return false
+    end, false)
+  end
+  local want_plant, f2_rest = false, {}
+  for _, n in ipairs(f.flags2 or {}) do
+    if n == 'plant' then want_plant = true else f2_rest[#f2_rest + 1] = n end
+  end
+  local fm = f
+  if want_plant then
+    fm = {}
+    for k, v in pairs(f) do fm[k] = v end
+    fm.flags2 = f2_rest
+  end
+  local ji = to_job_item(fm)
   -- isSuitableItem answers "is this the right kind of item"; given material fields too (mat_type 0 plus the
   -- hard flag) it rejects good stone, so it gets a filter with the item fields only.
   local ji_item = to_job_item({item_type = f.item_type, item_subtype = f.item_subtype})
@@ -96,6 +116,8 @@ local function count(f)
       if mat_ok(f, mt, mi)
          and try(function() return dfhack.job.isSuitableItem(ji_item, itype, it:getSubtype()) end, true) then
         local ok_mat = try(function() return dfhack.job.isSuitableMaterial(ji, mt, mi, itype) end, true)
+          and (not want_plant or try(function() return dfhack.matinfo.decode(mt, mi).plant ~= nil end, false))
+          and (not want_edged or edged(it))
         local st = state(it)
         if st and ok_mat then
           if st == 'usable' then usable = usable + 1 else held = held + 1 end
@@ -128,7 +150,9 @@ local function describe(f)
   if mat then return mat .. ' ' .. kind end
   local adj = {}
   for _, n in ipairs(f.flags2 or {}) do if n == 'non_economic' then adj[#adj + 1] = 'non-economic' end end
-  for _, n in ipairs(f.flags3 or {}) do if n == 'hard' then adj[#adj + 1] = 'hard' end end
+  for _, n in ipairs(f.flags3 or {}) do
+    if n == 'hard' then adj[#adj + 1] = 'hard' elseif n == 'edged' then adj[#adj + 1] = 'edged' end
+  end
   if f.mat_type == 0 and (f.item_type == IT.BOULDER) then adj[#adj + 1] = 'stone' end
   if (f.reaction_class or '') ~= '' then adj[#adj + 1] = f.reaction_class:lower() end
   return (#adj > 0 and table.concat(adj, ' ') .. ' ' or '') .. kind

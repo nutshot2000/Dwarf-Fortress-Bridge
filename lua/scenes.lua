@@ -48,7 +48,7 @@ for _, u in ipairs(citizens()) do
     add('crafting', 1.5 + s / 6, u, name .. ': ' .. job_name(j) .. (jsk >= 15 and ' (legendary)' or ''))
   elseif not jt then
     if u.military.squad_id >= 0 then add('military', 1.4, u, name .. ' training with the squad')
-    elseif #u.social_activities > 0 then add('social', 2.0, u, name .. ' socialising')
+    elseif #u.social_activities > 0 then add('social', 1.0, u, name .. ' socialising')
     elseif not dfhack.units.isAdult(u) then add('kids', 1.0, u, name .. ' playing')
     end
   end

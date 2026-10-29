@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.4.5
+
+- Camera director is calmer and says what it shows:
+  - a tour shot lasts at least 20 s, and up to 45 s while the dwarf keeps doing the same thing (was 9 s);
+  - every new tour shot and every new hostile puts a "Camera: ..." line in the game's announcements;
+  - a walking subject moves the view only when it nears the edge of the screen, not every few steps;
+  - work orders finishing ("has been completed") no longer count as news worth a cut;
+  - socialising dwarves score below crafters in the tour.
+- `df_look` warns about open tiles under aquifer tiles on the level above: v50 aquifers drip downward, so a room
+  dug just below an aquifer layer floods slowly even when no aquifer tile is on its own level.
+- `df_dig` warns when designated tiles lie directly under revealed aquifer tiles (hidden ones stay undisclosed).
+- `df_help`: key `F` builds a pedestal as well as a display case.
+- `df_workshop add` of a reaction: each reagent now gets its own item type from the reaction raw. dfhack.workshops
+  gave every reagent the first one's type, so 'make wooden chair' asked for a second log in place of its edged tool
+  and no dwarf could ever start it.
+- Material preflight: logs now count for reagents that want any plant material (flags2.plant); the chair job
+  warned "0 usable logs" with hundreds in stock. Reagents that need an edged item (flags3.edged) now count only
+  items with an edged attack, so a chair with every axe and knife in use warns "0 usable edged items".
+
 ## 1.4.4
 
 - `df_workshop action=add` and `df_order` check materials before queuing (new `lua/inputs.lua`). The job is

@@ -110,7 +110,7 @@ for _, u in ipairs(df.global.world.units.active) do
   end
 end
 
-local rows, aquifer_tiles, ice_tiles, flooded_buildings, sky_holes = {}, {}, {}, {}, {}
+local rows, aquifer_tiles, ice_tiles, flooded_buildings, sky_holes, ceiling_leaks = {}, {}, {}, {}, {}, {}
 for y = y1, y2 do
   local line = {}
   for x = x1, x2 do
@@ -129,6 +129,11 @@ for y = y1, y2 do
       local tt = dfhack.maps.getTileType(x,y,z)
       if tt and df.tiletype.attrs[tt].material == MAT.FROZEN_LIQUID then
         ice_tiles[#ice_tiles+1] = {x=x,y=y}
+      end
+      -- An open tile under a revealed aquifer tile floods slowly: aquifers leak downward as well.
+      local up = dfhack.maps.getTileFlags(x, y, z + 1)
+      if tt and df.tiletype.attrs[tt].shape ~= SHAPE.WALL and up and up.water_table and not up.hidden then
+        ceiling_leaks[#ceiling_leaks+1] = {x=x,y=y}
       end
       if fl.flow_size > 0 and grid_b[k] then
         flooded_buildings[#flooded_buildings+1] = {x=x,y=y,depth=fl.flow_size}
@@ -161,4 +166,5 @@ emit({
   z = z, x1 = x1, y1 = y1, x2 = x2, y2 = y2, map_size = {x = sx, y = sy, z = sz},
   rows = rows, units = ulist, buildings = blist, aquifer_tiles = aquifer_tiles,
   ice_tiles = ice_tiles, flooded_buildings = flooded_buildings, sky_holes = sky_holes,
+  ceiling_leaks = ceiling_leaks,
 })

@@ -103,6 +103,22 @@ if action == 'add' then
     end
   end
   if not pick then emit({error = 'No task matching "' .. want .. '". List tasks with action=list building_id=' .. b.id}) return end
+  -- dfhack.workshops gives every reagent the first one's item type (the edged tool of 'make wooden chair'
+  -- becomes a second log, so nothing can ever fill it): take each reagent's type from the reaction raw.
+  local rname = pick.job_fields and pick.job_fields.reaction_name
+  for _, r in ipairs(rname and df.global.world.raws.reactions.reactions or {}) do
+    if r.code == rname then
+      for _, it in ipairs(pick.items or {}) do
+        local g = try(function() return r.reagents[it.reagent_index] end)
+        if g and it.item_type ~= g.item_type then
+          it.item_type, it.item_subtype = g.item_type, g.item_subtype
+          it.vector_id = g.item_type >= 0 and df.job_item_vector_id[df.item_type[g.item_type]]
+            or df.job_item_vector_id.IN_PLAY
+        end
+      end
+      break
+    end
+  end
   local count = math.min(ARGS.count or 1, 10)
   if #b.jobs + count > 10 then emit({error = 'Workshop queue is full (10 jobs max)'}) return end
   for _ = 1, count do
