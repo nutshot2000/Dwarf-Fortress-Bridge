@@ -47,13 +47,14 @@ tool("df_room_plan", "Protect, audit or repair private rooms. status reports mis
         next_step:r.enclosed?"Nothing to repair: room is enclosed. Audit furniture/ownership, then preview tidy.":targets.length===0?"Construction is already pending. Wait and inspect suspended jobs; do not repeatedly submit the same repair. Repeat repair after walls finish if a door was deferred.":a.dry_run?"Review entrance/access and targets, then repeat with dry_run=false.":"Construction queued, not finished. df_wait, inspect df_jobs suspended, then repeat repair after walls finish to place a deferred door. Recheck status until enclosed=true. Clear loose boulders with df_dump restricted to the room footprint; never dump construction materials."},null,1));
     });
 
-tool("df_dig", "Designate a rectangle for digging (or channel/stairs/ramp/chop/gather/smooth/undesignate). x1,y1 to x2,y2 inclusive on level z. levels>1 repeats the same rectangle DOWNWARD (useful for updown_stair shafts). Unrevealed tiles can be designated.",
+tool("df_dig", "Designate a rectangle for digging (or channel/stairs/ramp/chop/gather/smooth/undesignate). x1,y1 to x2,y2 inclusive on level z. levels>1 repeats the same rectangle DOWNWARD (useful for updown_stair shafts). Unrevealed tiles can be designated. dry_run=true previews (room-protection check included) without designating.",
   {
     kind: z.enum(Object.keys(DIG_KEYS)).default("dig"),
     x1: coord, y1: coord, x2: coord, y2: coord, z: coord,
     levels: z.number().int().min(1).max(100).optional(),
     priority: z.number().int().min(1).max(7).optional(),
     allow_room_changes:z.boolean().default(false),
+    dry_run: z.boolean().optional(),
   },
   async (a) => {
     const x = Math.min(a.x1, a.x2), y = Math.min(a.y1, a.y2);
@@ -61,6 +62,13 @@ tool("df_dig", "Designate a rectangle for digging (or channel/stairs/ramp/chop/g
     const extra = [];
     if (a.levels > 1) extra.push("-r", `down,${a.levels}`);
     if (a.priority) extra.push("-p", String(a.priority));
+    // preview: the room-protection guard and quickfort report what would happen; nothing is designated
+    if (a.dry_run) {
+      if (["engrave", "chop", "gather"].includes(a.kind)) return fail(`dry_run is not supported for kind=${a.kind}.`);
+      const out = await quickfort("dig", [`${DIG_KEYS[a.kind]}(${w}x${h})`], x, y, a.z, [...extra, "--dry-run"],
+        { allow_room_changes: a.allow_room_changes });
+      return text(out + "\n(dry run: nothing was designated)");
+    }
     if (a.kind === "engrave") {
       // quickfort's engrave key reports success but leaves no designation in v50; set it the way the game does
       // (only smoothed tiles can be engraved: smooth first, engrave once smoothing is done)

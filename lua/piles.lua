@@ -37,5 +37,14 @@ else
   f(pile.links.take_from_workshop, shop)
   f(prof.links.give_to_pile, pile)
 end
+-- A workshop with any "take from" link draws EVERY input only from its linked piles, containers included: a
+-- produce pile linked to a still left it waiting for "empty food storage item in linked stockpile".
+local warning
+if action == 'link' and (ARGS.direction or 'give') == 'give' then
+  warning = 'This workshop now takes ALL its inputs only from linked piles, empty barrels/bags too. Make the linked '
+    .. 'piles hold every input it needs (e.g. add empty barrels for a still), or unlink: a pile right next to the '
+    .. 'workshop is usually enough without a link.'
+end
 emit({ok = true, pile = nm(pile), workshop = nm(shop), direction = ARGS.direction or 'give',
-  give_to_workshops = ids(pile.links.give_to_workshop), take_from_workshops = ids(pile.links.take_from_workshop)})
+  give_to_workshops = ids(pile.links.give_to_workshop), take_from_workshops = ids(pile.links.take_from_workshop),
+  warning = warning})

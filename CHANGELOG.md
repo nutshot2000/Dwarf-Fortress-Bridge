@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.4.11
+
+- New `df_paths`: walking distances between named points (stairs and ramps included), the longest pair, and which
+  pairs are unreachable, to find the daily trips worth a shortcut and to compare routes before and after.
+- `df_pile link direction=give` warns that the workshop now takes all inputs, empty barrels included, only from
+  linked piles (a still linked to a produce pile stalled on "empty food storage item in linked stockpile").
+- `df_dig dry_run=true` previews a dig, room-protection check included, without designating anything (the flag was
+  silently ignored, so a "preview" dug for real).
+- `df_rooms bedroom_wing` no longer tells you to "dig a link from the shaft at x104" for a wing nowhere near a shaft:
+  the default shaft column is only mentioned when shaft_x was given or a stair is really there.
+
 ## 1.4.10
 
 - `df_zone location=guildhall` takes `guild=<name>` (the petitioning guild; its profession is read from the guild,

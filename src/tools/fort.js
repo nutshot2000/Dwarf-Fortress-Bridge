@@ -114,7 +114,9 @@ tool("df_rooms", "Zones. action=list shows all zones with owners. action=assign 
     if (a.phase === "dig" || !a.phase) {
       // The corridor must reach the shaft even when every room lies west of it.
       const corrEnd = SX > xEnd ? SX - 1 : xEnd;
-      if (SX < X1) log.push(`note: the shaft at x${SX} is west of x1=${X1}; dig a link from the shaft to x${X1} yourself.`);
+      // shaft_x defaults to 104 (kept so existing wings keep their layout); only talk about it when asked for
+      const shaftGiven = a.shaft_x !== undefined;
+      if (shaftGiven && SX < X1) log.push(`note: the shaft at x${SX} is west of x1=${X1}; dig a link from the shaft to x${X1} yourself.`);
       await dig("dig", X1, Y, corrEnd, Y);
       for (const x of rooms) {
         await dig("dig", x, Y - 4, x + 2, Y - 2); await dig("dig", x + 1, Y - 1, x + 1, Y - 1);
@@ -125,7 +127,8 @@ tool("df_rooms", "Zones. action=list shows all zones with owners. action=assign 
       const { value: stairHere } = await lua(`local tt=dfhack.maps.getTileType(ARGS.x,ARGS.y,ARGS.z)
         emit(tt ~= nil and df.tiletype.attrs[tt].shape == df.tiletype_shape.STAIR_UPDOWN)`, { x: SX, y: Y, z: Z });
       if (stairHere) await quickfort("dig", ["i"], SX, Y, Z, ["-p", "1"]);
-      log.push(`dig: corridor x${X1}-${corrEnd} y${Y} and ${rooms.length * 2} rooms on z${Z}; shaft at ${SX},${Y}`);
+      log.push(`dig: corridor x${X1}-${corrEnd} y${Y} and ${rooms.length * 2} rooms on z${Z}` +
+        (shaftGiven || stairHere ? `; shaft at ${SX},${Y}` : ""));
     }
     if (a.phase === "furnish") {
       for (const x of rooms) {

@@ -11,6 +11,11 @@ tool("df_problems", "Early-warning scan sorted by severity: food/drink shortages
 tool("df_units", "List citizens: id, name, profession, current job, position, stress, mood, hunger/thirst flags and top skills.",
   {}, () => luaTool("units"));
 
+tool("df_paths", "Walking distances between named points (bedrooms, dining hall, kitchen, workshops, stockpiles, quarry...), the way dwarves walk: 8 directions, stairs, ramps. Use it to find the long daily trips worth shortcutting, and to compare a route before and after digging a corridor or stair. Unreachable pairs are named.",
+  { points: z.array(z.object({ name: z.string().min(1), x: z.number().int(), y: z.number().int(), z: z.number().int() })).min(2).max(12),
+    max_steps: z.number().int().min(50).max(2000).optional() },
+  (a) => luaTool("paths", a));
+
 tool("df_announcements", "Recent game announcements (newest last). Pass since=<last_id> to get only new ones.",
   { since: z.number().int().optional(), limit: z.number().int().min(1).max(100).optional() },
   (a) => luaTool("announcements", a));
