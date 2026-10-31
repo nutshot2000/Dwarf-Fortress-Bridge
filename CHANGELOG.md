@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.4.14
+
+- `df_workshop` lists and queues bowyer tasks (wooden/bone crossbows and bolts); the bowyer task list was empty
+  because DFHack has no catalogue for it. A workshop that still has no task list says to use `df_order` instead.
+
 ## 1.4.13
 
 - `df_military uniform` with a crossbow template also gives the squad an ammunition entry (bolts for combat and

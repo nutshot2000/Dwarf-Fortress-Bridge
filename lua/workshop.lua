@@ -16,7 +16,26 @@ end
 -- Common jobs missing from dfhack.workshops' catalogue (it lists mostly reactions for craftsdwarfs).
 local function boulder() return {item_type = df.item_type.BOULDER, mat_type = 0, mat_index = -1, quantity = 1,
   flags2 = {non_economic = true}} end
+local function subtype(defs, id)
+  for _, d in ipairs(defs) do if d.id == id then return d.subtype end end
+  return -1
+end
+local CROSSBOW = subtype(df.global.world.raws.itemdefs.weapons, 'ITEM_WEAPON_CROSSBOW')
+local BOLTS = subtype(df.global.world.raws.itemdefs.ammo, 'ITEM_AMMO_BOLTS')
+local function wood() return {item_type = df.item_type.WOOD, quantity = 1, vector_id = df.job_item_vector_id.WOOD} end
+local function bone() return {item_type = -1, quantity = 1, flags1 = {}, flags2 = {bone = true, body_part = true}} end
 local EXTRA = {
+  -- dfhack.workshops has no Bowyers entry at all: the task list came back empty.
+  Bowyers = {
+    {name = 'make wooden crossbow', job_fields = {job_type = df.job_type.MakeWeapon, item_subtype = CROSSBOW,
+      material_category = {wood = true}}, items = {wood()}},
+    {name = 'make bone crossbow', job_fields = {job_type = df.job_type.MakeWeapon, item_subtype = CROSSBOW,
+      material_category = {bone = true}}, items = {bone()}},
+    {name = 'make wooden bolts', job_fields = {job_type = df.job_type.MakeAmmo, item_subtype = BOLTS,
+      material_category = {wood = true}}, items = {wood()}},
+    {name = 'make bone bolts', job_fields = {job_type = df.job_type.MakeAmmo, item_subtype = BOLTS,
+      material_category = {bone = true}}, items = {bone()}},
+  },
   Craftsdwarfs = {
     {name = 'make rock crafts', job_fields = {job_type = df.job_type.MakeCrafts, mat_type = 0}, items = {boulder()}},
     {name = 'make rock mug', job_fields = {job_type = df.job_type.MakeGoblet, mat_type = 0}, items = {boulder()}},
@@ -69,6 +88,9 @@ if action == 'list' then
         local flt = ARGS.filter and ARGS.filter:lower()
         for _, t in ipairs(task_list(b)) do
           if not flt or t.name:lower():find(flt, 1, true) then table.insert(entry.tasks, dfhack.df2utf(t.name)) end
+        end
+        if #entry.tasks == 0 and not flt then
+          entry.tasks_note = 'No task catalogue for this workshop type; queue its products with df_order instead.'
         end
       end
       table.insert(out, entry)
