@@ -37,7 +37,8 @@ tool("df_rooms", "Zones. action=list shows all zones with owners. action=assign 
     phase: z.enum(["dig", "furnish", "zone"]).optional(), z: optCoord, x1: optCoord, y: optCoord, per_side: z.number().int().min(1).max(15).optional(),
     shaft_x: optCoord, priority: z.number().int().min(1).max(7).optional(),
     building_id: z.number().int().optional().describe("display: the display case or pedestal"),
-    item_id: z.number().int().optional().describe("display: the item (e.g. an artifact) to put on show") },
+    item_id: z.number().int().optional().describe("display: the item (e.g. an artifact) to put on show"),
+    full: z.boolean().optional().describe("audit: list every zone and room layout, not only those needing attention") },
   async (a) => {
     if (a.action === "display") {
       // Through the game's own "Assign new display items" panel: writing displayed_items directly made a
@@ -64,8 +65,16 @@ tool("df_rooms", "Zones. action=list shows all zones with owners. action=assign 
     if (a.action === "audit") {
       const {value:report}=await luaFile("audit",a);
       const {value:layout}=await luaFile("room_plan",{action:"status"});
-        const {value:access}=await luaFile("access",{});
-        return text(JSON.stringify({...report,room_layouts:layout?.rooms,citizen_access:access},null,1));
+      const {value:access}=await luaFile("access",{});
+      if (a.full) return text(JSON.stringify({...report,room_layouts:layout?.rooms,citizen_access:access},null,1));
+      // A grown fort has 80+ zones: by default list only what needs attention (or the one zone_id asked about).
+      const zones = (report?.zones ?? []).filter((zn) => a.zone_id !== undefined ? zn.id === a.zone_id
+        : (zn.missing?.length || zn.warnings?.length));
+      const rooms = (layout?.rooms ?? []).filter((r) => r.state !== "enclosed");
+      const ok = (report?.zones?.length ?? 0) - zones.length;
+      return text(JSON.stringify({...report, zones, zones_ok: a.zone_id === undefined ? ok : undefined,
+        room_layouts: rooms, citizen_access: access?.isolated?.length ? access : { isolated: [], main_group_size: access?.main_group_size },
+        hint: "Only zones with something missing or a warning are listed; zone_id=<id> shows one zone, full=true everything."}, null, 1));
     }
     if (a.action !== "bedroom_wing") return luaTool("rooms", a);
     // A tidy wing of private 3x3 bedrooms either side of a corridor (row y), each with a doorway.
@@ -156,7 +165,13 @@ tool("df_rooms", "Zones. action=list shows all zones with owners. action=assign 
 
 tool("df_mood", "Strange moods: which dwarf is in a mood, which workshop they claimed, and exactly which items they still need (runs DFHack showmood). check=true instead counts suitable items in the fort for each requirement, says how to get missing ones and gives days left, so impossible moods show up early. Provide the materials quickly or the dwarf goes insane.",
   { check: z.boolean().optional() },
-  async (a) => a.check ? luaTool("moodcheck", {}) : text((await command("showmood")).trim() || "No dwarf is in a strange mood."));
+  async (a) => {
+    if (a.check) return luaTool("moodcheck", {});
+    // showmood prints DF's CP437 names: convert in-game so "Dodók" does not arrive as "Dod?k"
+    const { value } = await lua(`emit(dfhack.df2utf(dfhack.run_command_silent('showmood') or ''))`);
+    // df2utf also maps the newline byte to its CP437 glyph
+    return text((value ?? "").replace(/◙/g, "\n").trim() || "No dwarf is in a strange mood.");
+  });
 
 tool("df_location", "Locations and their occupations. list: taverns, hospitals, temples, libraries, guildhalls with their zones and occupation slots (create a location with df_zone location=...). assign: give unit_id an occupation at location_id: DOCTOR, DIAGNOSTICIAN, SURGEON, BONE_DOCTOR (hospital), TAVERN_KEEPER, PERFORMER (tavern), SCHOLAR, SCRIBE (library). remove: clear unit_id (or occupation_id) from location_id. attach: put location_id on zone_id (a purpose-built room), detach_others=true to release its old zones; keeps name and staff. dedicate: set what temple location_id is for: religion=<name or id> (this answers an approved temple petition from that religion), deity=<name or id>, or all_faiths=true; with none of these it lists the religions and deities citizens follow, with follower counts.",
   { action: z.enum(["list", "assign", "remove", "attach", "dedicate"]).default("list"), location_id: z.number().int().optional(), zone_id: z.number().int().optional(), detach_others: z.boolean().optional(),

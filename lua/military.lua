@@ -211,6 +211,40 @@ if action == 'equip' then
           -- gloves and boots are single items: a slot wants a pair
           local tname = df.item_type[sp.item_type]
           local want = (tname == 'GLOVES' or tname == 'SHOES') and 2 or 1
+          -- upgrade: a filled armour slot takes a free item of a strictly higher armour level (new iron
+          -- breastplates over leather or a dress); filling only empty slots left masterwork plate in storage
+          local level = function(it) return it and try(function() return it.subtype.armorlevel end, 0) or 0 end
+          if tname == 'ARMOR' or tname == 'HELM' or tname == 'PANTS' or tname == 'GLOVES' or tname == 'SHOES' then
+            for k = #sp.assigned - 1, 0, -1 do
+              local cur_id = sp.assigned[k]
+              local cur = df.item.find(cur_id)
+              local better, bl = nil, level(cur)
+              for _, it in ipairs(df.global.world.items.other[tname]) do
+                if not taken[it.id] and it.id ~= cur_id and level(it) > bl and fits(sp, it, u)
+                   and (tname ~= 'GLOVES' or not cur or it:getGloveHandedness() == cur:getGloveHandedness()) then
+                  better, bl = it, level(it)
+                end
+              end
+              if better then
+                sp.assigned:erase(k)
+                local ai = utils.linear_index(p.equipment.assigned_items, cur_id)
+                if ai then p.equipment.assigned_items:erase(ai) end
+                local as = E.items_assigned[sp.item_type]
+                local i = utils.linear_index(as, cur_id)
+                if i then as:erase(i) utils.insert_sorted(E.items_unassigned[sp.item_type], cur_id) end
+                taken[cur_id] = nil
+                local un = E.items_unassigned[sp.item_type]
+                local j = utils.linear_index(un, better.id)
+                if j then un:erase(j) end
+                if not utils.linear_index(as, better.id) then utils.insert_sorted(as, better.id) end
+                sp.assigned:insert('#', better.id)
+                utils.insert_sorted(p.equipment.assigned_items, better.id)
+                taken[better.id] = true
+                table.insert(done, (u and unit_name(u) or ('pos ' .. pi)) .. ': upgraded to ' ..
+                  dfhack.df2utf(dfhack.items.getReadableDescription(better)))
+              end
+            end
+          end
           while #sp.assigned < want do
             -- search every item of the type: freed gear can be missing from the unassigned index
             -- the most valuable fitting item (a bronze shield over a wooden one, steel over copper); what the

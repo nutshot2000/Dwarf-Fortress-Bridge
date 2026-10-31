@@ -77,7 +77,18 @@ if action == 'send' or action == 'goods' then
   local text = (ARGS.search or ''):lower()
   -- An explicit item_ids list is the request itself: do not cut it at the default 20.
   local limit = math.min(ARGS.limit or (ARGS.item_ids and #ARGS.item_ids) or 20, 200)
-  local sent,protected = {},{}
+  local sent,protected,banned = {},{},{}
+  -- a noble's export ban (mandate mode 0): trading a matching item is a crime, so never send one
+  local bans = {}
+  for _, m in ipairs(df.global.world.mandates.all) do if m.mode == 0 then bans[#bans + 1] = m end end
+  local function is_banned(it)
+    for _, m in ipairs(bans) do
+      if it:getType() == m.item_type and (m.item_subtype < 0 or it:getSubtype() == m.item_subtype)
+         and (m.mat_type < 0 or (it:getMaterial() == m.mat_type and (m.mat_index < 0 or it:getMaterialIndex() == m.mat_index))) then
+        return true
+      end
+    end
+  end
   for _, it in ipairs(df.global.world.items.other.IN_PLAY) do
     if #sent >= limit then break end
     local ok = (ARGS.item_ids == nil) and (text ~= '' or action=='goods')
@@ -85,7 +96,12 @@ if action == 'send' or action == 'goods' then
     if ok and text ~= '' then ok = dfhack.items.getReadableDescription(it):lower():find(text, 1, true) ~= nil end
     -- never send artifacts by search: losing one angers its owner, its god or a noble (item_ids still allowed)
     if ok and it.flags.artifact and not ARGS.item_ids then ok = false end
-    if ok and tradeable(it, depot) then
+    ok = ok and tradeable(it, depot)
+    if ok and #bans > 0 and is_banned(it) then
+      ok = false
+      if #banned < 10 then banned[#banned + 1] = dfhack.df2utf(dfhack.items.getReadableDescription(it)) end
+    end
+    if ok then
       local contents={}
       for _,c in ipairs(dfhack.items.getContainedItems(it)) do
         contents[#contents+1]={id=c.id,item=dfhack.df2utf(dfhack.items.getReadableDescription(c)),value=value_with_contents(c)}
@@ -111,8 +127,14 @@ if action == 'send' or action == 'goods' then
     end
   end
   local preview=action=='goods' or ARGS.dry_run
-  emit({ok=true,dry_run=preview,marked=not preview and #sent or 0,candidates=#sent,items=sent,
-    protected_containers=protected,guidance='Nonempty containers are protected by default, including booze and seed barrels. Inspect contents, then explicitly set allow_contents=true if intended. value excludes contents; value_with_contents includes them.'}) return
+  -- a big send lists only the first items; the totals cover all of them
+  local total_value, shown = 0, {}
+  for i, e in ipairs(sent) do total_value = total_value + e.value_with_contents if i <= 15 then shown[i] = e end end
+  emit({ok=true,dry_run=preview,marked=not preview and #sent or 0,candidates=#sent,total_value=total_value,
+    items=shown, more=#sent > 15 and (#sent - 15) or nil,
+    protected_containers=protected,
+    export_banned=#banned > 0 and banned or nil,
+    guidance='Nonempty containers are protected by default, including booze and seed barrels. Inspect contents, then explicitly set allow_contents=true if intended. value excludes contents; value_with_contents includes them.'}) return
 end
 
 -- trade screen

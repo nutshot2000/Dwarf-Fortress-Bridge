@@ -54,10 +54,29 @@ if (ARGS.action or 'list') == 'list' then
       end
     end
   end
-  local list = {}
-  for _, v in pairs(seeds) do table.insert(list, v) end
+  -- seeds no plot can grow (surface crops in an all-underground fort, or the reverse) are only counted
+  local has_under, has_surface = false, false
+  for _, p in ipairs(plots) do if p.underground then has_under = true else has_surface = true end end
+  local list, other = {}, 0
+  for _, v in pairs(seeds) do
+    if #plots == 0 or (v.underground and has_under) or (not v.underground and has_surface) then table.insert(list, v)
+    else other = other + v.seeds end
+  end
   table.sort(list, function(a, b) return a.seeds > b.seeds end)
-  emit({plots = plots, seeds_in_stock = list}) return
+  -- a season set to a crop with no seeds grows nothing (farmers cancel planting)
+  local by_name = {}
+  for _, v in pairs(seeds) do by_name[v.name] = v.seeds end
+  for _, p in ipairs(plots) do
+    for season, crop in pairs(p.crops or {}) do
+      if crop ~= 'fallow' and not by_name[crop] then
+        p.no_seeds = p.no_seeds or {}
+        table.insert(p.no_seeds, season .. ': ' .. crop)
+      end
+    end
+  end
+  emit({plots = plots, seeds_in_stock = list,
+    seeds_for_other_plots = other > 0 and (other .. ' seeds of crops no current plot can grow (' ..
+      (has_under and 'surface' or 'underground') .. ' crops)') or nil}) return
 end
 
 -- set

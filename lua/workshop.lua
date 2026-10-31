@@ -57,7 +57,11 @@ if action == 'list' then
   local out = {}
   for _, b in ipairs(df.global.world.buildings.all) do
     -- With building_id, report just that workshop (with its task list).
-    if is_shop(b) and (not ARGS.building_id or ARGS.building_id == b.id) then
+    -- without show_tasks, filter picks workshops by type or name ("Masons", "Quarry"); with it, it filters task names
+    local wf = ARGS.filter and not ARGS.show_tasks and not ARGS.building_id and ARGS.filter:lower()
+    local shop_ok = is_shop(b) and (not wf or shop_type(b):lower():find(wf, 1, true)
+      or dfhack.df2utf(b.name or ''):lower():find(wf, 1, true))
+    if shop_ok and (not ARGS.building_id or ARGS.building_id == b.id) then
       local entry = {id = b.id, type = shop_type(b), x = b.centerx, y = b.centery, z = b.z,
         built = b:getBuildStage() >= b:getMaxBuildStage(), jobs = queued(b)}
       if ARGS.building_id == b.id or ARGS.show_tasks then

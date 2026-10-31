@@ -117,7 +117,8 @@ tool("df_wait","Unpause and let the game run for a number of in-game days (1 day
     }
     const ran = (now.abs - start.abs) / 1200;
     const { value: ann } = await luaFile("announcements", { since: start.last, limit: 200 });
-    const all = ann?.messages ?? [];
+    // the camera's own "[agent] Camera: ..." captions are not news (one about a mood landed under IMPORTANT)
+    const all = (ann?.messages ?? []).filter((m) => !/^\[[^\]]+\] Camera: /.test(m.text));
     // Events the overseer must react to are always listed first and never truncated.
     const IMPORTANT = /CARAVAN|MERCHANT|MIGRANT|SIEGE|AMBUSH|THIEF|INVASION|ENEMY|MEGABEAST|FORGOTTEN|TITAN|WEREBEAST|NIGHT_CREATURE|UNDEAD|MOOD|BERSERK|MADNESS|INSANE|TANTRUM|DEATH|DIED|KILLED|BIRTH|ARTIFACT|DIPLOMAT|LIAISON|NOBLE|PETITION|FLOOD|CAVE_IN|COLLAPSE|STRUCK|DEMAND|MANDATE|CITIZEN|ELECTION|ANIMAL_?ATTACK|INJUR|SCREAM/i;
     const IMPORTANT_TEXT = /caravan|merchants|migrant|siege|ambush|stolen|thief|snatcher|invad|attack|dead|died|killed|been slaughtered by|mood|berserk|insane|tantrum|withdraw|born|given birth|artifact|diplomat|liaison|petition|arrived|has become|struck|forgotten beast|titan|vampire|were/i;

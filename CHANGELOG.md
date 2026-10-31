@@ -1,5 +1,29 @@
 # Changelog
 
+## 1.4.10
+
+- `df_zone location=guildhall` takes `guild=<name>` (the petitioning guild; its profession is read from the guild,
+  since names mislead: "The Mechanical Guild" is CRAFTSMAN) or `profession=`. Without either, quickfort made the zone
+  but silently no guildhall; the tool now refuses with a hint.
+- `df_zone` with a location refuses when the spot already has a zone carrying a location, so a retried call no longer
+  stacks a second zone and location on the same room.
+- `df_trade send` skips items under a noble's export ban (trading them is a crime) and lists them as `export_banned`.
+- `df_mood check`: "any bones"/"any shells" requests (no item type) are named and counted from corpse pieces (they
+  showed as "any none", 0 in fort, and a false "missing"); bars wanted in any inorganic read "metal bar" and rough
+  gems "any rough gems" (both were labelled "rock"). Plain `df_mood` keeps names like Dodók readable.
+- `df_workshop list filter=` picks workshops by type or name ("mason", "Quarry") when no task list is asked for; it
+  only filtered task names, so a filtered list still printed every workshop.
+- `df_crop list` shows only seeds a current plot can grow (the rest are summed in `seeds_for_other_plots`) and flags a
+  plot's `no_seeds` seasons: a season set to a crop with no seeds in stock grows nothing.
+- `df_military equip` upgrades: a filled armour slot takes a free item of a strictly higher armour level and releases
+  the old one (new masterwork iron breastplates sat in storage while soldiers kept leather, since equip only filled
+  empty slots). Weapons and shields are not swapped.
+- `df_rooms audit` lists only zones with something missing or a warning, unfinished room layouts, and the access
+  check only when someone is cut off; `zone_id=` shows one zone, `full=true` the old complete report (80+ zones).
+- `df_wait` no longer echoes the camera's own "[agent] Camera: ..." captions in its report.
+- `df_trade send`/`goods` list at most 15 items plus `more` and a `total_value` for the whole batch (an 80-item send
+  printed every entry).
+
 ## 1.4.9
 
 - `df_location action=dedicate`: dedicate a temple to a religion (`religion=<name or id>`, which keeps an approved

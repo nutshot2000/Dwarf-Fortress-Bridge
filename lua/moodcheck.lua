@@ -42,7 +42,18 @@ end
 -- Cloth, thread and bars are asked for by size (one whole cloth is 10000), not by count: sum their dimensions.
 local function count_suitable(ji)
   local n, size = 0, 0
-  if ji.item_type < 0 then return 0, 0 end
+  if ji.item_type < 0 then
+    -- "any bones" / "any shells": no item type, just a body-part flag; bones and shells are butchering corpse pieces
+    local want = fl(ji, "flags2", "bone") and 'bone' or fl(ji, "flags2", "shell") and 'shell' or nil
+    if not want then return 0, 0 end
+    for _, it in ipairs(df.global.world.items.other.CORPSEPIECE) do
+      local f = it.flags
+      if it.corpse_flags[want] and not (f.forbid or f.rotten or f.trader or f.removed or f.garbage_collect or f.dump) then
+        n = n + 1
+      end
+    end
+    return n, 0
+  end
   for _, it in ipairs(df.global.world.items.other[df.item_type[ji.item_type]]) do
     local f = it.flags
     if it:getType() == ji.item_type and not (f.forbid or f.rotten or f.trader or f.removed or f.garbage_collect or f.artifact)
@@ -83,9 +94,23 @@ for _, u in ipairs(citizens()) do
       local jitems = try(function() return j.job_items.elements end, j.job_items)
       local brought = #j.items
       for i, ji in ipairs(jitems) do
-        local m = dfhack.matinfo.decode(ji.mat_type, ji.mat_index)
+        local m = ji.mat_index >= 0 and dfhack.matinfo.decode(ji.mat_type, ji.mat_index) or nil
+        local tname = df.item_type[ji.item_type]
         local kind = fl(ji, "flags2", "plant") and 'plant fiber ' or fl(ji, "flags2", "silk") and 'silk ' or fl(ji, "flags2", "yarn") and 'yarn ' or ''
-        local desc = (m and (m:toString() .. ' ') or (kind == '' and 'any ' or '')) .. kind .. (df.item_type[ji.item_type] or 'item'):lower()
+        local desc
+        if ji.item_type < 0 then
+          -- no item type: the flag is the whole request (any bones, any shells)
+          desc = fl(ji, "flags2", "bone") and 'any bones' or fl(ji, "flags2", "shell") and 'any shells' or 'any item'
+        elseif m then
+          desc = m:toString() .. ' ' .. kind .. tname:lower()
+        elseif ji.mat_type == 0 then
+          -- any inorganic material: stone for boulders and blocks, metal for bars, gem for rough/cut gems
+          local adj = ({BAR = 'metal ', ROUGH = 'rough gem', SMALLGEM = 'cut gem', BOULDER = 'rock ', BLOCKS = 'rock '})[tname]
+          desc = adj == 'rough gem' and 'any rough gems' or adj == 'cut gem' and 'any cut gems'
+            or ((adj or 'stone ') .. kind .. tname:lower())
+        else
+          desc = (kind == '' and 'any ' or '') .. kind .. tname:lower()
+        end
         local count, size = count_suitable(ji)
         local need = math.max(ji.quantity, 1)
         -- a size-based need (e.g. 10000 for one cloth) is met by the items' summed dimensions

@@ -235,11 +235,39 @@ async function skippedTilesNote(out, a) {
     (value.length > 8 ? "; ..." : "") + ". Wait for digging to finish, then remove it (df_remove allow_built=true) and place it again.";
 }
 
-tool("df_zone", "Create a zone rectangle. Bedroom zones require dry floor and completed walls/doors; repair with df_room_plan first. type: m meeting area, b bedroom, h dining hall, n pasture, p pit/pond, w water source, f fishing, o office, D dormitory, B barracks, d garbage dump, T tomb (one burial per zone: 1x1 on each coffin), g gather fruit, s sand, c clay. Optional location: tavern, hospital, temple, library, guildhall.",
+tool("df_zone", "Create a zone rectangle. Bedroom zones require dry floor and completed walls/doors; repair with df_room_plan first. type: m meeting area, b bedroom, h dining hall, n pasture, p pit/pond, w water source, f fishing, o office, D dormitory, B barracks, d garbage dump, T tomb (one burial per zone: 1x1 on each coffin), g gather fruit, s sand, c clay. Optional location: tavern, hospital, temple, library, guildhall. A guildhall needs guild=<the petitioning guild's name, e.g. 'Hall of Coal'> (its profession is read from the guild) or profession=<df.profession name>.",
   { type: z.string().min(1), x: coord, y: coord, z: coord,
     w: z.number().int().min(1), h: z.number().int().min(1),
-    name: z.string().optional(), location: z.enum(["tavern", "hospital", "temple", "library", "guildhall"]).optional() },
+    name: z.string().optional(), location: z.enum(["tavern", "hospital", "temple", "library", "guildhall"]).optional(),
+    profession: z.string().optional(), guild: z.string().optional() },
   async (a) => {
+    // A guild's name says little about its craft ("The Mechanical Guild" is CRAFTSMAN): read it from the guild.
+    if (a.location === "guildhall" && a.guild && !a.profession) {
+      const { value: g } = await lua(`local want = ARGS.guild:lower()
+        for _, e in ipairs(df.global.world.entities.all) do
+          if e.type == df.historical_entity_type.Guild then
+            local n = dfhack.df2utf(dfhack.translation.translateName(e.name, true))
+            if n:lower():find(want, 1, true) and #e.guild_professions > 0 then
+              emit({name = n, profession = df.profession[e.guild_professions[0].profession]}) return
+            end
+          end
+        end
+        emit(nil)`, a);
+      if (!g) return fail(`No guild named like "${a.guild}".`);
+      a.profession = g.profession;
+    }
+    // quickfort makes the zone but silently skips the location when a guildhall has no profession
+    if (a.location === "guildhall" && !a.profession)
+      return fail("A guildhall needs guild=<the guild's name> or profession=<df.profession name, e.g. CRAFTSMAN>.");
+    // a retried call would stack a second zone and a second location on the same room
+    if (a.location) {
+      const { value: dup } = await lua(`local p = xyz2pos(ARGS.x + (ARGS.w // 2), ARGS.y + (ARGS.h // 2), ARGS.z)
+        for _, b in ipairs(dfhack.buildings.findCivzonesAt(p) or {}) do
+          if b.location_id >= 0 then emit({zone = b.id, location = b.location_id}) return end
+        end
+        emit(nil)`, a);
+      if (dup) return fail(`Zone ${dup.zone} here already carries location ${dup.location} (see df_location list); not making a second one. Remove that zone first to replace it.`);
+    }
     if(a.type==="b"){
       const {value:check}=await luaFile("room_check",{z:a.z,rooms:[{x:a.x,y:a.y,w:a.w,h:a.h}]});
       if(!check?.ok) return fail(JSON.stringify({...check,guidance:"Bedroom zones require dry floor and completed walls/doors. Use df_room_plan protect, repair, wait and verify before zoning."}));
@@ -247,6 +275,7 @@ tool("df_zone", "Create a zone rectangle. Bedroom zones require dry floor and co
     const props = [];
     if (a.name) props.push(`name="${a.name.replace(/"/g, "")}"`);
     if (a.location) props.push(`location=${a.location}`);
+    if (a.location === "guildhall") props.push(`profession=${a.profession.toUpperCase().replace(/[^A-Z_]/g, "")}`);
     const cell = a.type + (props.length ? `{${props.join(" ")}}` : "") + `(${a.w}x${a.h})`;
     await cameraTo(a.x + (a.w >> 1), a.y + (a.h >> 1), a.z, `zone at ${a.x},${a.y},${a.z}`);
     const out = await quickfort("zone", [cell], a.x, a.y, a.z);
