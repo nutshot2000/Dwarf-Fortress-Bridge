@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4.12
+
+- Every tool now rejects unknown arguments ("Unrecognized key") instead of dropping them: `df_dig mode=chop`
+  (the parameter is `kind`) quietly designated an ordinary dig, and a parameter missing from an older running server
+  ran as if it were not given.
+
 ## 1.4.11
 
 - New `df_paths`: walking distances between named points (stairs and ramps included), the longest pair, and which

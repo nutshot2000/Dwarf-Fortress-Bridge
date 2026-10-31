@@ -41,7 +41,8 @@ export const json = (v) => JSON.stringify(v, null, 1);
 
 export function tool(name, description, shape, fn) {
   if (enabled && !enabled.has(name)) return; // not in the DF_TOOLS profile
-  server.registerTool(name, { description, inputSchema: shape }, async (args) => {
+  // Strict: a misspelt or unknown argument (kind vs mode) is an error, not silently dropped so the call runs on defaults.
+  server.registerTool(name, { description, inputSchema: z.strictObject(shape) }, async (args) => {
     try {
       return await fn(args ?? {});
     } catch (e) {
