@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4.13
+
+- `df_military uniform` with a crossbow template also gives the squad an ammunition entry (bolts for combat and
+  training). Without it marksdwarves got crossbows but never picked up a single bolt.
+- `df_zone` lists `a` (archery range) among the zone types.
+
 ## 1.4.12
 
 - Every tool now rejects unknown arguments ("Unrecognized key") instead of dropping them: `df_dig mode=chop`

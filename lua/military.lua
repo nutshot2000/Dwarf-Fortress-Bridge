@@ -356,10 +356,39 @@ if action == 'uniform' then
     eq.flags.exact_matches = u.flags.exact_matches
     set = set + 1
   end
+  -- A ranged uniform gives soldiers crossbows but no bolts: the squad also needs an ammunition entry (the game's
+  -- uniform screen adds it, applying the template from a script does not), or marksdwarves never pick up ammo.
+  local ammo_class
+  local ws = df.uniform_category.weapon
+  for k, itype in ipairs(u.uniform_item_types[ws]) do
+    local sub, info = u.uniform_item_subtypes[ws][k], u.uniform_item_info[ws][k]
+    local def = itype == df.item_type.WEAPON and sub >= 0 and df.itemdef_weaponst.find(sub)
+    if def and def.ranged_ammo ~= '' then ammo_class = def.ranged_ammo end
+    if not ammo_class and try(function() return info.indiv_choice.ranged end, false) then ammo_class = 'BOLT' end
+  end
+  local ammo_added
+  if ammo_class and #sq.ammo.ammunition == 0 then
+    for _, d in ipairs(df.global.world.raws.itemdefs.ammo) do
+      if d.ammo_class == ammo_class then
+        local spec = df.squad_ammo_spec:new()
+        spec.item_type = df.item_type.AMMO
+        spec.item_subtype = d.subtype
+        spec.material_class = -1
+        spec.mattype = -1
+        spec.matindex = -1
+        spec.amount = 100 * #sq.positions
+        spec.flags.use_combat = true
+        spec.flags.use_training = true
+        sq.ammo.ammunition:insert('#', spec)
+        ammo_added = spec.amount .. ' ' .. d.name_plural .. ' (combat and training)'
+        break
+      end
+    end
+  end
   -- Do not set plotinfo.equipment.update here: the game's own pass then re-fills "metal armor" body slots with
   -- wool dresses and cloth gloves over our assignments. The JS side runs action=equip right after this.
-  emit({ok = true, squad = squad_info(sq), uniform = u.name, positions = set,
-    hint = 'Dwarves equip whatever matching items exist; make or buy armour and weapons.'}) return
+  emit({ok = true, squad = squad_info(sq), uniform = u.name, positions = set, ammunition = ammo_added,
+    hint ='Dwarves equip whatever matching items exist; make or buy armour and weapons.'}) return
 end
 
 if action == 'cancel' then

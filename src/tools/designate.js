@@ -243,7 +243,7 @@ async function skippedTilesNote(out, a) {
     (value.length > 8 ? "; ..." : "") + ". Wait for digging to finish, then remove it (df_remove allow_built=true) and place it again.";
 }
 
-tool("df_zone", "Create a zone rectangle. Bedroom zones require dry floor and completed walls/doors; repair with df_room_plan first. type: m meeting area, b bedroom, h dining hall, n pasture, p pit/pond, w water source, f fishing, o office, D dormitory, B barracks, d garbage dump, T tomb (one burial per zone: 1x1 on each coffin), g gather fruit, s sand, c clay. Optional location: tavern, hospital, temple, library, guildhall. A guildhall needs guild=<the petitioning guild's name, e.g. 'Hall of Coal'> (its profession is read from the guild) or profession=<df.profession name>.",
+tool("df_zone", "Create a zone rectangle. Bedroom zones require dry floor and completed walls/doors; repair with df_room_plan first. type: m meeting area, b bedroom, h dining hall, n pasture, p pit/pond, w water source, f fishing, o office, D dormitory, B barracks, a archery range (build archery targets A at one end; a squad trains there via df_military barracks), d garbage dump, T tomb (one burial per zone: 1x1 on each coffin), g gather fruit, s sand, c clay. Optional location: tavern, hospital, temple, library, guildhall. A guildhall needs guild=<the petitioning guild's name, e.g. 'Hall of Coal'> (its profession is read from the guild) or profession=<df.profession name>.",
   { type: z.string().min(1), x: coord, y: coord, z: coord,
     w: z.number().int().min(1), h: z.number().int().min(1),
     name: z.string().optional(), location: z.enum(["tavern", "hospital", "temple", "library", "guildhall"]).optional(),
