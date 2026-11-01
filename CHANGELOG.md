@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.4.18
+
+- `df_wait` and `df_status` repeat the notices DFHack shows in its corner box (traders ready to trade, "N petition
+  outstanding", mandates near deadline, moody dwarf status, ...). The overseer never saw that box, so an accepted
+  guildhall agreement sat unmet until it was abandoned.
+- `df_rooms action=display` takes `item_ids` to stock a pedestal or case with many items in one call.
+- PLAYBOOK: temple/guildhall agreements need the location to reach tier 1 (value), not just a zone.
+
+## 1.4.17
+
+- `df_dig` (dig, channel, ramp) keeps pending stair marks inside its area and says so. A tunnel dug across a shaft
+  turned the shaft's next stair into an ordinary dig that no one could reach from the stair above, and the shaft
+  silently stalled with every miner idle.
+
 ## 1.4.16
 
 - `df_military equip` no longer takes gear assigned to another squad. It only skipped its own squad's items, so an

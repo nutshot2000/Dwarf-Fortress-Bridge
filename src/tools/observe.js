@@ -2,8 +2,13 @@
 import { tool, luaTool, text, fail, optCoord, z, luaFile } from "../core.js";
 import { upkeepTargets } from "./production.js";
 
-tool("df_status", "Fort overview: date, pause state, population, idle/stressed counts, food/drink/wood/stone stocks, hostiles, map size and the player's current view.",
-  {}, () => luaTool("status"));
+tool("df_status", "Fort overview: date, pause state, population, idle/stressed counts, food/drink/wood/stone stocks, hostiles, map size, the player's current view, and the notices DFHack's corner box shows (traders ready, outstanding temple/guildhall agreements, mandates near deadline...).",
+  {}, async () => {
+    const { value } = await luaFile("status");
+    if (value?.error) return fail(value.error);
+    const { value: notices } = await luaFile("notices", {});
+    return text(JSON.stringify({ ...value, ...(notices?.length ? { dfhack_notices: notices } : {}) }, null, 1));
+  });
 
 tool("df_problems", "Early-warning scan sorted by severity: food/drink shortages, strange moods, stress, starvation, hostiles, missing beds/still/farms/tables, idle labour.",
   {}, () => luaTool("problems", { empty_storage_target: Math.max(0, Math.ceil(upkeepTargets().empty_storage)) }));

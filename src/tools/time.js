@@ -163,6 +163,10 @@ tool("df_wait","Unpause and let the game run for a number of in-game days (1 day
       out += `\nCONSTRUCTION: ${construction.review.length} suspended construction job(s) need review. Review df_jobs action=suspended; resume specific jobs only after any danger or obstruction is resolved.`;
     }
     lastConstructionWarning=constructionSignature;
+    // DFHack's corner box: "petition outstanding" there is an accepted guildhall/temple agreement not yet met
+    const { value: notices } = await luaFile("notices", {});
+    if (notices?.length) out += `\nDFHack notices: ${notices.join(" | ")}` +
+      (notices.some((n) => /petition/.test(n)) ? " (petition outstanding = an accepted temple/guildhall not yet up to tier: `list-agreements` via df_cmd)" : "");
     if (a.upkeep) {
       const u = await runUpkeep("apply");
       const queued = u.split("\n").filter((l) => l.includes("-> added"));

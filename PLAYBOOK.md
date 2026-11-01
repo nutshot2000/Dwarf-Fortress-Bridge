@@ -144,6 +144,14 @@ If something seems impossible without a cheat, tell the player instead.
 - An approved temple petition from a religion is kept by giving that religion its own temple: dig a room,
   `df_zone location=temple`, then `df_location action=dedicate religion=<name>`. Keep one temple on all faiths
   for everyone else (`action=dedicate` with no target lists the fort's religions and their followers).
+- A temple or guildhall agreement is met only when the location reaches the tier it asks for (tier 1 = a real
+  temple / guildhall, not a shrine or meeting place), and it is abandoned after about a year. A bare zoned room is
+  worth ~25 and stays tier 0: raise its value with an artifact or a pedestal of masterwork crafts
+  (`df_rooms action=display item_ids=[...]`). A guildhall reached tier 1 at about 2,500. `df_wait` and `df_status`
+  repeat DFHack's corner notices; "N petition outstanding" there means such an agreement is still unmet
+  (`df_cmd list-agreements` names it and its age).
+- A recognized priesthood is needed for some temple agreements; the button is in the temple's location details and
+  no bridge tool presses it yet: ask the player to click it.
 - After every migrant wave run df_threats: a necromancer can arrive as a citizen. Startled, they raise nearby corpses
   as hostile undead; banish them with `df_justice action=exile` (or keep them far from any corpses and out of the library,
   where they may write a book that makes more necromancers).

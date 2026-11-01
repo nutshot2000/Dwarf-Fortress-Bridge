@@ -38,15 +38,18 @@ tool("df_rooms", "Zones. action=list shows all zones with owners. action=assign 
     shaft_x: optCoord, priority: z.number().int().min(1).max(7).optional(),
     building_id: z.number().int().optional().describe("display: the display case or pedestal"),
     item_id: z.number().int().optional().describe("display: the item (e.g. an artifact) to put on show"),
+    item_ids: z.array(z.number().int()).min(1).max(100).optional().describe("display: several items for one case at once (a case of masterwork crafts raises a guildhall's value)"),
     full: z.boolean().optional().describe("audit: list every zone and room layout, not only those needing attention") },
   async (a) => {
     if (a.action === "display") {
       // Through the game's own "Assign new display items" panel: writing displayed_items directly made a
       // "Put item on display" job that nobody ever took.
-      if (a.building_id === undefined || a.item_id === undefined) return fail("display needs building_id and item_id");
+      const ids = [...(a.item_ids ?? []), ...(a.item_id !== undefined ? [a.item_id] : [])];
+      if (a.building_id === undefined || !ids.length) return fail("display needs building_id and item_id or item_ids");
+      a = { ...a, ids };
       const { value: ok } = await lua(`local b = df.building.find(ARGS.building_id)
         if not b or not df.building_display_furniturest:is_instance(b) then emit('not a display case or pedestal') return end
-        if not df.item.find(ARGS.item_id) then emit('no item ' .. ARGS.item_id) return end
+        for _, id in ipairs(ARGS.ids) do if not df.item.find(id) then emit('no item ' .. id) return end end
         local v = df.global.game.main_interface.view_sheets
         v.open = true v.active_sheet = df.view_sheet_type.BUILDING v.active_id = b.id v.active_sub_tab = 0
         emit(true)`, a);
@@ -54,13 +57,15 @@ tool("df_rooms", "Zones. action=list shows all zones with owners. action=assign 
       await luaFile("screen", { action: "click", text: "Assign new display items" });
       const { value: set } = await lua(`local p = df.global.game.main_interface.assign_display_item
         if not p.open then emit(false) return end
-        p.new_display_itid:insert('#', ARGS.item_id) emit(true)`, a);
+        for _, id in ipairs(ARGS.ids) do p.new_display_itid:insert('#', id) end emit(true)`, a);
       await luaFile("screen", { action: "key", keys: ["LEAVESCREEN"] });
       await luaFile("screen", { action: "close" });
       const { value: shown } = await lua(`local b = df.building.find(ARGS.building_id)
-        for _, id in ipairs(b.displayed_items) do if id == ARGS.item_id then emit(true) return end end emit(false)`, a);
-      if (!set || !shown) return fail("The display panel did not take the item (is the building finished?).");
-      return text(`Item ${a.item_id} assigned to display ${a.building_id}; a dwarf carries it there.`);
+        local on, n = {}, 0
+        for _, id in ipairs(b.displayed_items) do on[id] = true end
+        for _, id in ipairs(ARGS.ids) do if on[id] then n = n + 1 end end emit(n)`, a);
+      if (!set || !shown) return fail("The display panel did not take the item(s) (is the building finished?).");
+      return text(`${shown} of ${ids.length} item(s) assigned to display ${a.building_id}; dwarves carry them there.`);
     }
     if (a.action === "audit") {
       const {value:report}=await luaFile("audit",a);

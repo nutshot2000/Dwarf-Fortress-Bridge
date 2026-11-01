@@ -90,7 +90,29 @@ tool("df_dig", "Designate a rectangle for digging (or channel/stairs/ramp/chop/g
          emit({engrave_designated = n, not_smoothed_yet = rough})`);
       return text(JSON.stringify(value));
     }
+    // A plain dig over a pending stair mark replaced it: a tunnel crossing a shaft turned the shaft's next stair into
+    // an ordinary dig nobody can reach from the stair above, and the whole shaft stalled. Keep stair marks.
+    const STAIRS = "{UpDownStair=1, UpStair=1, DownStair=1}";
+    const keepStairs = ["dig", "channel", "ramp"].includes(a.kind);
+    const { value: stairMarks } = keepStairs ? await lua(
+      `local S, out = ${STAIRS}, {}
+       for zz = ${a.z}, ${a.z} - ${(a.levels ?? 1) - 1}, -1 do
+         for xx = ${x}, ${x + w - 1} do for yy = ${y}, ${y + h - 1} do
+           local f = dfhack.maps.getTileFlags(xx, yy, zz)
+           if f and S[df.tile_dig_designation[f.dig]] then out[#out + 1] = {xx, yy, zz, f.dig} end
+         end end
+       end
+       emit(out)`) : { value: [] };
     const out = await quickfort("dig", [`${DIG_KEYS[a.kind]}(${w}x${h})`], x, y, a.z, extra,{allow_room_changes:a.allow_room_changes});
+    let stairNote = "";
+    if (stairMarks?.length) {
+      await lua(`for _, p in ipairs(ARGS.tiles) do
+          dfhack.maps.getTileFlags(p[1], p[2], p[3]).dig = p[4]
+          dfhack.maps.getTileBlock(p[1], p[2], p[3]).flags.designated = true
+        end emit(true)`, { tiles: stairMarks });
+      stairNote = `\nKept ${stairMarks.length} pending stair mark(s) inside the area (a ${a.kind} there would cut the shaft): ` +
+        stairMarks.slice(0, 6).map((p) => `${p[0]},${p[1]},${p[2]}`).join("; ");
+    }
     if (["chop", "gather", "undesignate"].includes(a.kind)) {
       const { value } = await lua(`local n=0
         for _,p in ipairs(df.global.world.plants.all) do
@@ -162,7 +184,7 @@ Verified: ${v} of ${want} tile(s) now carry a ${a.kind} designation` +
       ? `\nWARNING: ${under.length} designated tile(s) lie directly under aquifer tiles; once dug, water drips down into them. ` +
         `Undesignate them or dig one level lower. At: ${under.slice(0, 12).join("; ")}${under.length > 12 ? "; ..." : ""}`
       : "";
-    return text(out + note + leak);
+    return text(out + note + leak + stairNote);
   });
 
 tool("df_build", "Place a building, or dry_run=true for a real non-mutating native preview with invalid tile coordinates, terrain/occupancy reasons and ground-item reservations. No placement occurs when preflight rejects the footprint. Keys: wc carpenter, wm mason, wl still, wz kitchen, wu BUTCHER, wb BOWYER, wr craftsdwarf, D trade depot. See df_help topic=keys for the full list. Workshops use their CENTRE tile. Area buildings (p farm, Cw wall, Cf floor) use top-left plus w,h.",
