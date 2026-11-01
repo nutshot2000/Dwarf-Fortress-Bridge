@@ -8,90 +8,81 @@
                               / _ )/ _ \/  _/ _ \/ ___/ __/
                              / _  / , _// // // / (_ / _/
                      =====  /____/_/|_/___/____/\___/___/    =====
-
-                 /\                                                /\
-            /\  /  \           _____________________              /  \   /\
-           /  \/    \  /\     /   ##   _______  ##   \   /\      /    \ /  \
-          /    \     \/  \   |    ##  |   o/  | ##    |_ /  \____/      \    \
-         /      \     \   \  |    ##  |  /|   | ##    | /    \           \    \
-        /        \     \   \_|____##__|__/_\__|_##____|/      \           \    \
-       /__________\_____\_____________________________________\___________\____\
-               ~  your AI plays ~  you watch  ~  strike the earth!  ~
 ```
 
 <div align="center">
 
 **Your AI plays Dwarf Fortress. You grab a drink and watch.**
 
-An MCP server that gives any AI agent (Claude, Codex, OpenCode, Hermes, OpenClaw, Cursor, Gemini...) 56 tools<br>to run a real Dwarf Fortress fortress through DFHack:<br>
-digging, building, trade, war and diplomacy, with a camera that follows the action for you.
+An MCP server that gives any AI agent 57 tools to run a real Dwarf Fortress fortress through DFHack,<br>
+from the first dig to sieges, caravans, nobles and guildhalls, with a camera that shows you the action.
 
 ![Dwarf Fortress](https://img.shields.io/badge/Dwarf%20Fortress-v53%20Steam-8b5a2b)
 ![DFHack](https://img.shields.io/badge/DFHack-53.16-4a7c59)
 ![MCP](https://img.shields.io/badge/MCP-any%20client-6b4fbb)
-![Tools](https://img.shields.io/badge/tools-50-c08a1e)
+![Tools](https://img.shields.io/badge/tools-57-c08a1e)
 ![No cheats](https://img.shields.io/badge/cheats-none-b33a3a)
 
 </div>
 
 ---
 
-## 🎬 What it's like
+## Contents
 
-You start Dwarf Fortress, your AI takes the overseer's chair, and your screen turns into a live broadcast of your fort.
+- [What it's like](#what-its-like)
+- [Quick start](#quick-start)
+- [Connect your AI](#connect-your-ai)
+- [Settings](#settings)
+- [The tools](#the-tools)
+- [How it works](#how-it-works)
+- [Tales from real forts](#tales-from-real-forts)
+- [What the bridge knows about DF v50+](#what-the-bridge-knows-about-df-v50)
+- [Development](#development)
 
-- 🗡️ **A goblin thief slips in at the map edge.** The game pauses, the camera snaps to it, and the AI sends the Hollow Guard. You watch the commander charge across the surface.
-- 🏗️ **Nothing dangerous going on?** The camera tours the fort: a new bedroom wing being dug, a legendary armourer at the forge, a bard performing in the tavern.
-- 🤝 **A caravan or a royal treasurer arrives.** You're there for the meeting and the haggling at the depot.
-- 📜 **The AI narrates** with captions in the game's own announcement log, so you know what you're about to see.
+## What it's like
 
-Tell the camera what you enjoy, and it remembers:
+Start Dwarf Fortress, connect your AI, and say *"play my fort"*. The AI becomes the overseer; your game window
+becomes a live view of what it is doing.
+
+- **Time runs in short, watched steps.** The game unpauses for a few days at a time and stops the moment something
+  matters: a goblin thief at the map edge, a citizen in a fight, a death, a strange mood, a caravan, a migrant wave.
+- **The camera follows the story.** It jumps to fights and arrivals, tracks intruders, and tours interesting work
+  when nothing is happening: a new bedroom wing being dug, a masterwork leaving the forge. Captions in the game's own
+  announcement log say what you are looking at.
+- **The AI explains itself.** It reports what it saw, what it decided and why, and asks you before anything you
+  would want a say in.
+- **It plays fair.** Everything goes through the game's own systems: designations, work orders, zones, the trade
+  screen, petitions. Nothing is spawned, teleported or revealed.
+
+Tell the camera what you like watching, and it remembers:
 
 ```
 df_camera like categories=["fights","hostiles","building","diplomacy"]
 df_camera dislike categories=["farming"]
 ```
 
-## ✨ Highlights
+## Quick start
 
-| | |
-|---|---|
-| 🎥 **Camera director** | Jumps to real fights, tracks enemies, shows arrivals, births, artifacts and moods. Tours interesting work when it's quiet, weighted by your taste. `follow` locks onto any dwarf or creature. |
-| 🚨 **Watchdog** | Time runs in controlled steps that stop the instant something matters: an enemy appears, a dwarf dies, a strange mood starts or a caravan arrives. Optionally sounds the civilian alert and readies the squads by itself. |
-| 📦 **Upkeep** | Keeps drink, barrels, spare furniture, goblets, soap and fuel topped up with work orders, without ever doubling an order. |
-| 🧐 **Diagnosis** | `df_threats` finds disguised werebeasts and lists who killed whom. `df_mood check` says whether a strange mood can be satisfied. `df_items` explains why that barrel nobody uses is stuck. |
-| 🏰 **Tidy builder** | Bedroom wings in three calls, room-value audits against the wiki's rules, overlap detection, stockpile tidiness checks. |
-| ⚔️ **Military** | Squads, uniforms, schedules, patrols, burrows, levers, and an `equip` fix for the game's habit of leaving soldiers unarmed. |
-| 🎲 **No cheating** | Everything goes through the game's own systems. Nothing is spawned, teleported or revealed. |
-
-## 📖 Tales from the first fort
-
-The bridge was built by Claude while playing, and the fort's disasters shaped the tools.
-
-- **The well that ran dry.** The surface pool drained, so the overseer dug a one-tile shaft 40 levels down into the first cavern's lake. The well now draws from water that never runs out.
-- **The werebeast.** A wereiguana arrived disguised as a human and killed four children in the pasture. Two dwarves it had bitten turned at the next full moon. Avuz the broker and Dastot the axedwarf killed them. That's why `df_threats`, the watchdog and petition vetting exist.
-- **The stalled diplomat.** A royal treasurer's meeting froze the depot for days because the broker had no office worth meeting in. The overseer dug one, engraved it and furnished it in iron, and the meeting went ahead.
-- **The near miss.** A search for "scepter" almost carted a strange mood's artifact off to the trade depot. `df_trade send` now refuses artifacts.
-- **The yarn crisis.** A fey weaver needed wool cloth nobody had. With cheating ruled out, the answer was the dwarven caravan, and the mood ended in an artifact shirt with days to spare.
-
-## 🚀 Quick start
-
-1. Install **Dwarf Fortress** and the free **DFHack** app on Steam, then launch the game (the DFHack console opens with it).
+1. Install **Dwarf Fortress** and the free **DFHack** app on Steam, then launch the game. DFHack starts with it.
 2. Install the bridge (needs [Node.js](https://nodejs.org) 18+):
    ```bash
    git clone https://github.com/nutshot2000/Dwarf-Fortress-Bridge.git
    cd Dwarf-Fortress-Bridge
    npm install
    ```
-3. Connect your AI (below), load or embark on a fort, and tell it to play.
+3. Connect your AI (next section), load or embark on a fort, and tell it to play.
 
-If the game isn't in `D:\SteamLibrary`, set `DF_DIR` and `DFHACK_DIR` in the server's environment.
+If the game isn't installed under `D:\SteamLibrary`, set `DF_DIR` and `DFHACK_DIR` (see [Settings](#settings)).
 
-### 🔌 Connect your AI
+`df_screenshot`, which lets vision models look at the real game window, works on Windows. Everything else works
+wherever Dwarf Fortress and DFHack run.
 
-It's a standard **MCP stdio server**: any client that speaks MCP can run it. Replace the path with yours.
-`df_wait` can run for up to 50 seconds per call, so give the server a tool timeout of at least 60 seconds
-(or lower `DF_WAIT_SECONDS`).
+## Connect your AI
+
+It's a standard **MCP stdio server**, so any client that speaks MCP can run it. Replace the path with yours.
+
+`df_wait` can run for up to 50 real seconds per call, so give the server a tool timeout of at least 60 seconds,
+or lower `DF_WAIT_SECONDS`.
 
 <details open>
 <summary><b>Claude Code</b></summary>
@@ -165,8 +156,7 @@ mcp_servers:
   "mcpServers": {
     "dwarf-fortress": {
       "command": "node",
-      "args": ["/path/to/Dwarf-Fortress-Bridge/src/server.js"],
-      "env": { "DF_TOOLS": "full" }
+      "args": ["/path/to/Dwarf-Fortress-Bridge/src/server.js"]
     }
   }
 }
@@ -174,25 +164,52 @@ mcp_servers:
 Cursor: `.cursor/mcp.json` · Claude Desktop: `claude_desktop_config.json` · Gemini CLI: `~/.gemini/settings.json`
 </details>
 
-Config formats change between versions; if a snippet doesn't load, check your client's MCP docs for the current shape.
+Config formats change between client versions; if a snippet doesn't load, check your client's MCP docs.
 
-### ⚙️ Settings
+**The playbook.** The server sends [`PLAYBOOK.md`](PLAYBOOK.md) to the model as its instructions: the turn loop,
+the no-cheating rule, and how to use each tool well. Some clients drop server instructions; if yours does, start
+with *"call df_help topic=playbook first"*.
+
+## Settings
 
 All optional, set in the server's `env`:
 
 | Variable | Default | What it does |
 |---|---|---|
-| `DF_TOOLS` | `full` | `full` = all 56 tools · `core` = 24 essentials for clients with tool limits or smaller models · or a comma-separated list |
+| `DF_TOOLS` | `full` | `full` = all 57 tools · `core` = 24 essentials, for clients with tool limits or smaller models · or a comma-separated list of tool names |
 | `DF_AGENT_NAME` | `Overseer` | The name on camera captions in the game's announcement log, e.g. `Codex` or `Hermes` |
 | `DF_WAIT_SECONDS` | `50` | Real-time cap for one `df_wait` call; keep it under your client's tool timeout |
-| `DF_DIR`, `DFHACK_DIR` | `D:\SteamLibrary\...` | Where Dwarf Fortress and DFHack live |
+| `DF_DIR`, `DFHACK_DIR` | `D:\SteamLibrary\...` | Where Dwarf Fortress and DFHack are installed |
 
-### 📘 The playbook
+## The tools
 
-The server sends [`PLAYBOOK.md`](PLAYBOOK.md) to the model as its instructions: the turn loop, the rules (no cheating), and how to use each tool well.
-Some clients don't pass server instructions on to the model. If yours doesn't, start with *"call df_help topic=playbook first"*.
+| Group | Tools |
+|---|---|
+| Observe | `df_status` `df_problems` `df_units` `df_unit` `df_look` `df_paths` `df_announcements` `df_alerts` `df_screenshot` |
+| Diagnose | `df_threats` `df_items` `df_squad_status` `df_mood` `df_stocks` `df_designations` `df_jobs` |
+| Build | `df_dig` `df_build` `df_stockpile` `df_zone` `df_blueprint` `df_rooms` `df_room_plan` `df_remove` `df_minecart` |
+| Produce | `df_order` `df_upkeep` `df_workshop` `df_crop` `df_kitchen` `df_pile` `df_dump` |
+| People | `df_labor` `df_noble` `df_location` `df_standing` `df_animals` `df_petition` `df_justice` |
+| Defence | `df_military` `df_schedule` `df_burrow` `df_levers` |
+| Trade | `df_trade` |
+| Time | `df_wait` `df_pause` `df_resume` `df_save` |
+| Camera and UI | `df_camera` `df_view` `df_ui` `df_screen` `df_tutorial` |
+| Expert | `df_auto` `df_cmd` `df_lua` `df_help` |
 
-## 🔧 How it works
+Some of what they do beyond the obvious:
+
+| | |
+|---|---|
+| **Watchdog** (`df_wait`) | Runs time in steps and stops for hostiles, citizen fights, deaths, moods, caravans, migrants, petitions and citizens who lose their way out. Clicks away popups, names any panel that froze the clock, and repeats the notices in DFHack's corner box (traders ready, unmet guildhall agreements, mandates near deadline). Can sound the civilian alert and ready the squads by itself. |
+| **Upkeep** | Keeps drink, food storage, spare furniture, goblets, soap and fuel topped up with work orders, without ever doubling an order. |
+| **Threats** | `df_threats` finds disguised werebeasts, vampires and necromancers, and lists who killed whom. `df_petition` vets every petitioner before you accept them. |
+| **Rooms** | Bedroom wings in three calls (dig, furnish, zone), protected walls that later digs can't break, value and requirement audits for every zone, and pedestals and display cases stocked in one call. |
+| **Navigation** | `df_paths` measures real walking distances (stairs and ramps included), so you can see which trips are long and check a new corridor or stairwell before and after. |
+| **Military** | Squads, uniforms, schedules, patrols, burrows and levers. `equip` fills empty uniform slots, prefers real armour over clothing, upgrades to better pieces, and never takes another squad's kit. |
+| **Trade** | Marks goods (unpacking them from bins), refuses artifacts and export-banned items, drives the trade screen and shows the merchant's reply. |
+| **Safety nets** | `df_dig` warns before you dig under an aquifer, keeps a shaft's stair marks when a tunnel crosses it, and can preview (`dry_run`). Every tool rejects misspelt arguments instead of silently ignoring them. |
+
+## How it works
 
 ```mermaid
 flowchart LR
@@ -203,106 +220,125 @@ flowchart LR
     S -. camera, watchdog,<br/>upkeep .-> G
 ```
 
-Each tool writes a short Lua chunk and runs it through `dfhack-run`. Digging, buildings, stockpiles and zones go through DFHack's `quickfort`. There's no game mod and nothing is injected.
+Each tool runs a short Lua script through `dfhack-run`. Digging, buildings, stockpiles and zones go through DFHack's
+`quickfort`; menus that only the UI can drive (trade, petitions, display assignment) are clicked through the game's
+own screens. There is no game mod and nothing is injected.
 
-A turn looks like this: `df_status` → `df_problems` → one action → `df_wait upkeep=true`, with the camera showing you each step.
+A turn looks like: `df_status` → `df_problems` → one action → `df_wait upkeep=true`, with the camera showing each
+step.
 
-## Field-tested fixes (v1.4.1–1.4.3)
+## Tales from real forts
 
-A full first year of play (the fort Spearmirrors: an aquifer crossing, a cavern breach, a caravan, migrant waves) turned
-up rough edges that are now fixed: dig jobs that vanished from the map, ragged stockpiles, refused furniture with no
-reason given, fights that stopped every wait, seasonal autosaves mistaken for open menus, and trade replies that looked
-like refusals. Output is also much shorter. Lua changes now take effect without restarting the server. Details in
-[CHANGELOG.md](CHANGELOG.md).
+The bridge was written by Claude while playing; most of its tools exist because something went wrong.
 
-## Visual inspection (v1.4.0)
+**Flagringed** (year 103–104, 100 dwarves, now a Town)
 
-`df_screenshot` returns the actual Dwarf Fortress window as an MCP PNG image, a saved local PNG path, and text enclosure/access checks. Use `{ "x": 103, "y": 92, "z": 169 }` to centre an inspection, or `{}` to capture the current view. Pause first, inspect workers and exits after construction, and pan for large layouts. `max_width` defaults to1600 (640–2560). Images are saved under `%TEMP%/df-bridge/screenshots/`.
+- **The flooding quarry.** A quarry dug one level under a light aquifer slowly filled with water. The stair ring was
+  walled off and the quarry moved two levels down; `df_dig` and `df_look` now warn about tiles under aquifers.
+- **The chinchillas and the keas.** Keas (thieving parrots) kept stealing bolts and killing chinchilla kits in the
+  surface garden. Chinchillas don't need grass, so the herd moved into an underground burrow off the tavern, and a
+  crossbow squad, the Kea Bane, was formed with an archery range and a stair straight up to the surface.
+- **The guildhalls nobody counted.** Three temple and guildhall agreements were abandoned even though the rooms
+  existed. A bare zoned room is worth about 25 and the game calls it a "meeting place"; the agreement wants a real
+  guildhall. An artifact quern on a pedestal lifted one hall to 8,139 and its agreement was satisfied the same week.
+- **Snatchers.** Goblin thieves came for the children twice. The civilian alert and both squads drove them off; the
+  militia commander killed one.
+- **Exploration pays.** A shaft extended eight levels down struck magnetite, native platinum and gypsum in the first
+  tunnels.
 
-Capture uses built-in Windows PowerShell/.NET and PrintWindow on the game client area only; no extra package, mouse movement, foreground switch, or desktop-wide capture. Restore minimized windows; blank captures fail explicitly. Currently Windows-only. Vision-capable MCP clients receive image content; text-only models still receive layout/access results and instructions to use text tools. A screenshot is one view, and the checks are aids rather than a guarantee that every unit can move.
+**Spearmirrors** (the first fort)
 
-## Room protection and clearer diagnostics (v1.3.1)
+- **The well that ran dry.** The surface pool drained, so the overseer dug a one-tile shaft 40 levels down into the
+  first cavern's lake.
+- **The werebeast.** A wereiguana arrived disguised as a human and killed four children. Two dwarves it had bitten
+  turned at the next full moon. That's why `df_threats`, the watchdog and petition vetting exist.
+- **The stalled diplomat.** A royal treasurer refused to meet without a decent office; the overseer dug one,
+  engraved it and furnished it in iron.
+- **The yarn crisis.** A fey weaver needed wool cloth nobody had. With cheating ruled out, the answer was the
+  dwarven caravan, and the mood ended in an artifact shirt.
 
-Bedroom wings now register protected walls. Digging and blueprints reject changes through protected room boundaries unless `allow_room_changes=true` explicitly permits remodelling. `df_room_plan` protects custom layouts and audits existing bedrooms; `df_rooms` refuses to furnish or zone open rooms. Existing damaged layouts are reported for repair. `df_room_plan action=repair` previews or queues walls, then doors; `action=tidy` previews or marks eligible loose stone/gems within one room. Both default to previews. Status distinguishes pending jobs from finished enclosure, and the playbook includes repair and relocation steps.
-
-Build previews identify invalid tiles, construction reviews distinguish allocated materials from foreign reservations, and crop/trade helpers prevent common supply mistakes. See [ISSUES-REVIEW.md](ISSUES-REVIEW.md) for reproduced issues, model mistakes, test results, and limits.
-
-## 🧰 The 56 tools
-
-| Group | Tools |
-|---|---|
-| 👀 Observe | `df_status` `df_problems` `df_units` `df_unit` `df_announcements` `df_look` `df_alerts` |
-| 🧐 Diagnose | `df_threats` `df_items` `df_squad_status` `df_mood` `df_stocks` `df_designations` |
-| 🏗️ Build | `df_dig` `df_build` `df_stockpile` `df_zone` `df_blueprint` `df_rooms` `df_room_plan` `df_remove` `df_minecart` |
-| ⚒️ Produce | `df_order` `df_upkeep` `df_workshop` `df_jobs` `df_crop` `df_kitchen` `df_pile` `df_dump` |
-| 👥 People | `df_labor` `df_noble` `df_location` `df_standing` `df_animals` `df_petition` `df_justice` |
-| ⚔️ Defence | `df_military` `df_schedule` `df_burrow` `df_levers` |
-| 💰 Trade | `df_trade` |
-| ⏳ Time | `df_wait` `df_pause` `df_resume` `df_save` |
-| 🎥 Watch & UI | `df_camera` `df_ui` `df_screen` `df_view` `df_screenshot` |
-| 🧪 Expert | `df_auto` `df_cmd` `df_lua` `df_help` |
+## What the bridge knows about DF v50+
 
 <details>
-<summary><b>🐛 v50 quirks the tools work around</b> (worth knowing if you script DFHack yourself)</summary>
+<summary><b>Game quirks the tools work around</b> (useful if you script DFHack yourself)</summary>
 
-- **Work orders** need a manager. If the Work orders screen says "A manager is required" although one is appointed, `df_noble action=repair` rebuilds `fortress_entity.assignments_by_type`, the index the game actually checks (found by reverse engineering the game binary). Orders also need a material, so `df_order` defaults to wood or stone.
-- **Panels** (trade, squads, petitions, building sheets) live inside the main screen and ignore Esc sent from scripts; some freeze time while open. `df_ui close` shuts them, and `df_wait` names any panel that stalls the clock.
-- **Popups** (weapon namings and the like) pause the game until their Okay button is clicked; `df_wait` clicks them away.
-- **Engraving**: quickfort's engrave key designates nothing in v50, so `df_dig kind=engrave` sets the designation directly.
-- **Uniforms**: soldiers only fetch items listed in their position's `assigned_items`. `df_military equip` fills empty slots and keeps that list in sync.
-- **Kill orders** are ignored for targets the game doesn't count as hostile, like a werebeast in human form. Station the squad nearby instead.
-- **Diplomats** meet nobles in an office of decent quality, or the meeting and depot trading stall. Office zones should include their walls; engraving and metal furniture raise the value.
-- **Follow mode** (`plotinfo.follow_unit`) switches itself off, so the camera director follows units itself.
-- **Dumps** forbid whatever lands in them; `df_dump action=unforbid` makes dumped stone usable again.
-- **Linked stockpiles**: a workshop with linked "give" piles only takes from those piles.
-- **Farm plots** reset to fallow when construction finishes, so set crops afterwards.
-- **Damp stone**: digging next to water or a light aquifer cancels the designation once ("damp stone located");
-  designating the same tiles again confirms it. Water standing on a floor also makes the rock around it "damp" and
-  cancels nearby digs silently. A light aquifer drips into tiles dug directly beneath it, so the level right under an
-  aquifer layer is unusable for rooms. The playbook explains crossing one with a walled shaft ring.
-- **Dig jobs** clear the tile's dig flag once a dwarf takes them, so a plain map read shows rock; `df_look` overlays
-  queued dig jobs.
-- **Workshop queues** run front to back and ignore the job's do-now flag; `df_jobs do_now` moves the job forward.
-- **Doors** need an existing wall beside them; in one blueprint with their walls they are refused until the walls are
-  built.
-- **Caravans** have a weight limit: stone mugs and crafts are heavy, cut gems and metal crafts are light.
-- **Seasonal autosave** freezes time for a while at the start of each season.
-- **Wells** need a bucket, a chain or rope, a mechanism and stone blocks. If one of them never turns up, the plan is
-  dropped ("unable to complete the Well"), so make them first. A one-tile channel into a light aquifer under the well
-  makes a safe water source.
-- **Work details** override individual labors: re-applying one (as `df_labor detail_add` does) resets labors toggled
-  by hand, and labors no detail covers (brewing, cooking) come back on. Disable them again afterwards.
-- **Location names**: every location quickfort creates gets the same generated name; `df_zone` sets the requested
-  name as the location's nickname.
-- **Tombs** hold one body each: a big tomb zone over a row of coffins buries one dwarf and leaves the rest lying
-  where they fell. Put a 1x1 tomb zone on every coffin, and remove any larger tomb zone over them: a coffin in two
-  tomb zones is skipped. Ghosts rest once their engraved memorial slab is built (`~s`).
-- **Gear of the dead** (citizens and invaders) is forbidden where it falls; after a fight it stays on the floor until
-  unforbidden; gear the undead or invaders carried (even a raised citizen's own pick) is also flagged `foreign`,
-  which haulers ignore until it is cleared. It needs a weapon/armour stockpile to go to. `df_problems` counts it.
-- **Necromancer migrants** can arrive as ordinary citizens (df_threats lists them by their curse record). When
-  startled they raise every corpse within about 15 tiles as undead hostile to everyone. The game has no expel button
-  for citizens; `df_justice action=exile` banishes one through DFHack's emigration script.
-- **Cave plants indoors**: soil floors underground grow shrubs and fungiwood/tower-cap saplings. Shrubs can be
-  gathered (`df_dig kind=gather`; quarry bush, cave wheat, sweet pod are food and brewing stock). Saplings cannot be
-  chopped; a constructed floor (`df_build key=Cf`) over the tile removes them along with the grass.
-- **Corpses and bones** lie where they fell forever: only vermin remains rot. They get cleaned up with a refuse
-  stockpile or a dump zone plus the `dump_corpses/bones/skulls` standing orders; `gather_refuse_outside` starts off,
-  so bodies on the surface stay even then.
-- **`dfhack.workshops.getJobs`** prints a debug dump for every ore when listing smelter jobs; the bridge mutes it.
+**Digging and water**
+- A light aquifer drips into open tiles directly beneath it, so the level right under an aquifer layer floods
+  slowly. Water on a floor makes nearby rock "damp" and silently cancels digs; designating the same tiles again
+  confirms them.
+- A plain dig over a pending stair mark replaces it, and a dig directly under a stair can't be reached, so a shaft
+  stalls with every miner idle. `df_dig` keeps stair marks.
+- Dig jobs clear the tile's dig flag once a dwarf takes them; `df_look` overlays queued dig jobs.
+- quickfort's engrave key designates nothing in v50; `df_dig kind=engrave` sets it directly.
+
+**Work and workshops**
+- Work orders need a manager. If the game says "A manager is required" although one is appointed, `df_noble
+  action=repair` rebuilds the index the game checks.
+- Many v53 workshop items (wooden chairs, shields) are reactions that need an edged tool; the native "construct"
+  jobs for hatch covers and thrones need none.
+- A workshop with linked "give" stockpiles takes every input only from them, empty barrels included.
+- DFHack has no task catalogue for bowyers, clothiers or kennels; the bridge adds bowyer jobs and points to
+  `df_order` for the rest.
+- Workshop queues run front to back and ignore the do-now flag; `df_jobs do_now` moves a job forward.
+- Farm plots reset to fallow when construction finishes, so set crops afterwards.
+
+**Rooms, locations and nobles**
+- Temple and guildhall agreements need the location to reach tier 1 (a guildhall reached it at about 2,500 value);
+  they are abandoned after about a year. Artifacts and masterwork crafts on display raise the value.
+- A temple dedicated to a religion is set through the location's deity fields; a guildhall needs its guild's
+  profession, which a guild's name doesn't tell you ("The Mechanical Guild" is craftsdwarves).
+- Diplomats meet nobles in an office of decent quality, or the meeting and depot trading stall.
+- Tombs hold one body each: put a 1x1 tomb zone on every coffin.
+- Every location quickfort creates gets the same generated name; `df_zone` sets the requested one.
+
+**Military**
+- Soldiers only fetch items listed in their position's assigned items; `df_military equip` keeps that in sync.
+- A crossbow uniform applied from a script has no ammunition entry, so marksdwarves never pick up bolts; the bridge
+  adds one.
+- In an off-duty month soldiers change into civilian clothes and drop their uniform where they stand.
+  `df_squad_status` says so; `train routine=constant` keeps a squad in uniform.
+- Kill orders are ignored for targets the game doesn't count as hostile, such as a werebeast in human form.
+
+**Trade and animals**
+- Marking an item for trade while it sits in a bin never creates a haul job; `df_trade send` unpacks it first.
+- Elves are offended by wood and animal-product goods.
+- DFHack's autobutcher, once enabled, culls every species unless `noautowatch` is set first.
+- Guard dogs in a pasture can kill other animals there once those revert to wild.
+
+**Interface**
+- Panels (trade, squads, petitions, building sheets) ignore Esc sent from scripts and some freeze time; `df_ui close`
+  shuts them. Popups pause the game until their Okay button is clicked; `df_wait` clicks them.
+- A seasonal autosave freezes time for a while at the start of each season.
+- Follow mode switches itself off, so the camera director follows units itself.
+
+**Leftovers**
+- Gear of the dead is forbidden where it falls, and invaders' gear is flagged foreign; haulers ignore both until
+  cleared. `df_problems` counts it.
+- Dumps forbid what lands in them; `df_dump action=unforbid` makes dumped stone usable again.
+- An item can stay "held" by a unit that no longer exists, so nobody can ever pick it up.
 
 </details>
 
-## 🛠️ Development
+## Development
 
-- `PLAYBOOK.md` is the model's operating guide, `src/core.js` holds the server, settings and helpers, `src/camera.js` the camera director, `src/tools/*.js` one file per area, and `lua/` the Lua behind each tool.
+| Path | What's there |
+|---|---|
+| [`PLAYBOOK.md`](PLAYBOOK.md) | The model's operating guide, sent as the server's instructions |
+| [`AGENTS.md`](AGENTS.md) | Notes for AI coding agents working on the bridge |
+| `src/server.js`, `src/core.js` | Server start, tool registration, settings and helpers |
+| `src/camera.js` | The camera director |
+| `src/tools/*.js` | Tools, one file per area |
+| `lua/` | The DFHack Lua behind each tool |
+| [`CHANGELOG.md`](CHANGELOG.md) | Notable changes per release |
+| [`FORTRESS.md`](FORTRESS.md), [`ISSUES-REVIEW.md`](ISSUES-REVIEW.md), [`TUTORIAL-VALIDATION.md`](TUTORIAL-VALIDATION.md) | Play logs and test reports |
+
 - Try one tool: `node scripts/call.mjs df_look "{\"radius\":20}"`
-- Several calls in one session (the camera keeps state in the server): `node scripts/session.mjs '[["df_camera",{"action":"follow","name":"Urist"}],["df_wait",{"days":1}]]'`
-- Tests: `npm test` runs every read-only tool against the running game and changes nothing; `npm run test:offline` only checks that all tools register.
-- Lua files reload automatically when edited. Changes under `src/` need the MCP server restarted (reconnect it in your
-  client, or stop its `node src/server.js` process if your client relaunches it). `scripts/call.mjs` always starts a
-  fresh server, so it tests new JS right away.
-- Notable changes per release are in [CHANGELOG.md](CHANGELOG.md).
+- Several calls in one server session (the camera keeps state in the server):
+  `node scripts/session.mjs '[["df_camera",{"action":"follow","name":"Urist"}],["df_wait",{"days":1}]]'`
+- `npm run test:offline` checks that every tool registers; `npm test` runs every read-only tool against the running
+  game and changes nothing.
+- Lua files reload automatically when edited. Changes under `src/` need the MCP server restarted;
+  `scripts/call.mjs` always starts a fresh server, so it tests new JS right away.
 
 <div align="center">
 
