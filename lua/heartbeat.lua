@@ -45,6 +45,11 @@ for _, u in ipairs(df.global.world.units.active) do
         local id = logs.Combat[i]
         if id <= ARGS.since then break end
         local rep = not ignored[id] and df.report.find(id)
+        -- The combat log also holds the dwarves' talk about a conflict (CONFLICT_CONVERSATION: "This is my fight
+        -- too", even "I had a bath" while a far-off buzzard counts as a fight) and its after-effects (standing up,
+        -- freeing oneself from a web). Only blows mean a fight.
+        local ty = rep and df.announcement_type[rep.type] or ''
+        if rep and not (ty:find('^COMBAT_') or ty:find('GRIP$')) then rep = nil end
         if rep then
           local list=ARGS.report_animal_combat and not dfhack.units.isCitizen(u) and animal_combat or combat
           list[#list + 1] = {unit_id = u.id, name = unit_name(u), report_id = id,

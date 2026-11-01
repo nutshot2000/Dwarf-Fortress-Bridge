@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4.22
+
+- The `df_wait` watchdog no longer stops for dwarves *talking* about a fight. DF files their conflict chatter
+  ("This is my fight too", even "I had a bath") in the combat log, so a dozen buzzards circling far overhead stopped
+  every wait within seconds. Only blows (`COMBAT_*` and grip reports) count as a fight now.
+
 ## 1.4.21
 
 - The trapped-citizen check (`df_problems`, `df_screenshot`, the `df_wait` watchdog) now notices dwarves shut out
