@@ -180,9 +180,41 @@ if action == 'equip' then
   -- equipment pass does (slot.assigned + plotinfo.equipment assigned/unassigned index).
   -- Use when dwarves stay unequipped although matching gear exists.
   local E = df.global.plotinfo.equipment
+  -- Gear assigned to ANY squad is taken, not only this one's: an off-duty soldier's uniform lies unworn in a
+  -- cabinet or on the floor and looked free, so equipping the new crossbow squad stripped the melee squad's iron.
+  -- Heal earlier double assignments: an item in this squad's slot that another squad's slot also holds stays
+  -- here only if this soldier is wearing it; otherwise the slot lets it go and is refilled below.
+  local elsewhere = {}
+  for _, s2 in ipairs(df.global.world.squads.all) do
+    if s2.id ~= sq.id then
+      for _, p in ipairs(s2.positions) do for s = 0, 6 do for _, sp in ipairs(p.equipment.uniform[s]) do
+        for _, id in ipairs(sp.assigned) do elsewhere[id] = true end end end end
+    end
+  end
+  local released = {}
+  for _, p in ipairs(sq.positions) do
+    local hf = p.occupant >= 0 and df.historical_figure.find(p.occupant)
+    local u = hf and df.unit.find(hf.unit_id)
+    for s = 0, 6 do for _, sp in ipairs(p.equipment.uniform[s]) do
+      for k = #sp.assigned - 1, 0, -1 do
+        local id = sp.assigned[k]
+        local it = elsewhere[id] and df.item.find(id)
+        local holder = it and dfhack.items.getHolderUnit(it)
+        if it and not (u and holder and holder.id == u.id) then
+          sp.assigned:erase(k)
+          local ai = utils.linear_index(p.equipment.assigned_items, id)
+          if ai then p.equipment.assigned_items:erase(ai) end
+          released[#released + 1] = (u and unit_name(u) or '?') .. ': ' .. dfhack.df2utf(dfhack.items.getReadableDescription(it))
+            .. ' (also assigned to another squad)'
+        end
+      end
+    end end
+  end
   local taken = {}
-  for _, p in ipairs(sq.positions) do for s = 0, 6 do for _, sp in ipairs(p.equipment.uniform[s]) do
-    for _, id in ipairs(sp.assigned) do taken[id] = true end end end end
+  for _, s2 in ipairs(df.global.world.squads.all) do
+    for _, p in ipairs(s2.positions) do for s = 0, 6 do for _, sp in ipairs(p.equipment.uniform[s]) do
+      for _, id in ipairs(sp.assigned) do taken[id] = true end end end end
+  end
   local function is_metal(it)
     local m = dfhack.matinfo.decode(it)
     return m and m.material and m.material.flags.IS_METAL
@@ -307,7 +339,7 @@ if action == 'equip' then
       end
     end end end
   end
-  emit({ok = true, assigned = done, still_missing = missing, synced = synced,
+  emit({ok = true, assigned = done, released = #released > 0 and released or nil, still_missing = missing, synced = synced,
     hint = 'Dwarves now collect the assigned items. still_missing = make or buy those.'}) return
 end
 

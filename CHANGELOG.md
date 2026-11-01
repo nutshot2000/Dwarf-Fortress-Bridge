@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.4.16
+
+- `df_military equip` no longer takes gear assigned to another squad. It only skipped its own squad's items, so an
+  off-duty squad's unworn uniforms looked free: equipping a new crossbow squad stripped the melee squad's iron.
+- `df_military equip` also heals such double assignments: an item held by two squads stays with the soldier wearing
+  it, and the other slot is refilled (listed under `released`).
+
 ## 1.4.15
 
 - `df_squad_status` says when a squad is off duty this month (its routine has no orders): soldiers then wear civilian
