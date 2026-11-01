@@ -187,6 +187,57 @@ if action == 'dedicate' then
   emit({ok = true, location = lname(loc), dedicated_to = dedication(loc)}) return
 end
 
+-- Priests of a temple's religion at this site. Recognizing the priesthood (a UI button, pressed from JS) adds a
+-- vacant PRIEST assignment to the religion entity with st_id = this site; appointing fills it the way the game
+-- does: histfig and histfig2, plus a position link on the figure with -1 vector indices.
+local function temple_religion(b)
+  if not df.abstract_building_templest:is_instance(b) then return nil, lname(b) .. ' is not a temple' end
+  if b.deity_type ~= P.RELIGION_ENID then return nil, lname(b) .. ' is not dedicated to a religion (df_location dedicate)' end
+  local e = df.historical_entity.find(b.deity_data.Religion)
+  if not e then return nil, 'religion entity missing' end
+  return e
+end
+local function priest_posts(e)
+  local codes, out = {}, {}
+  for _, p in ipairs(e.positions.own) do codes[p.id] = p.code end
+  for _, a in ipairs(e.positions.assignments) do
+    if a.st_id == site.id then
+      local hf = a.histfig >= 0 and df.historical_figure.find(a.histfig)
+      out[#out + 1] = {assignment = a, code = codes[a.position_id] or ('position ' .. a.position_id),
+        holder = hf and ename(hf.name) or nil}
+    end
+  end
+  return out
+end
+local function posts_info(posts)
+  local t = {}
+  for _, p in ipairs(posts) do t[#t + 1] = {position = p.code, holder = p.holder or 'vacant'} end
+  return t
+end
+
+if action == 'priests' or action == 'priest' then
+  local e, err = temple_religion(loc)
+  if not e then emit({error = err}) return end
+  local posts = priest_posts(e)
+  if action == 'priests' then
+    emit({location = lname(loc), religion = ename(e.name), recognized = #posts > 0, posts = posts_info(posts)}) return
+  end
+  local u = df.unit.find(ARGS.unit_id or -1)
+  local hf = u and df.historical_figure.find(u.hist_figure_id)
+  if not hf then emit({error = 'No unit ' .. tostring(ARGS.unit_id) .. ' with a historical figure'}) return end
+  local slot
+  for _, p in ipairs(posts) do if not p.holder and p.code == 'PRIEST' then slot = p.assignment break end end
+  for _, p in ipairs(posts) do if not slot and not p.holder then slot = p.assignment end end
+  if not slot then
+    emit({error = #posts == 0 and 'The priesthood is not recognized here yet' or 'No vacant priest post', posts = posts_info(posts)}) return
+  end
+  slot.histfig = hf.id
+  slot.histfig2 = hf.id
+  hf.entity_links:insert('#', {new = df.histfig_entity_link_positionst, entity_id = e.id, link_strength = 100,
+    assignment_id = slot.id, assignment_vector_idx = -1, entity_vector_idx = -1, start_year = df.global.cur_year})
+  emit({ok = true, location = lname(loc), religion = ename(e.name), appointed = unit_name(u), posts = posts_info(priest_posts(e))}) return
+end
+
 if action == 'remove' then
   local n = 0
   for _, o in ipairs(loc.occupations) do

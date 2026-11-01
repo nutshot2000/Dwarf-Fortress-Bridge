@@ -181,9 +181,32 @@ tool("df_mood", "Strange moods: which dwarf is in a mood, which workshop they cl
     return text((value ?? "").replace(/◙/g, "\n").trim() || "No dwarf is in a strange mood.");
   });
 
-tool("df_location", "Locations and their occupations. list: taverns, hospitals, temples, libraries, guildhalls with their zones and occupation slots (create a location with df_zone location=...). assign: give unit_id an occupation at location_id: DOCTOR, DIAGNOSTICIAN, SURGEON, BONE_DOCTOR (hospital), TAVERN_KEEPER, PERFORMER (tavern), SCHOLAR, SCRIBE (library). remove: clear unit_id (or occupation_id) from location_id. attach: put location_id on zone_id (a purpose-built room), detach_others=true to release its old zones; keeps name and staff. dedicate: set what temple location_id is for: religion=<name or id> (this answers an approved temple petition from that religion), deity=<name or id>, or all_faiths=true; with none of these it lists the religions and deities citizens follow, with follower counts.",
-  { action: z.enum(["list", "assign", "remove", "attach", "dedicate"]).default("list"), location_id: z.number().int().optional(), zone_id: z.number().int().optional(), detach_others: z.boolean().optional(),
+tool("df_location", "Locations and their occupations. list: taverns, hospitals, temples, libraries, guildhalls with their zones and occupation slots (create a location with df_zone location=...). assign: give unit_id an occupation at location_id: DOCTOR, DIAGNOSTICIAN, SURGEON, BONE_DOCTOR (hospital), TAVERN_KEEPER, PERFORMER (tavern), SCHOLAR, SCRIBE (library). remove: clear unit_id (or occupation_id) from location_id. attach: put location_id on zone_id (a purpose-built room), detach_others=true to release its old zones; keeps name and staff. dedicate: set what temple location_id is for: religion=<name or id> (this answers an approved temple petition from that religion), deity=<name or id>, or all_faiths=true; with none of these it lists the religions and deities citizens follow, with follower counts. priesthood: for a temple dedicated to a religion, press \"Recognize priesthood\" when the game offers it (\"The priesthood of X is ready to be recognized\" - this satisfies that temple agreement), and with unit_id appoint that citizen to the vacant priest post. priests: list the temple's priest posts here.",
+  { action: z.enum(["list", "assign", "remove", "attach", "dedicate", "priesthood", "priests"]).default("list"), location_id: z.number().int().optional(), zone_id: z.number().int().optional(), detach_others: z.boolean().optional(),
     unit_id: z.number().int().optional(), occupation: z.string().optional(), occupation_id: z.number().int().optional(),
     religion: z.union([z.string(), z.number().int()]).optional(), deity: z.union([z.string(), z.number().int()]).optional(),
     all_faiths: z.boolean().optional() },
-  (a) => luaTool("location", a));
+  async (a) => {
+    if (a.action !== "priesthood") return luaTool("location", a);
+    const { value: before } = await luaFile("location", { action: "priests", location_id: a.location_id });
+    if (before?.error) return fail(before.error);
+    // The button lives in the location details panel. Opened from Lua it renders only with context 1 (as from
+    // the zone sheet's location chooser); with the default context it draws an empty panel.
+    const { value: opened } = await lua(`local site = dfhack.world.getCurrentSite()
+      local ab for _, b in ipairs(site.buildings) do if b.id == ARGS.id then ab = b end end
+      if not ab then emit(false) return end
+      local ld = df.global.game.main_interface.location_details
+      ld.selected_ab = ab ld.context = 1 ld.open = true emit(true)`, { id: a.location_id });
+    let pressed = false;
+    if (opened) {
+      const { value: f } = await luaFile("screen", { action: "find", text: "Recognize priesthood" });
+      if (f?.hits?.length) { await luaFile("screen", { action: "click", text: "Recognize priesthood" }); pressed = true; }
+    }
+    await luaFile("screen", { action: "close" });
+    await lua(`local ld = df.global.game.main_interface.location_details ld.open = false ld.selected_ab = nil emit(true)`);
+    const { value: after } = await luaFile("location", a.unit_id !== undefined
+      ? { action: "priest", location_id: a.location_id, unit_id: a.unit_id }
+      : { action: "priests", location_id: a.location_id });
+    if (after?.error) return fail(JSON.stringify({ recognized_now: pressed, ...after }));
+    return text(JSON.stringify({ recognized_now: pressed, was_recognized: before.recognized, ...after }, null, 1));
+  });

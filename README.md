@@ -287,6 +287,8 @@ The bridge was written by Claude while playing; most of its tools exist because 
   they are abandoned after about a year. Artifacts and masterwork crafts on display raise the value.
 - A temple dedicated to a religion is set through the location's deity fields; a guildhall needs its guild's
   profession, which a guild's name doesn't tell you ("The Mechanical Guild" is craftsdwarves).
+- Recognizing a temple's priesthood is a button in the location details panel, which only draws when opened with
+  the right context; `df_location action=priesthood` presses it and can appoint the priest.
 - Diplomats meet nobles in an office of decent quality, or the meeting and depot trading stall.
 - Tombs hold one body each: put a 1x1 tomb zone on every coffin.
 - Every location quickfort creates gets the same generated name; `df_zone` sets the requested one.

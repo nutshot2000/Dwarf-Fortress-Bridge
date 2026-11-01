@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.4.20
+
+- `df_location action=priesthood location_id=<temple>` presses "Recognize priesthood" when the game offers it
+  (that satisfies the religion's temple agreement), and with `unit_id` appoints that citizen to the temple's vacant
+  priest post. `action=priests` lists the posts. No tool could reach that button before, and an unrecognized
+  priesthood cost a temple agreement. The location details panel only draws when opened with context 1.
+
 ## 1.4.19
 
 - `df_military kill` no longer warns that soldiers will ignore wild creatures. Troglodytes and pets gone feral
