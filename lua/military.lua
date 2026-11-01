@@ -71,8 +71,16 @@ if action == 'status' then
           end
         end
       end
+      -- A month of the routine with no orders is off duty: soldiers change into civilian clothes and leave the
+      -- uniform wherever they stand (a captain's whole kit lay on a shrine floor), so worn drops to 0 by design.
+      local duty
+      local month = try(function() return s.schedule.routine[s.cur_routine_idx].month[df.global.cur_year_tick // 33600] end)
+      if month and #month.orders == 0 then
+        duty = 'off duty this month: civilian clothes, uniforms put away or dropped (low worn counts are expected). '
+          .. 'df_military train routine=constant keeps them in uniform all year.'
+      end
       out[#out + 1] = {id = s.id, name = dfhack.df2utf(s.alias ~= '' and s.alias or dfhack.translation.translateName(s.name, true)),
-        routine = rt and rt.name, orders = orders, members = members,
+        routine = rt and rt.name, duty = duty, orders = orders, members = members,
         released_stale = #stale > 0 and stale or nil}
     end
   end

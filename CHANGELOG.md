@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4.15
+
+- `df_squad_status` says when a squad is off duty this month (its routine has no orders): soldiers then wear civilian
+  clothes and drop the uniform where they stand, so 0/10 worn is expected, not a stuck soldier. It points to
+  `df_military train routine=constant` for a squad that should stay in uniform.
+
 ## 1.4.14
 
 - `df_workshop` lists and queues bowyer tasks (wooden/bone crossbows and bolts); the bowyer task list was empty
