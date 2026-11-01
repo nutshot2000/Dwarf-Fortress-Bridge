@@ -7,7 +7,11 @@ local cits = citizens()
 local pop = #cits
 local access=citizen_access_report(cits)
 for _,u in ipairs(access.isolated) do
-  add('high',('Potentially trapped: %s (#%d) at %d,%d,%d has no walking connection to the main citizen group. Inspect/reopen a safe passage; do not remove bedroom walls blindly.'):format(u.name,u.id,u.x,u.y,u.z))
+  if u.behind_locked_door then
+    add('high',('Shut out: %s (#%d) at %d,%d,%d can reach the others only through a locked door or hatch. Unlock it (door_flags.forbidden) until they are back.'):format(u.name,u.id,u.x,u.y,u.z))
+  else
+    add('high',('Potentially trapped: %s (#%d) at %d,%d,%d has no walking connection to the main citizen group. Inspect/reopen a safe passage; do not remove bedroom walls blindly.'):format(u.name,u.id,u.x,u.y,u.z))
+  end
 end
 
 local usable = stock_usable

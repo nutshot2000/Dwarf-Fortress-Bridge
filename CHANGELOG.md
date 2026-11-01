@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.4.21
+
+- The trapped-citizen check (`df_problems`, `df_screenshot`, the `df_wait` watchdog) now notices dwarves shut out
+  behind a locked door or hatch. The game's walk groups ignore locks, so a craftsdwarf locked into a cavern was never
+  reported and died there. With any lock in place the check walks the fort treating locked doors as walls, and
+  `df_problems` says "Shut out ... unlock it".
+
 ## 1.4.20
 
 - `df_location action=priesthood location_id=<temple>` presses "Recognize priesthood" when the game offers it

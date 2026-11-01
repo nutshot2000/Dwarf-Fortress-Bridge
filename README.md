@@ -318,6 +318,8 @@ The bridge was written by Claude while playing; most of its tools exist because 
 - Gear of the dead is forbidden where it falls, and invaders' gear is flagged foreign; haulers ignore both until
   cleared. `df_problems` counts it.
 - Dumps forbid what lands in them; `df_dump action=unforbid` makes dumped stone usable again.
+- The game's walkability map treats locked doors and hatches as open, so a dwarf shut out behind one never shows as
+  trapped; the bridge's access check walks around locks itself.
 - An item can stay "held" by a unit that no longer exists, so nobody can ever pick it up.
 
 </details>

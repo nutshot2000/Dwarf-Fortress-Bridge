@@ -93,6 +93,53 @@ local function citizen_access_report(units, connected)
     for i=2,#groups do for _,u in ipairs(groups[i]) do
       isolated[#isolated+1]={id=u.id,name=try(function() return unit_name(u) end,tostring(u.id)),x=u.pos.x,y=u.pos.y,z=u.pos.z}
     end end
+    -- The game's walk groups ignore door locks: a dwarf shut out behind a locked door or hatch still counts as
+    -- connected (a craftsdwarf left in a cavern behind a locked door died there unreported). With any lock in
+    -- place, walk from the main group treating locked doors and hatches as walls; stop once all are found.
+    local locked={}
+    for _,v in ipairs({'DOOR','HATCH'}) do for _,b in ipairs(df.global.world.buildings.other[v]) do
+      if b.door_flags.forbidden then locked[(b.z*1000+b.centery)*1000+b.centerx]=true end
+    end end
+    if next(locked) and #main>1 then
+      local S=df.tiletype_shape
+      local function walk(x,y,z)
+        local k=(z*1000+y)*1000+x
+        if locked[k] then return nil end
+        local t=dfhack.maps.getTileType(x,y,z) if not t then return nil end
+        local s=df.tiletype.attrs[t].shape
+        if s==S.WALL or s==S.EMPTY or s==S.NONE or s==S.BRANCH or s==S.TWIG or s==S.TRUNK_BRANCH then return nil end
+        return s
+      end
+      local function reach(p0)
+        local want,left,total={},0,0
+        for _,u in ipairs(main) do local k=(u.pos.z*1000+u.pos.y)*1000+u.pos.x if not want[k] then want[k]={} left=left+1 end table.insert(want[k],u) total=total+1 end
+        local k0=(p0.z*1000+p0.y)*1000+p0.x
+        local seen,q,h={[k0]=true},{{p0.x,p0.y,p0.z}},1
+        if want[k0] then want[k0]=nil left=left-1 end
+        while h<=#q and left>0 do
+          local x,y,z=q[h][1],q[h][2],q[h][3] h=h+1
+          local s=walk(x,y,z)
+          local function push(a,b,c)
+            local k=(c*1000+b)*1000+a
+            if not seen[k] and walk(a,b,c) then seen[k]=true q[#q+1]={a,b,c} if want[k] then want[k]=nil left=left-1 end end
+          end
+          for dx=-1,1 do for dy=-1,1 do if dx~=0 or dy~=0 then push(x+dx,y+dy,z) end end end
+          if s==S.STAIR_UP or s==S.STAIR_UPDOWN then local s2=walk(x,y,z+1) if s2==S.STAIR_DOWN or s2==S.STAIR_UPDOWN then push(x,y,z+1) end end
+          if s==S.STAIR_DOWN or s==S.STAIR_UPDOWN then local s2=walk(x,y,z-1) if s2==S.STAIR_UP or s2==S.STAIR_UPDOWN then push(x,y,z-1) end end
+          if s==S.RAMP then for dx=-1,1 do for dy=-1,1 do push(x+dx,y+dy,z+1) end end end
+          for dx=-1,1 do for dy=-1,1 do if walk(x+dx,y+dy,z-1)==S.RAMP then push(x+dx,y+dy,z-1) end end end
+        end
+        local missed=0 for _,us in pairs(want) do missed=missed+#us end
+        return want,missed,total
+      end
+      local want,missed,total=reach(main[1].pos)
+      -- the starting citizen may be the one shut out: then start again from someone it could not reach
+      if missed>total/2 then local _,us=next(want) want=select(1,reach(us[1].pos)) end
+      for _,us in pairs(want) do for _,u in ipairs(us) do
+        isolated[#isolated+1]={id=u.id,name=try(function() return unit_name(u) end,tostring(u.id)),x=u.pos.x,y=u.pos.y,z=u.pos.z,
+          behind_locked_door=true}
+      end end
+    end
   end
   return {checked=n>1,main_group_size=#main,citizens_checked=n,isolated=isolated,
     guidance='Disconnected citizens may be trapped. Inspect walls, doors, stairs and access to supplies. Connected does not prove doors are unlocked or the unit is mobile. No majority group means no isolation verdict.'}
