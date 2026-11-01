@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.4.19
+
+- `df_military kill` no longer warns that soldiers will ignore wild creatures. Troglodytes and pets gone feral
+  were hunted down although the game did not flag them dangerous; the old warning steered squads to a station
+  while a troglodyte killed a jeweler. The warning now covers only non-hostile members of a civilization
+  (a werebeast in human form, a visitor). Tool description, PLAYBOOK and README say the same.
+
 ## 1.4.18
 
 - `df_wait` and `df_status` repeat the notices DFHack shows in its corner box (traders ready to trade, "N petition

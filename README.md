@@ -297,7 +297,8 @@ The bridge was written by Claude while playing; most of its tools exist because 
   adds one.
 - In an off-duty month soldiers change into civilian clothes and drop their uniform where they stand.
   `df_squad_status` says so; `train routine=constant` keeps a squad in uniform.
-- Kill orders are ignored for targets the game doesn't count as hostile, such as a werebeast in human form.
+- Kill orders are ignored for members of a civilization the game doesn't count as hostile, such as a werebeast in
+  human form or a visitor. Wild creatures are hunted down even though the game doesn't flag them as dangerous.
 
 **Trade and animals**
 - Marking an item for trade while it sits in a bin never creates a haul job; `df_trade send` unpacks it first.

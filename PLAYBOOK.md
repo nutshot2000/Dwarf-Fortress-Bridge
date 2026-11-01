@@ -174,7 +174,9 @@ If something seems impossible without a cheat, tell the player instead.
 ## Defence
 
 - `df_military`: squads, uniforms (re-equips automatically), `equip` for empty slots, station, kill, cancel. `df_squad_status` shows gear worn vs assigned.
-- Kill orders only work on targets the game counts as hostile (a werebeast in human form is not): station the squad nearby instead.
+- Kill orders work on wild creatures (troglodytes, keas, feral pets) even before they count as hostile; send a squad
+  at once when one attacks a dwarf. Members of a civilization that are not hostile (a werebeast in human form, a
+  visitor) are ignored: station the squad nearby instead.
 - Siege or undead attack with a weak military: `df_burrow alert_on burrow=Inside` (create the burrow over the
   underground fort first), wait until no citizen is on the surface, then `df_levers action=lock` the entrance door or
   hatch. Unlock and `alert_off clear_units=true` once `df_threats` shows the attackers gone (without clear_units the

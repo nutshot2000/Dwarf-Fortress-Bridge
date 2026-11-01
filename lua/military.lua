@@ -460,11 +460,13 @@ if action == 'kill' then
   o.title = 'Kill'
   o.year, o.year_tick = df.global.cur_year, df.global.cur_year_tick
   sq.orders:insert('#', o)
-  -- soldiers ignore targets the game does not count as hostile (werebeasts in human form, visitors)
+  -- soldiers ignore targets the game does not count as hostile when they belong to a civilization (werebeasts in
+  -- human form, visitors, merchants). Wild creatures (no civ: troglodytes, a pet gone feral) are hunted down even
+  -- though isDanger is false; warning about those sent the squad to the wrong place while a jeweler was killed.
   local calm = {}
   for _, id in ipairs(o.units) do
     local t = df.unit.find(id)
-    if t and not dfhack.units.isDanger(t) then table.insert(calm, unit_name(t)) end
+    if t and not dfhack.units.isDanger(t) and t.civ_id ~= -1 then table.insert(calm, unit_name(t)) end
   end
   emit({ok = true, squad = squad_info(sq), warning = #calm > 0 and
     ('Not hostile right now, soldiers will ignore the order: ' .. table.concat(calm, ', ') ..
