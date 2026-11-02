@@ -43,8 +43,14 @@ const readIndex = (j) => { try { return JSON.parse(fs.readFileSync(path.join(cha
   catch { return { chapters: [], introduced: [] }; } };
 const writeIndex = (j, idx) => fs.writeFileSync(path.join(chaptersDir(j), "index.json"), JSON.stringify(idx, null, 1));
 
+const TONES = {
+  funny: "funny: the deadpan, darkly comic narrator of the guide (the default)",
+  dramatic: "dramatic: tension and loss carry this chapter; humour only in the margins",
+  epic: "epic: a saga voice for sieges, megabeasts and last stands; grand, but every claim still true",
+};
+
 /** Everything that happened since the last chapter, the people in it and how to tell it. */
-function chapterMaterial(j) {
+function chapterMaterial(j, tone = "funny") {
   const book = readCast(j.dir) ?? { dwarves: {} };
   const dwarves = Object.values(book.dwarves);
   const idx = readIndex(j);
@@ -64,6 +70,7 @@ function chapterMaterial(j) {
   const prevText = prev ? (() => { try { return fs.readFileSync(path.join(chaptersDir(j), prev.file), "utf8"); } catch { return ""; } })() : "";
   return {
     chapter: (prev?.n ?? 0) + 1, from: prev?.date ?? book.founded, to: j.date.text, fort: j.fort, world: j.world,
+    tone: TONES[tone],
     situation: founding ? `This is the start of the journal: ${founding.text} Open on what is happening now, not on the founders.` : undefined,
     events: events.length ? events : ["(no recorded events: build the chapter from the overseer's notes and what the dwarves say)"],
     new_characters: [...inChapter.values()].filter((d) => !met.has(d.id)).map((d) => ({ id: d.id, name: d.name, intro: d.intro, fate: d.fate })),
@@ -153,7 +160,8 @@ tool("df_journal", "The fort's journal: a record of its life to tell as a story 
   { action: z.enum(["status", "enable", "disable", "read", "write", "intro", "cast", "chapter", "save_chapter", "story"]).default("status"),
     text: z.string().max(12000).optional(), title: z.string().max(120).optional(), unit_id: z.number().int().optional(),
     unit_ids: z.array(z.number().int()).optional(), tags: z.array(z.string()).optional(), kind: z.string().optional(),
-    limit: z.number().int().min(1).max(200).optional() },
+    limit: z.number().int().min(1).max(200).optional(),
+    tone: z.enum(["funny", "dramatic", "epic"]).optional().describe("chapter: the narrator's voice; funny (deadpan dark comedy) unless the player or the events call for another") },
   async (a) => {
     if (JOURNAL.mode === "off") return fail("The journal is off for every fort (DF_JOURNAL=off in the server settings).");
     const info = await fortInfo();
@@ -193,7 +201,7 @@ tool("df_journal", "The fort's journal: a record of its life to tell as a story 
       if (a.kind) es = es.filter((e) => e.kind === a.kind);
       return text(es.slice(-(a.limit ?? 30)).map(line).join("\n") || "No entries yet.");
     }
-    if (a.action === "chapter") return text(json(chapterMaterial(j)));
+    if (a.action === "chapter") return text(json(chapterMaterial(j, a.tone)));
     if (a.action === "save_chapter") {
       if (!a.title || !a.text) return fail("save_chapter needs title and text (the chapter's prose).");
       return text(json(saveChapter(j, a.title, a.text)));

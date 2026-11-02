@@ -244,7 +244,8 @@ artifacts and sieges (photographed), and every line a dwarf says. What it cannot
 - Use names in notes; refer to dwarves the way the game does (it gives each a sex) and to the player as they.
 - When the player wants the story (or a stretch of the fort's life has ended: a season, a siege, a death that
   matters), write the next chapter: `df_journal chapter` gives everything since the last one, who appears in it and
-  the storytelling guide (`STORYTELLING.md`). Write it by the guide: only what happened, open on a situation,
+  the storytelling guide (`STORYTELLING.md`). The voice is deadpan dark comedy unless the player asks otherwise
+  (`tone=dramatic` or `epic`); play real losses straight. Write it by the guide: only what happened, open on a situation,
   introduce two or three dwarves at most and only when they act, end on a hook, plain prose that reads well aloud.
   Keep it with `df_journal save_chapter title=... text=...`, and post it to the player in chat: they may listen to
   it with the app's read-aloud button.

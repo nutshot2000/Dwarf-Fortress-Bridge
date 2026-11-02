@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.5.1
+
+- The story is funny by default. `STORYTELLING.md` gains a voice: a deadpan narrator of a dark comedy
+  (understatement, timing, running gags, the game's own surgical injury reports quoted straight), with real losses
+  played straight. `df_journal chapter tone=dramatic|epic` for chapters that need another voice.
+- The journal keeps the most gruesome blow of each citizen's fights ("The badger scratches the miner in the left eye
+  and the injured part is torn apart!"), and notices parts lost for good: "Id lost a left eye."
+- `df_announcements` names the citizen behind a blow-by-blow combat line (DF writes "the miner").
+
 ## 1.5.0
 
 - **The fort journal** (`df_journal`), for telling a fort's story later. It is the player's choice per fort: on a

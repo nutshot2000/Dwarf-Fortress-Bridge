@@ -210,6 +210,20 @@ for _, i in ipairs(df.global.world.incidents.all) do
   end
 end
 
+-- Parts lost for good: an eye, a hand. Only the part that came off, not every finger on it.
+local function lost_parts(u)
+  local out = {}
+  local parts, st = u.body.body_plan.body_parts, u.body.components.body_part_status
+  for i = 0, #parts - 1 do
+    local bp = parts[i]
+    local parent = bp.con_part_id
+    if st[i].missing and not (parent >= 0 and st[parent].missing) then
+      out[#out + 1] = dfhack.df2utf(bp.name_singular[0].value)
+    end
+  end
+  return out
+end
+
 local function stress_word(s)
   if not s then return nil end
   if s >= 100000 then return 'falling apart' elseif s >= 50000 then return 'very stressed'
@@ -234,7 +248,7 @@ local function sketch(u)
     child = dfhack.units.isChild(u) or dfhack.units.isBaby(u),
     traits = standout(p, 3, dfhack.units.isChild(u) or dfhack.units.isBaby(u)), baby = dfhack.units.isBaby(u), values = strongest_values(p, 1), likes = likes(soul), dreams = dreams,
     family = hf and family(hf) or {}, close = close, cold = cold, skills = top_skills(u, 2), nobles = nobles,
-    kills = k and k.n or 0, victims = k and k.victims or {},
+    kills = k and k.n or 0, victims = k and k.victims or {}, lost = try(function() return lost_parts(u) end, {}),
     stress = stress_word(unit_stress(u)), mood = u.mood >= 0 and df.mood_type[u.mood] or nil,
     squad = u.military.squad_id >= 0 and (function() local s = df.squad.find(u.military.squad_id)
       return s and dfhack.df2utf(dfhack.translation.translateName(s.name, true)) end)() or nil}

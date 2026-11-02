@@ -122,7 +122,7 @@ const state = (s) => ({
   children: (s.family ?? []).filter((f) => f.relation === "child" && f.here).map((f) => f.hf),
   kills: s.kills ?? 0, legendary: (s.skills ?? []).filter((k) => k.legendary).map((k) => k.skill),
   dreams_done: (s.dreams ?? []).filter((d) => d.done).map((d) => d.dream), nobles: s.nobles ?? [],
-  stress: s.stress, squad: s.squad || null, child: !!s.child,
+  stress: s.stress, squad: s.squad || null, child: !!s.child, lost: s.lost ?? [],
 });
 const famName = (s, hf) => (s.family ?? []).find((f) => f.hf === hf)?.name ?? "someone";
 const KILL_MARKS = [1, 5, 10, 25, 50, 100];
@@ -158,6 +158,8 @@ export async function castBeats(j, cast) {
     for (const n of now.nobles) if (!was.state.nobles?.includes(n)) add({ kind: "office", text: `${who} became ${n.toLowerCase()}.`, units: [s.id] });
     if (now.squad && now.squad !== was.state.squad) add({ kind: "military", text: `${who} joined the squad ${now.squad}.`, units: [s.id] });
     if (was.state.child && !now.child) add({ kind: "growing", text: `${who} has grown up and is now a ${s.profession.toLowerCase()}.`, units: [s.id] });
+    // an older snapshot has no lost parts recorded: take today's as the baseline instead of announcing old wounds
+    if (was.state.lost) for (const part of now.lost) if (!was.state.lost.includes(part)) add({ kind: "wound", text: `${who} lost ${/^[aeiou]/.test(part) ? "an" : "a"} ${part}.`, units: [s.id] });
     const bad = (x) => x === "very stressed" || x === "falling apart";
     if (bad(now.stress) && !bad(was.state.stress)) add({ kind: "mind", text: `${who} is ${now.stress}.`, units: [s.id] });
     if (!bad(now.stress) && bad(was.state.stress)) add({ kind: "mind", text: `${who} has recovered from a dark time.`, units: [s.id] });
@@ -201,10 +203,27 @@ const SPEECH = /^([^:]{3,80}?), ([^:,]{2,40}): (.+)$/;
 const COMBATISH = /^COMBAT|BREAK_GRIP|STAND_UP/;
 const BATTLE_CRY = /This is my fight too|I cannot just stand by|I have a part in this/;
 
+// The fight lines worth retelling: the badger that took an eye, the gem setter whose punch made a troglodyte explode.
+const GORE = [
+  [/gouge|sever|ripped away|explodes into gore|into gore|brain|skull|spine|artery|throat|in the (left|right) eye|eye.* (torn|ripped)/i, 3],
+  [/shatter|smash|crush|torn apart|tearing apart|tearing off|lodged firmly|knocked unconscious|gives in to pain/i, 2],
+  [/vomits|falls over|bites .* in the (nose|ear|lip|cheek|tongue)|latches on/i, 1],
+];
+const gore = (t) => GORE.find(([re]) => re.test(t))?.[1] ?? 0;
+
 /** Log notable announcements and keep the dwarves' spoken thoughts. Returns {entries, shots} to photograph. */
 export function captureAnnouncements(j, messages) {
   const entries = [], shots = [];
   const quotes = [];
+  const fights = new Map(); // citizen -> their most gruesome line this wait
+  for (const m of messages) {
+    if (!/^COMBAT|GRIP|VOMIT|PAIN_KO|STUN|CONSCIOUS/.test(m.type || "") || !m.citizen) continue;
+    const g = gore(m.text);
+    if (g && g > (fights.get(m.citizen)?.g ?? 0)) fights.set(m.citizen, { g, m });
+  }
+  for (const [citizen, { m }] of [...fights].sort((a, b) => b[1].g - a[1].g).slice(0, 5)) {
+    entries.push(addEntry(j.dir, j.date, { kind: "injury", text: `${citizen.replace(/, .*$/, "")} in a fight: ${m.text}`, report: m.id }));
+  }
   for (const m of messages) {
     const type = m.type || "";
     if (/^\[[^\]]+\] /.test(m.text)) continue; // the camera's own captions

@@ -227,7 +227,7 @@ per fort under `Documents/df-journals`:
 | File | What's in it |
 |---|---|
 | `cast.json` | Every dwarf who ever lived here, with a short introduction ("Zuglar Zasittomus is a 49-year-old swordsmaster. He is truly painfully shy and is wasteful. He likes parasaurolophus and apple wood, can't stand worms and dreams of one day being able to craft a masterwork. His children Inod and Monom live here too. Already a legend with the sword."), when they arrived and how they died or left |
-| `journal.jsonl` | The events, dated: deaths with cause and killer, arrivals, marriages and lovers, births, first kills and kill tallies, legends, dreams come true, offices, breakdowns and recoveries, moods and artifacts, sieges, megabeasts and thieves, plus the overseer's own notes |
+| `journal.jsonl` | The events, dated: deaths with cause and killer, arrivals, marriages and lovers, births, first kills and kill tallies, legends, dreams come true, offices, breakdowns and recoveries, lost eyes and hands, the most gruesome blow of each dwarf's fights ("The badger scratches the miner in the left eye and the injured part is torn apart!"), moods and artifacts, sieges, megabeasts and thieves, plus the overseer's own notes |
 | `quotes.jsonl` | Every line a dwarf said ("I had a bath. I do not see the bliss in this.") |
 | `shots/` | Screenshots of the big moments: a citizen's death where the body lies, artifacts, sieges and megabeasts |
 | `chapters/` | The story, written by the AI one chapter at a time |
@@ -241,7 +241,10 @@ The AI adds what automation can't: why it made a call, what went wrong, what was
 since the last chapter, who appears in it (new faces and returning ones) and the storytelling guide,
 [`STORYTELLING.md`](STORYTELLING.md): only what really happened, open on a situation rather than a roll call, two or
 three new characters at most and only when they act, contrast for comedy and tragedy, end on a hook, and plain prose
-that sounds right read aloud (the Claude app's read-aloud button, or a narrator for your video).
+that sounds right read aloud (the Claude app's read-aloud button, or a narrator for your video). The narrator is
+funny by default: deadpan dark comedy, the way the game itself reads ("Id lost his left eye to a badger. He has not
+discussed the badger since."), with real losses played straight. Ask for `dramatic` or `epic` when a chapter
+calls for it.
 
 ## How it works
 

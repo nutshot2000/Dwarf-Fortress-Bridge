@@ -11,6 +11,35 @@ choose, order, compress and comment, and you may say what a dwarf seems to feel 
 a stress level, a breakdown). You may not invent events, dialogue or outcomes. When you don't know how something
 ended, end the chapter on the question.
 
+## The voice: funny by default
+
+Dwarf Fortress is a dark comedy that takes itself completely seriously. Tell it the same way: a dry, deadpan
+narrator who reports outrageous things in a calm voice, and lets the listener do the laughing. Unless the chapter
+asks for another tone, this is the voice.
+
+- **Understatement.** The flatter the delivery, the bigger the laugh. "Id lost his left eye to a badger. He has
+  not discussed the badger since." A legendary axe lord brought down by a turkey is reported like any other death.
+- **Timing.** Set it up, then land it in a short sentence of its own. Don't explain the joke, and don't stack
+  three jokes in a paragraph: one good one is plenty.
+- **The gap is the joke.** Dignity against circumstance: the mayor demanding a crown while the dining hall floods,
+  the pacifist planter married to a weaponsmith, a fortress of ninety dwarves "joining the fight" against a buzzard
+  circling a mile overhead.
+- **Use the game's own precision.** DF describes injuries like a surgeon with no bedside manner ("the injured part
+  explodes into gore"). Quoting it straight is funnier than any adjective. Gore is comedy when it's absurd and the
+  dwarf survives it.
+- **Running gags and callbacks.** The broker who still hasn't said a word. The dwarf who keeps taking baths and
+  keeps not enjoying them. Bring them back; each return is funnier.
+- **The overseer can be the punchline.** "I locked the door. I did not check who was still outside." A narrator
+  who owns their blunders is good company.
+- **Narrator's asides are allowed** (what the badger presumably thought of it all) as long as no listener could
+  mistake them for something that happened.
+- **Know when to stop.** A real loss (a child, a dwarf the story made us love, a fort-breaking disaster) gets
+  played straight: no jokes in that paragraph, one sincere sentence, then the world goes on. Never mock grief.
+  The jokes afterwards land better for it.
+
+Other tones, when the chapter asks for them: **dramatic** (tension and loss, humour only in the margins) and
+**epic** (a saga voice for sieges, megabeasts and last stands).
+
 ## Shape of a chapter
 
 - **Open on a situation, not a cast list.** Something is happening or about to go wrong: a caravan nobody can
