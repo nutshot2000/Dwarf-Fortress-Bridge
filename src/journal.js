@@ -21,13 +21,26 @@ const safe = (s) => String(s).replace(/[<>:"/\\|?*\x00-\x1f]/g, "").replace(/\s+
 const choicesFile = () => path.join(JOURNAL.root, "forts.json");
 const readChoices = () => { try { return JSON.parse(fs.readFileSync(choicesFile(), "utf8")); } catch { return {}; } };
 
-/** The loaded fort: save folder, fort name, today's date, its journal folder and whether the journal is kept. */
+/** The loaded fort: its name and world, today's date, its journal folder and whether the journal is kept. */
 export async function fortInfo() {
   const { value: f } = await luaFile("journal", { action: "fort" });
   if (!f || f.error) throw new Error(f?.error ?? "No fort loaded");
-  const key = safe(`${f.save_dir} - ${f.fort}`);
-  const choice = JOURNAL.mode === "ask" ? readChoices()[key] : JOURNAL.mode;
-  return { ...f, key, dir: path.join(JOURNAL.root, key), choice };
+  // Not the save folder: DF renames that on every save ("region3" becomes "autosave 2").
+  const key = safe(`${f.fort} - ${f.world}`);
+  const dir = path.join(JOURNAL.root, key);
+  const choices = readChoices();
+  // 1.5.0-1.5.1 keyed journals as "<save folder> - <fort>": move such a journal to its lasting name once.
+  if (!(key in choices) && !fs.existsSync(dir)) {
+    const old = Object.keys(choices).find((k) => k.endsWith(` - ${safe(f.fort)}`) && fs.existsSync(path.join(JOURNAL.root, k)));
+    if (old) {
+      fs.renameSync(path.join(JOURNAL.root, old), dir);
+      choices[key] = choices[old];
+      delete choices[old];
+      fs.writeFileSync(choicesFile(), JSON.stringify(choices, null, 1));
+    }
+  }
+  const choice = JOURNAL.mode === "ask" ? choices[key] : JOURNAL.mode;
+  return { ...f, key, dir, choice };
 }
 
 /** Record the player's choice for this fort. */

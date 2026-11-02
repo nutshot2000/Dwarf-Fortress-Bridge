@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.5.2
+
+- The journal forgot it was on after the first save: it was filed under the game's save folder, which DF renames
+  when it saves ("region3" becomes "autosave 2"). Journals are now kept as `<fort> - <world>`; a journal under the
+  old name moves there by itself.
+
 ## 1.5.1
 
 - The story is funny by default. `STORYTELLING.md` gains a voice: a deadpan narrator of a dark comedy
