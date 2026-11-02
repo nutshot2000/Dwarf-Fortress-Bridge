@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.5.4
+
+- The journal records a new couple once, not once from each lover's side.
+- Introductions say "an 18-year-old", "an 80-year-old" and "an 11-year-old".
+
 ## 1.5.3
 
 - Journal photos no longer move the game view while the camera is off (`df_camera off`): the view stays where the

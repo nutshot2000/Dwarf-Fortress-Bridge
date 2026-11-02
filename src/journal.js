@@ -100,7 +100,8 @@ export function intro(s) {
   if (s.baby) out.push(`${name} is a baby.`);
   else if (s.child) out.push(`${name} is a child of ${s.age}.`);
   else if (office === prof) out.push(`${name}, ${s.age}, is the fort's ${office}.`);
-  else out.push(`${name} is a ${s.age}-year-old ${prof}${office ? ` and the fort's ${office}` : ""}.`);
+  // "an 18-year-old", "an 80-year-old", "an 11-year-old": the article follows how the number is said
+  else out.push(`${name} is ${/^(8|11$|18$)/.test(String(s.age)) ? "an" : "a"} ${s.age}-year-old ${prof}${office ? ` and the fort's ${office}` : ""}.`);
   const traits = (s.traits ?? []).map(fix);
   if (traits.length) out.push(`${cap(he)} ${and(traits)}.`);
   const likes = pick([...(s.likes?.like ?? []), ...(s.likes?.food ?? [])], 2, s.id);
@@ -151,6 +152,9 @@ export async function castBeats(j, cast) {
     add({ kind: "founding", text: `The journal of ${j.fort} begins with ${cast.length} dwarves.`, units: cast.map((s) => s.id) });
   }
   const seen = new Set();
+  // a couple is one story beat, not one per partner
+  const couples = new Set();
+  const firstTime = (a, b) => { const k = [a, b].sort((x, y) => x - y).join("+"); if (couples.has(k)) return false; couples.add(k); return true; };
   for (const s of cast) {
     seen.add(String(s.id));
     const was = book.dwarves[s.id];
@@ -167,8 +171,8 @@ export async function castBeats(j, cast) {
       continue;
     }
     const who = s.first_name;
-    for (const hf of now.spouses) if (!was.state.spouses?.includes(hf)) add({ kind: "love", text: `${who} married ${famName(s, hf)}.`, units: [s.id] });
-    for (const hf of now.lovers) if (!was.state.lovers?.includes(hf) && !now.spouses.includes(hf)) add({ kind: "love", text: `${who} and ${famName(s, hf)} became lovers.`, units: [s.id] });
+    for (const hf of now.spouses) if (!was.state.spouses?.includes(hf) && firstTime(s.hf, hf)) add({ kind: "love", text: `${who} married ${famName(s, hf)}.`, units: [s.id] });
+    for (const hf of now.lovers) if (!was.state.lovers?.includes(hf) && !now.spouses.includes(hf) && firstTime(s.hf, hf)) add({ kind: "love", text: `${who} and ${famName(s, hf)} became lovers.`, units: [s.id] });
     for (const hf of now.children) if (!was.state.children?.includes(hf)) add({ kind: "birth", text: `${who} became a parent: ${famName(s, hf)}.`, units: [s.id] });
     const mark = KILL_MARKS.filter((m) => was.state.kills < m && now.kills >= m).at(-1);
     if (mark) add({ kind: "kills", text: mark === 1 ? `${who} made a first kill${s.victims?.length ? `: ${s.victims.at(-1)}` : ""}.` : `${who} has now killed ${now.kills}.`, units: [s.id] });
