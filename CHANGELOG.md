@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.5.0
+
+- **The fort journal** (`df_journal`), for telling a fort's story later. It is the player's choice per fort: on a
+  fort without one, `df_wait` tells the AI to ask once, and `df_journal enable` / `disable` records the answer
+  (`DF_JOURNAL=on` or `off` decides for every fort). Once on, each `df_wait` writes down what happened, one folder
+  per fort under `Documents/df-journals` (`DF_JOURNAL_DIR`): deaths with
+  cause and killer, arrivals with a short book-style introduction of each dwarf (age, work, the traits that stand
+  out, a like or two, a dream, family in the fort), lovers, marriages, births, first kills, legends, dreams come
+  true, offices, breakdowns, moods and artifacts, sieges and megabeasts, and every line a dwarf says. Citizens'
+  deaths, artifacts and invasions are photographed. The overseer adds notes (`write`), meets a dwarf and rewrites
+  their introduction (`intro`), and `story` writes `chronicle.md`: the years season by season, each dwarf introduced
+  where they first appear, photos, the rarest lines overheard, and a who's who at the back.
+- **Chapters.** `df_journal chapter` gives the AI everything since the last chapter, the dwarves in it (new and
+  returning, plus those not yet met) and the storytelling guide, `STORYTELLING.md`: only what happened, open on a
+  situation, introduce dwarves only when they act, end on a hook, prose written to be read aloud. `save_chapter`
+  keeps each one; `story` also binds them into `book.md`.
+- `df_zone` rejects a zone type it does not know. `type="tomb"` was read as four zone keys (t, o, m, b) and stacked
+  an animal-training zone, an office, a meeting hall and a bedroom on a coffin; names like `tomb` and `pasture`
+  now map to their keys.
+- `df_announcements` and `df_wait` carry each report's map position.
+
 ## 1.4.22
 
 - The `df_wait` watchdog no longer stops for dwarves *talking* about a fight. DF files their conflict chatter

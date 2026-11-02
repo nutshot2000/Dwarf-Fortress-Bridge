@@ -14,13 +14,13 @@
 
 **Your AI plays Dwarf Fortress. You grab a drink and watch.**
 
-An MCP server that gives any AI agent 57 tools to run a real Dwarf Fortress fortress through DFHack,<br>
+An MCP server that gives any AI agent 58 tools to run a real Dwarf Fortress fortress through DFHack,<br>
 from the first dig to sieges, caravans, nobles and guildhalls, with a camera that shows you the action.
 
 ![Dwarf Fortress](https://img.shields.io/badge/Dwarf%20Fortress-v53%20Steam-8b5a2b)
 ![DFHack](https://img.shields.io/badge/DFHack-53.16-4a7c59)
 ![MCP](https://img.shields.io/badge/MCP-any%20client-6b4fbb)
-![Tools](https://img.shields.io/badge/tools-57-c08a1e)
+![Tools](https://img.shields.io/badge/tools-58-c08a1e)
 ![No cheats](https://img.shields.io/badge/cheats-none-b33a3a)
 
 </div>
@@ -34,6 +34,7 @@ from the first dig to sieges, caravans, nobles and guildhalls, with a camera tha
 - [Connect your AI](#connect-your-ai)
 - [Settings](#settings)
 - [The tools](#the-tools)
+- [The fort journal](#the-fort-journal)
 - [How it works](#how-it-works)
 - [Tales from real forts](#tales-from-real-forts)
 - [What the bridge knows about DF v50+](#what-the-bridge-knows-about-df-v50)
@@ -51,6 +52,10 @@ becomes a live view of what it is doing.
   announcement log say what you are looking at.
 - **The AI explains itself.** It reports what it saw, what it decided and why, and asks you before anything you
   would want a say in.
+- **It keeps a journal of the fort's life.** Every dwarf is introduced like a character in a book; deaths, lovers,
+  births, first kills, legends, artifacts and sieges are written down (the big moments photographed) along with the
+  overseer's own notes and the strangest things the dwarves say. `df_journal story` turns it into a chronicle you can
+  read, narrate or film. See [The fort journal](#the-fort-journal).
 - **It plays fair.** Everything goes through the game's own systems: designations, work orders, zones, the trade
   screen, petitions. Nothing is spawned, teleported or revealed.
 
@@ -176,9 +181,11 @@ All optional, set in the server's `env`:
 
 | Variable | Default | What it does |
 |---|---|---|
-| `DF_TOOLS` | `full` | `full` = all 57 tools · `core` = 24 essentials, for clients with tool limits or smaller models · or a comma-separated list of tool names |
+| `DF_TOOLS` | `full` | `full` = all 58 tools · `core` = 24 essentials, for clients with tool limits or smaller models · or a comma-separated list of tool names |
 | `DF_AGENT_NAME` | `Overseer` | The name on camera captions in the game's announcement log, e.g. `Codex` or `Hermes` |
 | `DF_WAIT_SECONDS` | `50` | Real-time cap for one `df_wait` call; keep it under your client's tool timeout |
+| `DF_JOURNAL` | `ask` | `ask` = the AI asks you once per fort whether to keep a journal · `on` = every fort · `off` = never |
+| `DF_JOURNAL_DIR` | `Documents/df-journals` | Where journals are kept, one folder per fort |
 | `DF_DIR`, `DFHACK_DIR` | `D:\SteamLibrary\...` | Where Dwarf Fortress and DFHack are installed |
 
 ## The tools
@@ -193,6 +200,7 @@ All optional, set in the server's `env`:
 | Defence | `df_military` `df_schedule` `df_burrow` `df_levers` |
 | Trade | `df_trade` |
 | Time | `df_wait` `df_pause` `df_resume` `df_save` |
+| Story | `df_journal` |
 | Camera and UI | `df_camera` `df_view` `df_ui` `df_screen` `df_tutorial` |
 | Expert | `df_auto` `df_cmd` `df_lua` `df_help` |
 
@@ -208,6 +216,32 @@ Some of what they do beyond the obvious:
 | **Military** | Squads, uniforms, schedules, patrols, burrows and levers. `equip` fills empty uniform slots, prefers real armour over clothing, upgrades to better pieces, and never takes another squad's kit. |
 | **Trade** | Marks goods (unpacking them from bins), refuses artifacts and export-banned items, drives the trade screen and shows the merchant's reply. |
 | **Safety nets** | `df_dig` warns before you dig under an aquifer, keeps a shaft's stair marks when a tunnel crosses it, and can preview (`dry_run`). Every tool rejects misspelt arguments instead of silently ignoring them. |
+
+## The fort journal
+
+Dwarf Fortress makes stories nobody remembers. The journal remembers them. It's your choice for each fort: when
+the AI takes over a fort without one, it asks you once whether you want it (`DF_JOURNAL=on` or `off` skips the
+question for every fort). Once it's on it needs nothing from you: every `df_wait` adds what happened, in one folder
+per fort under `Documents/df-journals`:
+
+| File | What's in it |
+|---|---|
+| `cast.json` | Every dwarf who ever lived here, with a short introduction ("Zuglar Zasittomus is a 49-year-old swordsmaster. He is truly painfully shy and is wasteful. He likes parasaurolophus and apple wood, can't stand worms and dreams of one day being able to craft a masterwork. His children Inod and Monom live here too. Already a legend with the sword."), when they arrived and how they died or left |
+| `journal.jsonl` | The events, dated: deaths with cause and killer, arrivals, marriages and lovers, births, first kills and kill tallies, legends, dreams come true, offices, breakdowns and recoveries, moods and artifacts, sieges, megabeasts and thieves, plus the overseer's own notes |
+| `quotes.jsonl` | Every line a dwarf said ("I had a bath. I do not see the bliss in this.") |
+| `shots/` | Screenshots of the big moments: a citizen's death where the body lies, artifacts, sieges and megabeasts |
+| `chapters/` | The story, written by the AI one chapter at a time |
+| `book.md` | All the chapters as one book, written by `df_journal story` |
+| `chronicle.md` | The raw record as a readable log, written by `df_journal story`: the years season by season, each dwarf introduced where they first appear, photos, the rarest lines overheard each season (the strange ones only get said once), and a who's who at the back |
+
+The AI adds what automation can't: why it made a call, what went wrong, what was funny. Ask it about a dwarf
+(`df_journal intro`) and it can rewrite that dwarf's introduction in its own words once it knows them.
+
+**Chapters.** Ask for the story and the AI writes the next chapter: `df_journal chapter` hands it everything
+since the last chapter, who appears in it (new faces and returning ones) and the storytelling guide,
+[`STORYTELLING.md`](STORYTELLING.md): only what really happened, open on a situation rather than a roll call, two or
+three new characters at most and only when they act, contrast for comedy and tragedy, end on a hook, and plain prose
+that sounds right read aloud (the Claude app's read-aloud button, or a narrator for your video).
 
 ## How it works
 
@@ -329,6 +363,7 @@ The bridge was written by Claude while playing; most of its tools exist because 
 | Path | What's there |
 |---|---|
 | [`PLAYBOOK.md`](PLAYBOOK.md) | The model's operating guide, sent as the server's instructions |
+| [`STORYTELLING.md`](STORYTELLING.md) | How the AI writes the fort's story, sent with every `df_journal chapter` |
 | [`AGENTS.md`](AGENTS.md) | Notes for AI coding agents working on the bridge |
 | `src/server.js`, `src/core.js` | Server start, tool registration, settings and helpers |
 | `src/camera.js` | The camera director |

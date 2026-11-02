@@ -265,12 +265,22 @@ async function skippedTilesNote(out, a) {
     (value.length > 8 ? "; ..." : "") + ". Wait for digging to finish, then remove it (df_remove allow_built=true) and place it again.";
 }
 
+const ZONE_KEYS = Object.fromEntries("m b h n p w f o D B a d T g s c".split(" ").map((k) => [k, k]));
+const ZONE_NAMES = { meeting: "m", "meeting area": "m", bedroom: "b", dining: "h", "dining hall": "h", pasture: "n", pen: "n",
+  pit: "p", pond: "p", water: "w", "water source": "w", fishing: "f", office: "o", dormitory: "D", barracks: "B",
+  archery: "a", "archery range": "a", dump: "d", garbage: "d", "garbage dump": "d", tomb: "T", gather: "g", sand: "s", clay: "c" };
+
 tool("df_zone", "Create a zone rectangle. Bedroom zones require dry floor and completed walls/doors; repair with df_room_plan first. type: m meeting area, b bedroom, h dining hall, n pasture, p pit/pond, w water source, f fishing, o office, D dormitory, B barracks, a archery range (build archery targets A at one end; a squad trains there via df_military barracks), d garbage dump, T tomb (one burial per zone: 1x1 on each coffin), g gather fruit, s sand, c clay. Optional location: tavern, hospital, temple, library, guildhall. A guildhall needs guild=<the petitioning guild's name, e.g. 'Hall of Coal'> (its profession is read from the guild) or profession=<df.profession name>.",
   { type: z.string().min(1), x: coord, y: coord, z: coord,
     w: z.number().int().min(1), h: z.number().int().min(1),
     name: z.string().optional(), location: z.enum(["tavern", "hospital", "temple", "library", "guildhall"]).optional(),
     profession: z.string().optional(), guild: z.string().optional() },
   async (a) => {
+    // quickfort reads every letter as a zone key: type "tomb" made four zones (training, office, meeting hall,
+    // bedroom) stacked on one coffin. Accept the keys and their names only.
+    const key = ZONE_KEYS[a.type] ?? ZONE_NAMES[a.type.toLowerCase()];
+    if (!key) return fail(`Unknown zone type "${a.type}". Use a key (${Object.keys(ZONE_KEYS).join(" ")}) or a name (${Object.keys(ZONE_NAMES).join(", ")}).`);
+    a.type = key;
     // A guild's name says little about its craft ("The Mechanical Guild" is CRAFTSMAN): read it from the guild.
     if (a.location === "guildhall" && a.guild && !a.profession) {
       const { value: g } = await lua(`local want = ARGS.guild:lower()

@@ -15,7 +15,8 @@ for _, r in ipairs(out) do
   if r.flags.continuation and #msgs > 0 then
     msgs[#msgs].text = msgs[#msgs].text .. ' ' .. text
   else
-    table.insert(msgs, {id = r.id, type = df.announcement_type[r.type], text = text})
+    table.insert(msgs, {id = r.id, type = df.announcement_type[r.type], text = text,
+      x = r.pos.x >= 0 and r.pos.x or nil, y = r.pos.x >= 0 and r.pos.y or nil, z = r.pos.x >= 0 and r.pos.z or nil})
   end
 end
 while #msgs > limit do table.remove(msgs, 1) end

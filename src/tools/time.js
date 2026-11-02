@@ -2,6 +2,7 @@
 import { runUpkeep } from "./production.js";
 import { camera, directorReset, directorStep } from "../camera.js";
 import { waitDecision } from "../watchdog.js";
+import { journalAfterWait } from "../journal.js";
 import { tool, luaTool, text, fail, z, lua, luaFile, SETTINGS } from "../core.js";
 
 // One heartbeat per poll: the clock plus the watchdog counters (visible hostiles, active moods, caravans).
@@ -167,6 +168,8 @@ tool("df_wait","Unpause and let the game run for a number of in-game days (1 day
     const { value: notices } = await luaFile("notices", {});
     if (notices?.length) out += `\nDFHack notices: ${notices.join(" | ")}` +
       (notices.some((n) => /petition/.test(n)) ? " (petition outstanding = an accepted temple/guildhall not yet up to tier: `list-agreements` via df_cmd)" : "");
+    const journal = await journalAfterWait(all);
+    if (journal) out += `\n${journal}`;
     if (a.upkeep) {
       const u = await runUpkeep("apply");
       const queued = u.split("\n").filter((l) => l.includes("-> added"));

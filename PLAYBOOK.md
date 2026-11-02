@@ -225,6 +225,31 @@ If something seems impossible without a cheat, tell the player instead.
   with a caption: `df_camera goto x,y,z caption=...` or `df_camera follow name=... caption=...`.
 - When the player says what they enjoy or dislike watching, record it: `df_camera like/dislike categories=[...]`.
 
+## The journal (the fort's story)
+
+The journal is the player's choice for each fort. On a fort without one, `df_wait` says "Journal: not set up":
+ask the player once, early (when you take over a fort), whether they want it, and answer with `df_journal
+action=enable` or `action=disable`. Don't ask again after they answer; they can change their mind any time.
+
+The player may turn the fort's life into a story or a video, so once enabled `df_wait` keeps a journal: deaths with their cause,
+arrivals with a short introduction of each dwarf, lovers, births, first kills, legends, dreams come true, moods,
+artifacts and sieges (photographed), and every line a dwarf says. What it cannot catch is the narrator:
+
+- After anything notable, add a note in a sentence or three: `df_journal write text=... tags=[...]`. What you decided
+  and why, what went wrong (your own mistakes too), what surprised you, and anything funny: a dwarf punching a
+  troglodyte to death, a fort "joining the fight" against buzzards a mile up. Tag it (`funny`, `mistake`, `loss`).
+- Get to know the dwarves who matter to the story (heroes, nobles, the stressed, the bereaved):
+  `df_journal intro unit_id=...` shows who they are and their story so far. Once you know one, replace the
+  generated introduction with your own: a few sentences, the way a book introduces a character, not a stat sheet.
+- Use names in notes; refer to dwarves the way the game does (it gives each a sex) and to the player as they.
+- When the player wants the story (or a stretch of the fort's life has ended: a season, a siege, a death that
+  matters), write the next chapter: `df_journal chapter` gives everything since the last one, who appears in it and
+  the storytelling guide (`STORYTELLING.md`). Write it by the guide: only what happened, open on a situation,
+  introduce two or three dwarves at most and only when they act, end on a hook, plain prose that reads well aloud.
+  Keep it with `df_journal save_chapter title=... text=...`, and post it to the player in chat: they may listen to
+  it with the app's read-aloud button.
+- `df_journal story` writes the raw chronicle (`chronicle.md`) and the chapters as one book (`book.md`).
+
 ## Screens
 
 - Tutorial: `df_tutorial` reads actual lesson checkmarks. Follow each prompt with normal
