@@ -263,8 +263,13 @@ end
 
 if action == 'cast' then
   local out = {}
-  for _, u in ipairs(citizens()) do out[#out + 1] = sketch(u) end
-  emit({date = date_info(), cast = out})
+  -- one dwarf the sketch cannot read must not blank everyone else's story
+  local failed = {}
+  for _, u in ipairs(citizens()) do
+    local ok, s = pcall(sketch, u)
+    if ok then out[#out + 1] = s else failed[#failed + 1] = {id = u.id, error = tostring(s)} end
+  end
+  emit({date = date_info(), cast = out, failed = #failed > 0 and failed or nil})
   return
 end
 

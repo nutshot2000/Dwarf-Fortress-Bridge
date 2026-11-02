@@ -102,9 +102,12 @@ local function citizen_access_report(units, connected)
     end end
     if next(locked) and #main>1 then
       local S=df.tiletype_shape
+      -- a dwarf standing on a locked hatch is not shut out: their own tile can be reached from beside it
+      local occupied={}
+      for _,u in ipairs(main) do occupied[(u.pos.z*1000+u.pos.y)*1000+u.pos.x]=true end
       local function walk(x,y,z)
         local k=(z*1000+y)*1000+x
-        if locked[k] then return nil end
+        if locked[k] and not occupied[k] then return nil end
         local t=dfhack.maps.getTileType(x,y,z) if not t then return nil end
         local s=df.tiletype.attrs[t].shape
         if s==S.WALL or s==S.EMPTY or s==S.NONE or s==S.BRANCH or s==S.TWIG or s==S.TRUNK_BRANCH then return nil end

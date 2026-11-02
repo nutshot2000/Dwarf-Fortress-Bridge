@@ -7,6 +7,7 @@ import os from "node:os";
 import path from "node:path";
 import { lua, luaFile } from "./dfhack.js";
 import { captureScreenshot } from "./screenshot.js";
+import { camera } from "./camera.js";
 
 // DF_JOURNAL: ask (default: the player chooses per fort), on (every fort), off (never).
 const mode = (process.env.DF_JOURNAL ?? "ask").toLowerCase();
@@ -154,6 +155,11 @@ export async function castBeats(j, cast) {
     seen.add(String(s.id));
     const was = book.dwarves[s.id];
     const now = state(s);
+    // back among the citizens (off the map for a while, or written off too soon)
+    if (was?.gone) {
+      add({ kind: "return", text: `${s.first_name} is back in the fort.`, units: [s.id] });
+      delete was.gone; delete was.gone_date; delete was.fate;
+    }
     if (!was) {
       book.dwarves[s.id] = { id: s.id, hf: s.hf, name: s.name, first_name: s.first_name, sex: s.sex, intro: intro(s),
         first_seen: j.date.text, state: now };
@@ -224,8 +230,9 @@ const GORE = [
 ];
 const gore = (t) => GORE.find(([re]) => re.test(t))?.[1] ?? 0;
 
-/** Log notable announcements and keep the dwarves' spoken thoughts. Returns {entries, shots} to photograph. */
-export function captureAnnouncements(j, messages) {
+/** Log notable announcements and keep the dwarves' spoken thoughts. Returns {entries, shots} to photograph.
+ *  citizens: their names; a citizen's death is left to castBeats, which records the cause and the killer. */
+export function captureAnnouncements(j, messages, citizens = []) {
   const entries = [], shots = [];
   const quotes = [];
   const fights = new Map(); // citizen -> their most gruesome line this wait
@@ -247,6 +254,7 @@ export function captureAnnouncements(j, messages) {
     if (/^COMBAT/.test(type)) continue;
     const rule = RULES.find(([re]) => re.test(type) || re.test(m.text));
     if (!rule) continue;
+    if (rule[1] === "death" && citizens.some((n) => m.text.includes(n))) continue;
     const e = addEntry(j.dir, j.date, { kind: rule[1], text: m.text, report: m.id });
     entries.push(e);
     if (rule[2] && m.x !== undefined) shots.push({ entry: e, x: m.x, y: m.y, z: m.z });
@@ -281,16 +289,19 @@ export async function journalAfterWait(messages) {
     if (info.choice === "off") return "";
     if (info.choice !== "on") return ASK;
     const j = await fortJournal();
-    const { entries, shots, quotes } = captureAnnouncements(j, messages);
     const { value: c } = await luaFile("journal", { action: "cast" });
+    // everyone the journal has ever known, the dead included (a death is announced after they stop being citizens)
+    const known = Object.values(readCast(j.dir)?.dwarves ?? {}).map((d) => d.name.replace(/, .*$/, "").replace(/ "[^"]*"$/, ""));
+    const { entries, shots, quotes } = captureAnnouncements(j, messages, known);
     const beats = c?.cast ? await castBeats(j, c.cast) : [];
     // a citizen's death is photographed where the body lies
     for (const b of beats) if (b.shot_unit !== undefined) {
       const { value: p } = await lua(`local u = df.unit.find(${b.shot_unit}) emit(u and u.pos.x >= 0 and {x = u.pos.x, y = u.pos.y, z = u.pos.z} or nil)`);
       if (p) shots.unshift({ entry: b, ...p });
     }
+    // a photo moves the game view: with the camera off the view stays where the player put it
     let photos = 0;
-    for (const s of shots.slice(0, 2)) {
+    for (const s of camera.mode === "off" ? [] : shots.slice(0, 2)) {
       try { attachShot(j.dir, s.entry, await snapshot(j, s, s.entry.kind + " " + s.entry.text)); photos++; } catch { /* no window to capture */ }
     }
     const n = entries.length + beats.length;

@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.5.3
+
+- Journal photos no longer move the game view while the camera is off (`df_camera off`): the view stays where the
+  player put it.
+- One dwarf the journal cannot read no longer blanks everyone's update; a dwarf who stops being a citizen for a
+  while and comes back is welcomed back ("Kib is back in the fort") instead of being written off for good; a
+  citizen's death is recorded once (with cause and killer) instead of twice; names that start with an accent
+  (èrith) count as met in chapters.
+- The trapped-citizen check no longer reports a dwarf standing on a locked hatch or door as shut out.
+
 ## 1.5.2
 
 - The journal forgot it was on after the first save: it was filed under the game's save folder, which DF renames

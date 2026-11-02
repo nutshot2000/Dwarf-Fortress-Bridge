@@ -96,7 +96,8 @@ function saveChapter(j, title, body) {
   const firsts = new Map();
   for (const d of Object.values(book.dwarves)) firsts.set(d.first_name, (firsts.get(d.first_name) ?? 0) + 1);
   const named = Object.values(book.dwarves).filter((d) => body.includes(bareName(d))
-    || (firsts.get(d.first_name) === 1 && new RegExp(`\\b${d.first_name}\\b`).test(body))).map((d) => d.id);
+    // whole-word match that also works for names starting with an accent (èrith, Àban)
+    || (firsts.get(d.first_name) === 1 && new RegExp(`(?<!\\p{L})${d.first_name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?!\\p{L})`, "u").test(body))).map((d) => d.id);
   idx.introduced = [...new Set([...idx.introduced, ...named])];
   idx.chapters.push({ n, title, file, date: j.date.text, until: { year: j.date.year, tick: j.date.tick },
     entries_until: readEntries(j.dir).length });
