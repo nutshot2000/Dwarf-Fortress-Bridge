@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.5.7
+
+- `df_zone location=... name=...` names the tavern, temple or other location exactly as asked. The name was set as a
+  nickname, which the game shows in quotes before its own generated name ("`The Severed Arc' the Ageless Rampage").
+- `df_kitchen` reports the seedwatch target actually set (e.g. "below 10 seeds") instead of always saying 30.
+- `df_trade request_broker` warns when the broker is held in a meeting with a diplomat or liaison and will not come
+  to the depot, says when the meeting has no office to happen in, and suggests `request_anyone`.
+
 ## 1.5.6
 
 - The journal's overheard lines no longer include job reports ("Cilob, Miner cancels Brew drink from plant: Needs

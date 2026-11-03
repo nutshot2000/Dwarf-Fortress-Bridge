@@ -30,7 +30,15 @@ local function excl_summary()
 end
 local function seedwatch_on()
   local out = try(function() return dfhack.run_command_silent('seedwatch') end, '') or ''
-  return out:find('seedwatch is enabled', 1, true) and 'enabled (forbids cooking crops below 30 seeds)' or 'disabled'
+  if not out:find('seedwatch is enabled', 1, true) then return 'disabled' end
+  -- targets are per crop ("13/10 MUSHROOM_HELMET_PLUMP"); report the range actually set, not a default
+  local lo, hi
+  for t in out:gmatch('%d+/(%d+)') do
+    t = tonumber(t)
+    lo, hi = math.min(lo or t, t), math.max(hi or t, t)
+  end
+  if not lo then return 'enabled (forbids cooking crops whose seeds are below target)' end
+  return ('enabled (forbids cooking crops below %s seeds; change with df_cmd seedwatch all <n>)'):format(lo == hi and lo or (lo .. '-' .. hi))
 end
 
 if action == 'list' then

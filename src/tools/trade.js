@@ -34,7 +34,29 @@ tool("df_trade", "Trading. goods previews tradeable goods and contents; send mar
       await lua(`local f=df.building.find(${depot.id}).trade_flags f.trader_requested=false f.anyone_can_trade=false emit(true)`);
       await luaFile("screen", { action: "click", text: anyone ? "Anyone requested at depot" : "Broker requested at depot" });
       await luaFile("screen", { action: "key", keys: ["LEAVESCREEN"] });
-      return text(`${anyone ? "Any dwarf" : "Broker"} requested at the depot (via the depot button). Run df_wait until they arrive, then action=open.`);
+      // A broker held in a meeting with a diplomat or liaison never walks to the depot; a meeting with no office
+      // (place -1) does not end until the visitor gives up and leaves unhappy.
+      const { value: busy } = anyone ? { value: null } : await lua(`local pos
+        for _, p in ipairs(df.global.plotinfo.main.fortress_entity.positions.own) do if p.code == 'BROKER' then pos = p.id end end
+        local unit
+        for _, a in ipairs(df.global.plotinfo.main.fortress_entity.positions.assignments) do
+          if a.position_id == pos and a.histfig ~= -1 then local hf = df.historical_figure.find(a.histfig) unit = hf and df.unit.find(hf.unit_id) end
+        end
+        if not unit then emit(nil) return end
+        for _, r in ipairs(unit.specific_refs) do
+          if r.type == df.specific_ref_type.ACTIVITY then
+            local act = try(function() return r.data.activity end)
+            local actor = act and try(function() return df.unit.find(act.unit_actor) end)
+            if actor and not dfhack.units.isCitizen(actor) and act.unit_noble == unit.id then
+              emit({broker = unit_name(unit), visitor = unit_name(actor), no_room = act.place == -1}) return
+            end
+          end
+        end
+        emit(nil)`);
+      const note = busy ? `\nWARNING: the broker ${busy.broker} is in a meeting with ${busy.visitor} and will not come until it ends.` +
+        (busy.no_room ? " There is no meeting room: give them an Office zone or the visitor eventually leaves unhappy." : "") +
+        " To trade now, use action=request_anyone." : "";
+      return text(`${anyone ? "Any dwarf" : "Broker"} requested at the depot (via the depot button). Run df_wait until they arrive, then action=open.${note}`);
     }
     if (a.action === "open") {
       const depot = await openDepot();

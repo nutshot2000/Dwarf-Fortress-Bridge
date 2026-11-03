@@ -321,7 +321,8 @@ tool("df_zone", "Create a zone rectangle. Bedroom zones require dry floor and co
     const out = await quickfort("zone", [cell], a.x, a.y, a.z);
     let locNote = "";
     if (a.location && a.name) {
-      // Quickfort gives every new location the same generated name; use the requested name as its nickname.
+      // Quickfort gives every new location the same generated name. A nickname would only be shown in quotes in front
+      // of it ("`Arc' the Ageless Rampage"), so the requested name replaces the generated words.
       const { value } = await lua(`local best
         for x = ARGS.x, ARGS.x + ARGS.w - 1 do for y = ARGS.y, ARGS.y + ARGS.h - 1 do
           for _, b in ipairs(dfhack.buildings.findCivzonesAt(xyz2pos(x, y, ARGS.z)) or {}) do
@@ -331,7 +332,12 @@ tool("df_zone", "Create a zone rectangle. Bedroom zones require dry floor and co
         local site = dfhack.world.getCurrentSite()
         local loc
         for _, l in ipairs(site and site.buildings or {}) do if best and l.id == best.location_id then loc = l end end
-        if loc then loc.name.nickname = ARGS.name emit(dfhack.translation.translateName(loc.name, true)) else emit(nil) end`, a);
+        if loc then
+          local n = loc.name
+          n.first_name, n.nickname, n.has_name = ARGS.name, '', true
+          for i = 0, #n.words - 1 do n.words[i] = -1 end
+          emit(dfhack.translation.translateName(n, true))
+        else emit(nil) end`, a);
       if (value) locNote = `\nLocation named: ${value}`;
     }
     // A tomb zone is one grave: DF assigns it to a single body whatever its size or coffin count.
