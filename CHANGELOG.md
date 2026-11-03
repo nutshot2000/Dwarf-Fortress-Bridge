@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.5.5
+
+- `df_upkeep` targets really are per fort now (`<fort> - <world>`). They were kept in one file for every fort, so a
+  big fort's targets (18 spare beds, 14 doors) followed the player to a new fort of seven. Targets saved before
+  this version are kept under `legacy` and no longer applied.
+- The journal keeps the fights of the fort's own animals as well as its dwarves' ("Dog (tame) in a fight: The stray
+  dog bites the wombat..."): the most gruesome blow per animal, the same as for dwarves.
+
 ## 1.5.4
 
 - The journal records a new couple once, not once from each lover's side.

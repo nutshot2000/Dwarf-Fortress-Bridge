@@ -227,7 +227,7 @@ per fort under `Documents/df-journals`:
 | File | What's in it |
 |---|---|
 | `cast.json` | Every dwarf who ever lived here, with a short introduction ("Zuglar Zasittomus is a 49-year-old swordsmaster. He is truly painfully shy and is wasteful. He likes parasaurolophus and apple wood, can't stand worms and dreams of one day being able to craft a masterwork. His children Inod and Monom live here too. Already a legend with the sword."), when they arrived and how they died or left |
-| `journal.jsonl` | The events, dated: deaths with cause and killer, arrivals, marriages and lovers, births, first kills and kill tallies, legends, dreams come true, offices, breakdowns and recoveries, lost eyes and hands, the most gruesome blow of each dwarf's fights ("The badger scratches the miner in the left eye and the injured part is torn apart!"), moods and artifacts, sieges, megabeasts and thieves, plus the overseer's own notes |
+| `journal.jsonl` | The events, dated: deaths with cause and killer, arrivals, marriages and lovers, births, first kills and kill tallies, legends, dreams come true, offices, breakdowns and recoveries, lost eyes and hands, the most gruesome blow of each fight a dwarf or one of the fort's animals was in ("The badger scratches the miner in the left eye and the injured part is torn apart!"), moods and artifacts, sieges, megabeasts and thieves, plus the overseer's own notes |
 | `quotes.jsonl` | Every line a dwarf said ("I had a bath. I do not see the bliss in this.") |
 | `shots/` | Screenshots of the big moments: a citizen's death where the body lies, artifacts, sieges and megabeasts |
 | `chapters/` | The story, written by the AI one chapter at a time |

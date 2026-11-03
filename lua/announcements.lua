@@ -10,9 +10,15 @@ for i = #reports - 1, 0, -1 do
   if #out >= limit * 3 then break end
 end
 -- Blow-by-blow lines name a job ("the miner"), not a dwarf: each citizen's combat log says whose fight it was.
+-- The fort's own animals too: the stray dog that took on a wombat is part of the story.
 local who = {}
 if since >= 0 then
-  for _, u in ipairs(citizens()) do
+  local ours = {}
+  for _, u in ipairs(citizens()) do ours[#ours + 1] = u end
+  for _, u in ipairs(df.global.world.units.active) do
+    if dfhack.units.isAlive(u) and not dfhack.units.isCitizen(u) and dfhack.units.isTame(u) and dfhack.units.isOwnCiv(u) then ours[#ours + 1] = u end
+  end
+  for _, u in ipairs(ours) do
     local log = u.reports.log.Combat
     for i = #log - 1, 0, -1 do
       if log[i] <= since then break end

@@ -83,9 +83,20 @@ async function queueOrder(a) {
 const UPKEEP_FILE = path.join(DF_DIR, "dfhack-config", "df-bridge", "upkeep.json");
 const UPKEEP_DEFAULTS = { drink_per_dwarf: 5, empty_storage: 10, free_beds: 3, free_doors: 2, free_cabinets: 2,
   free_chests: 2, goblets: 10, soap: 5, fuel: 30 };
-export function upkeepTargets() {
-  try { return { ...UPKEEP_DEFAULTS, ...JSON.parse(fs.readFileSync(UPKEEP_FILE, "utf8")) }; }
-  catch { return { ...UPKEEP_DEFAULTS }; }
+// Targets are kept per fort ("<fort> - <world>"): one big fort's 18 spare beds must not follow the player to a
+// new fort of seven. Before 1.5.5 the file held one flat set for every fort; it is kept under "legacy", unused.
+async function upkeepFort() {
+  const { value: f } = await luaFile("journal", { action: "fort" });
+  return f && !f.error ? `${f.fort} - ${f.world}` : "unknown";
+}
+function readUpkeepFile() {
+  let all = {};
+  try { all = JSON.parse(fs.readFileSync(UPKEEP_FILE, "utf8")); } catch { /* no targets saved yet */ }
+  if (Object.values(all).some((v) => typeof v === "number")) all = { legacy: all };
+  return all;
+}
+export async function upkeepTargets() {
+  return { ...UPKEEP_DEFAULTS, ...(readUpkeepFile()[await upkeepFort()] ?? {}) };
 }
 // What each stock is refilled with; per = items one order unit yields.
 const REFILL = [
@@ -109,12 +120,14 @@ tool("df_upkeep", "Keep everyday stocks topped up with work orders: drink (per d
 
 export async function runUpkeep(action = "check", targets) {
   if (action === "set") {
-    const t = { ...upkeepTargets(), ...(targets ?? {}) };
+    const fort = await upkeepFort();
+    const all = readUpkeepFile();
+    const saved = { ...(all[fort] ?? {}), ...(targets ?? {}) };
     fs.mkdirSync(path.dirname(UPKEEP_FILE), { recursive: true });
-    fs.writeFileSync(UPKEEP_FILE, JSON.stringify(t, null, 1));
-    return `Targets saved: ${JSON.stringify(t)}`;
+    fs.writeFileSync(UPKEEP_FILE, JSON.stringify({ ...all, [fort]: saved }, null, 1));
+    return `Targets saved for ${fort}: ${JSON.stringify({ ...UPKEEP_DEFAULTS, ...saved })}`;
   }
-  const t = upkeepTargets();
+  const t = await upkeepTargets();
   const { value } = await luaFile("upkeep", {});
   if (!value?.stock) throw new Error(value?.error ?? "upkeep scan failed");
   const { stock, pending } = value;
