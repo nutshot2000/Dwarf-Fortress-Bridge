@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.5.10
+
+- The journal records a baby born in the fort as "was born to èzum and Geshud", not "joined the fort".
+
 ## 1.5.9
 
 - `df_help topic=build` lists `~a` for an altar (temples): the key worked but was not documented.

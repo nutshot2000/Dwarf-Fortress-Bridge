@@ -167,7 +167,10 @@ export async function castBeats(j, cast) {
     if (!was) {
       book.dwarves[s.id] = { id: s.id, hf: s.hf, name: s.name, first_name: s.first_name, sex: s.sex, intro: intro(s),
         first_seen: j.date.text, state: now };
-      if (prev) add({ kind: "arrival", text: `${s.name} joined the fort.`, units: [s.id], intro: book.dwarves[s.id].intro });
+      // a newborn did not "join" the fort: say who it was born to
+      const parents = (s.family ?? []).filter((f) => (f.relation === "mother" || f.relation === "father") && f.here).map((f) => f.name.split(" ")[0]);
+      const text = s.baby && s.age === 0 ? `${s.name} was born${parents.length ? ` to ${parents.join(" and ")}` : ""}.` : `${s.name} joined the fort.`;
+      if (prev) add({ kind: "arrival", text, units: [s.id], intro: book.dwarves[s.id].intro });
       continue;
     }
     const who = s.first_name;
