@@ -21,7 +21,7 @@ local function targets_of(lever)
 end
 local function pending(lever)
   local p = {}
-  for _, j in ipairs(lever.jobs) do table.insert(p, dfhack.job.getName(j)) end
+  for _, j in ipairs(lever.jobs) do table.insert(p, job_name(j)) end
   return p
 end
 local function levers()

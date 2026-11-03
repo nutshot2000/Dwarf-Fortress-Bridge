@@ -18,6 +18,14 @@ const JOB_ALIASES = { ConstructChair: "ConstructThrone", MakeChair: "ConstructTh
 const TOOL_ALIASES = { MakeBookcase: "ITEM_TOOL_BOOKCASE", ConstructBookcase: "ITEM_TOOL_BOOKCASE",
   MakePedestal: "ITEM_TOOL_PEDESTAL", MakeDisplayCase: "ITEM_TOOL_DISPLAY_CASE", MakeAltar: "ITEM_TOOL_ALTAR",
   MakeMinecart: "ITEM_TOOL_MINECART", MakeWheelbarrow: "ITEM_TOOL_WHEELBARROW" };
+// Jobs whose product is chosen by item subtype; queueOrder refuses them without one.
+const SUBTYPE_EXAMPLES = { MakeArmor: "ITEM_ARMOR_BREASTPLATE", MakeHelm: "ITEM_HELM_HELM", MakePants: "ITEM_PANTS_GREAVES",
+  MakeGloves: "ITEM_GLOVES_GAUNTLETS", MakeShoes: "ITEM_SHOES_BOOTS", MakeShield: "ITEM_SHIELD_SHIELD",
+  MakeWeapon: "ITEM_WEAPON_AXE_BATTLE", MakeAmmo: "ITEM_AMMO_BOLTS", MakeTool: "ITEM_TOOL_BOOKCASE",
+  MakeTrapComponent: "ITEM_TRAPCOMP_GIANTAXEBLADE", MakeInstrument: "a musical instrument's ITEM_INSTRUMENT_ id",
+  MakeToy: "ITEM_TOY_PUZZLEBOX" };
+const SUBTYPE_JOBS = new Set(Object.keys(SUBTYPE_EXAMPLES));
+const SUBTYPE_DEFAULTS = { MakeShield: "ITEM_SHIELD_SHIELD" };
 
 tool("df_order", "Queue a manager work order (needs a MANAGER; df_noble repair if the game says one is required). job is a df.job_type name, e.g. ConstructBed, MakeBarrel, ConstructTable, ConstructThrone, ConstructDoor, BrewDrink, PrepareMeal, ConstructBlocks. material: wood, stone, bone, leather, cloth, ... (defaults: wood for carpenter jobs, stone for mason jobs; tables, chairs and doors fall back to wood while no stone is free). Chairs are ConstructThrone (ConstructChair is accepted); bookcases, pedestals, display cases and altars are MakeTool (MakeBookcase etc. are accepted). repeat: daily/monthly/seasonally/yearly (DF has no weekly). Metal gear: job MakeArmor/MakeHelm/MakePants/MakeGloves/MakeShoes/MakeShield/MakeWeapon with item_subtype (ITEM_ARMOR_BREASTPLATE, ITEM_ARMOR_MAIL_SHIRT, ITEM_HELM_HELM, ITEM_PANTS_GREAVES, ITEM_GLOVES_GAUNTLETS, ITEM_SHOES_BOOTS, ITEM_SHIELD_SHIELD, ITEM_WEAPON_AXE_BATTLE, ITEM_WEAPON_SPEAR, ITEM_WEAPON_PICK...) and material INORGANIC:IRON. Brewing, cooking and many crafts are reactions: pass reaction instead of job (BREW_DRINK_FROM_PLANT, BREW_DRINK_FROM_PLANT_GROWTH, MAKE_SOAP...). Omit job to list orders; cancel_id removes an order (and its pending jobs). df_cmd 'workorder -l <filter>' lists job names.",
   { job: z.string().optional(), reaction: z.string().optional(), item_subtype: z.string().optional(), amount: z.number().int().min(1).max(1000).optional(), material: z.string().optional(),
@@ -56,6 +64,12 @@ async function queueOrder(a) {
   // Without a material the manager never validates a MakeTool order: these furniture tools default to wood.
   if (TOOL_ALIASES[a.job]) { a = { ...a, item_subtype: a.item_subtype ?? TOOL_ALIASES[a.job], job: "MakeTool", material: a.material ?? "wood" }; }
   const job = a.reaction ? "CustomReaction" : (JOB_ALIASES[a.job] ?? a.job);
+  // Equipment jobs name their item by subtype. An order without one makes jobs with subtype -1, and naming such a
+  // job (the game's own job list, or dfhack.job.getName) reads item definition -1 and crashes Dwarf Fortress.
+  if (SUBTYPE_JOBS.has(job) && !a.item_subtype) {
+    if (!SUBTYPE_DEFAULTS[job]) throw new Error(`${job} needs item_subtype (e.g. ${SUBTYPE_EXAMPLES[job]}): without one the order makes jobs that crash Dwarf Fortress. No order was queued.`);
+    a = { ...a, item_subtype: SUBTYPE_DEFAULTS[job] };
+  }
   const order = { job, amount_total: a.amount ?? 1 };
   if (a.reaction) order.reaction = a.reaction.toUpperCase();
   if (a.item_subtype) order.item_subtype = a.item_subtype.toUpperCase();

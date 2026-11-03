@@ -4,7 +4,7 @@ if not b then emit({error='No building '..tostring(ARGS.building_id)}) return en
 local built=b:getBuildStage()>0
 local out={building=b.id,type=df.building_type[b:getType()],name=b.name,
   x=b.centerx,y=b.centery,z=b.z,built_or_started=built,dry_run=ARGS.dry_run~=false,jobs={}}
-for _,j in ipairs(b.jobs) do out.jobs[#out.jobs+1]={id=j.id,name=dfhack.job.getName(j)} end
+for _,j in ipairs(b.jobs) do out.jobs[#out.jobs+1]={id=j.id,name=job_name(j)} end
 if built and not ARGS.allow_built then
   out.error='Building is already built or construction has started. Explicit allow_built=true is required for removal.'
 elseif not out.dry_run then

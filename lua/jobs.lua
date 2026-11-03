@@ -19,7 +19,7 @@ local function jinfo(j)
   -- jobs such as "Destroy building" carry no position (-30000): report their building's centre instead
   local x, y, z = j.pos.x, j.pos.y, j.pos.z
   if x < -1000 and b then x, y, z = b.centerx, b.centery, b.z end
-  return {id = j.id, name = dfhack.df2utf(dfhack.job.getName(j)), x = x, y = y, z = z,
+  return {id = j.id, name = dfhack.df2utf(job_name(j)), x = x, y = y, z = z,
     worker = w and unit_name(w) or nil, building = b and b.id or nil,
     suspended = j.flags.suspend or nil, do_now = j.flags.do_now or nil, repeating = j.flags['repeat'] or nil}
 end
@@ -28,7 +28,7 @@ if action == 'list' then
   local filter = ARGS.filter and ARGS.filter:lower()
   local list, counts = {}, {}
   for _, j in utils.listpairs(df.global.world.jobs.list) do
-    local name = dfhack.job.getName(j)
+    local name = job_name(j)
     counts[name] = (counts[name] or 0) + 1
     if not filter or name:lower():find(filter, 1, true) then
       if #list < (ARGS.limit or 40) then table.insert(list, jinfo(j)) end

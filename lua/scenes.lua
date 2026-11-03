@@ -47,7 +47,8 @@ for _, u in ipairs(citizens()) do
     local jsk = (js and js >= 0) and try(function() return dfhack.units.getNominalSkill(u, js, true) end, 0) or 0
     add('crafting', 1.5 + s / 6, u, name .. ': ' .. job_name(j) .. (jsk >= 15 and ' (legendary)' or ''))
   elseif not jt then
-    if u.military.squad_id >= 0 then add('military', 1.4, u, name .. ' training with the squad')
+    local sq = u.military.squad_id >= 0 and df.squad.find(u.military.squad_id)
+    if sq and sq.entity_id == df.global.plotinfo.group_id then add('military', 1.4, u, name .. ' training with the squad')
     elseif #u.social_activities > 0 then add('social', 1.0, u, name .. ' socialising')
     elseif not dfhack.units.isAdult(u) then add('kids', 1.0, u, name .. ' playing')
     end

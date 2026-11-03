@@ -250,8 +250,9 @@ local function sketch(u)
     family = hf and family(hf) or {}, close = close, cold = cold, skills = top_skills(u, 2), nobles = nobles,
     kills = k and k.n or 0, victims = k and k.victims or {}, lost = try(function() return lost_parts(u) end, {}),
     stress = stress_word(unit_stress(u)), mood = u.mood >= 0 and df.mood_type[u.mood] or nil,
+    -- only the fort's own squads: migrants can still be listed in a squad of the group they came from
     squad = u.military.squad_id >= 0 and (function() local s = df.squad.find(u.military.squad_id)
-      return s and dfhack.df2utf(dfhack.translation.translateName(s.name, true)) end)() or nil}
+      return s and s.entity_id == df.global.plotinfo.group_id and dfhack.df2utf(dfhack.translation.translateName(s.name, true)) or nil end)() or nil}
 end
 
 if action == 'sketch' then

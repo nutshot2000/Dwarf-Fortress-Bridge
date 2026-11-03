@@ -43,9 +43,20 @@ local function unit_name(u)
       or ('unit ' .. u.id))
 end
 
+-- Equipment jobs are named after their item subtype. With subtype -1 (an order queued without one), getName
+-- reads item definition -1 and crashes the whole game: pcall cannot catch that, so never ask.
+local SUBTYPE_JOBS = {}
+for _, t in ipairs({'MakeArmor', 'MakeHelm', 'MakePants', 'MakeGloves', 'MakeShoes', 'MakeShield', 'MakeWeapon',
+    'MakeAmmo', 'MakeTool', 'MakeTrapComponent', 'MakeInstrument', 'MakeToy'}) do
+  if df.job_type[t] then SUBTYPE_JOBS[df.job_type[t]] = true end
+end
+local function job_name_unsafe(j)
+  return SUBTYPE_JOBS[j.job_type] and j.item_subtype < 0
+end
+
 -- DF gives some jobs (cooking a meal) an empty name: fall back to the job type, split into words.
 local function job_name(j)
-  local n = try(function() return dfhack.job.getName(j) end, '')
+  local n = not job_name_unsafe(j) and try(function() return dfhack.job.getName(j) end, '') or ''
   if n == nil or n == '' then n = (df.job_type[j.job_type] or '?'):gsub('(%l)(%u)', '%1 %2') end
   return n
 end

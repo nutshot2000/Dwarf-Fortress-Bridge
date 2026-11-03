@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.5.8
+
+- Fixed a crash of Dwarf Fortress itself. `df_order job=MakeShield` without `item_subtype` queued jobs with item
+  subtype -1, and naming such a job (the camera tour, `df_jobs`, `df_workshop`, or the game's own job list) reads
+  item definition -1 and takes the game down. Equipment orders (armor, helms, greaves, gauntlets, boots, shields,
+  weapons, ammo, tools, trap parts, instruments, toys) now need `item_subtype`; shields default to
+  `ITEM_SHIELD_SHIELD`. The bridge's own job names also skip any such job already in a save.
+- The journal only records joining one of the fort's own squads. Migrants can still be listed in a squad of the
+  group they came from, which it reported as "joined the squad The Diamond Galleys".
+
 ## 1.5.7
 
 - `df_zone location=... name=...` names the tavern, temple or other location exactly as asked. The name was set as a

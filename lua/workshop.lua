@@ -66,7 +66,7 @@ local function queued(b)
   local out = {}
   for _, j in ipairs(b.jobs) do
     local worker = dfhack.job.getWorker(j)
-    table.insert(out, {name = dfhack.job.getName(j), repeating = j.flags['repeat'] or nil,
+    table.insert(out, {name = job_name(j), repeating = j.flags['repeat'] or nil,
       worker = worker and unit_name(worker) or nil, suspended = j.flags.suspend or nil})
   end
   return out
