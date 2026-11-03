@@ -79,7 +79,7 @@ for _, u in ipairs(cits) do
       local actor = a and try(function() return df.unit.find(a.unit_actor) end)
       local visitor = actor and not dfhack.units.isCitizen(actor)
       if a and visitor and try(function() return a.unit_noble end) == u.id and a.place == -1 then
-        add('high', ('%s is stuck in a meeting with %s and no meeting room: give them an Office zone (Decent quality is best) or the meeting and depot trading stall.'):format(unit_name(u), unit_name(actor)))
+        add('high', ('%s is stuck in a meeting with %s: %s, so the meeting and depot trading stall.'):format(unit_name(u), unit_name(actor), meeting_room_advice(u, a)))
       end
     end
   end

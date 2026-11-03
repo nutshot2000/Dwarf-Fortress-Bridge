@@ -250,13 +250,21 @@ async function partsNote(key) {
 // Name them, usually undug rock or tiles still being mined, so the area can be laid again once ready.
 async function skippedTilesNote(out, a) {
   if (!/skipped/i.test(out)) return "";
-  const { value } = await lua(`local bad = {}
+  // This runs after placement: the stockpile just made (the newest one in the area) covers its own tiles and is
+  // not an obstacle there.
+  const { value } = await lua(`local bad, newest = {}, -1
+    for y = ARGS.y, ARGS.y + ARGS.h - 1 do for x = ARGS.x, ARGS.x + ARGS.w - 1 do
+      local b = dfhack.buildings.findAtTile(x, y, ARGS.z)
+      if b and b:getType() == df.building_type.Stockpile and b.id > newest then newest = b.id end
+    end end
     for y = ARGS.y, ARGS.y + ARGS.h - 1 do for x = ARGS.x, ARGS.x + ARGS.w - 1 do
       local tt = dfhack.maps.getTileType(x, y, ARGS.z)
       local f = dfhack.maps.getTileFlags(x, y, ARGS.z)
       local shape = tt and df.tiletype_shape[df.tiletype.attrs[tt].shape]
+      local b = dfhack.buildings.findAtTile(x, y, ARGS.z)
+      local other = b and not (b.id == newest and dfhack.buildings.containsTile(b, x, y))
       local why = not tt and 'off map' or f.hidden and 'unrevealed' or (shape ~= 'FLOOR' and shape ~= 'PEBBLES') and (shape:lower() .. (f.dig ~= 0 and ' (still designated for digging)' or ''))
-        or (dfhack.buildings.findAtTile(x, y, ARGS.z) and 'building already there') or nil
+        or (other and 'building already there') or nil
       if why then bad[#bad + 1] = x .. ',' .. y .. ' ' .. why end
     end end
     emit(bad)`, a);

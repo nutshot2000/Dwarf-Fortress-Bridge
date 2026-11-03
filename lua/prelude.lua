@@ -67,6 +67,20 @@ local function unit_job(u)
   return job_name(j)
 end
 
+-- A visitor's meeting with a noble (liaison, diplomat) needs one of the noble's rooms of at least the quality rank
+-- the meeting asks for (activity.worstroomrank); with none it never starts (place -1) and the visitor leaves unhappy.
+local ROOM_RANKS = {[0] = 'Meager', 'Modest', 'plain', 'Decent', 'Fine', 'Great', 'Grand', 'Royal'}
+local function meeting_room_advice(u, act)
+  local rank = try(function() return act.worstroomrank end, -1) or -1
+  local need = rank >= 0 and (' (the meeting asks for room rank %d, %s or better)'):format(rank, ROOM_RANKS[rank] or '?') or ''
+  local office = false
+  for _, b in ipairs(u.owned_buildings) do
+    if try(function() return b.type == df.civzone_type.Office end, false) then office = true end
+  end
+  if office then return 'their office is not good enough to meet in' .. need .. ': smooth and engrave it, add furniture' end
+  return 'they have no office to meet in: give them an Office zone' .. need
+end
+
 local function unit_stress(u)
   return try(function() return u.status.current_soul.personality.stress end)
       or try(function() return u.status.current_soul.personality.stress_level end)

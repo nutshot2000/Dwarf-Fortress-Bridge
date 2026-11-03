@@ -48,13 +48,13 @@ tool("df_trade", "Trading. goods previews tradeable goods and contents; send mar
             local act = try(function() return r.data.activity end)
             local actor = act and try(function() return df.unit.find(act.unit_actor) end)
             if actor and not dfhack.units.isCitizen(actor) and act.unit_noble == unit.id then
-              emit({broker = unit_name(unit), visitor = unit_name(actor), no_room = act.place == -1}) return
+              emit({broker = unit_name(unit), visitor = unit_name(actor), no_room = act.place == -1 and meeting_room_advice(unit, act) or nil}) return
             end
           end
         end
         emit(nil)`);
       const note = busy ? `\nWARNING: the broker ${busy.broker} is in a meeting with ${busy.visitor} and will not come until it ends.` +
-        (busy.no_room ? " There is no meeting room: give them an Office zone or the visitor eventually leaves unhappy." : "") +
+        (busy.no_room ? ` The meeting cannot start: ${busy.no_room}, or the visitor eventually leaves unhappy.` : "") +
         " To trade now, use action=request_anyone." : "";
       return text(`${anyone ? "Any dwarf" : "Broker"} requested at the depot (via the depot button). Run df_wait until they arrive, then action=open.${note}`);
     }

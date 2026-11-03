@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.5.11
+
+- A noble's stalled meeting with a liaison or diplomat is explained properly (`df_problems`, `df_trade
+  request_broker`): an office that exists but is not good enough is no longer reported as "no meeting room". The
+  message gives the room rank the meeting asks for (e.g. rank 3, Decent or better) and how to get there.
+- `df_stockpile` no longer reports the new stockpile's own tiles as "building already there" when a few tiles of
+  the rectangle were skipped; only the tiles that really were left out are listed.
+
 ## 1.5.10
 
 - The journal records a baby born in the fort as "was born to èzum and Geshud", not "joined the fort".
