@@ -162,8 +162,11 @@ if action == 'train' then
   local r = ROUTINES[(ARGS.routine or 'staggered'):lower()]
   if not r then emit({error = 'routine must be off, staggered, constant or ready'}) return end
   sq.cur_routine_idx = r
+  -- only point at barracks when the squad has none to train in
+  local trains = false
+  for _, rm in ipairs(sq.rooms) do if try(function() return rm.mode.train end, false) then trains = true end end
   emit({ok = true, squad = squad_info(sq), routine = df.global.plotinfo.alerts.routines[r].name,
-    hint = 'Squads train in a barracks: create a zone type B and use action=barracks.'}) return
+    hint = not trains and 'Squads train in a barracks: create a zone type B and use action=barracks.' or nil}) return
 end
 
 if action == 'barracks' then

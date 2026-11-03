@@ -12,7 +12,8 @@ const CATEGORY_MATS = ["wood", "plant", "cloth", "silk", "leather", "bone", "she
 // Furniture a carpenter or a mason can make: defaults to stone, but falls back to wood when no stone is free.
 const EITHER_JOBS = /^(ConstructTable|ConstructThrone|ConstructDoor)$/;
 // Natural names the game spells differently.
-const JOB_ALIASES = { ConstructChair: "ConstructThrone", MakeChair: "ConstructThrone", ConstructCup: "MakeGoblet", MakeCup: "MakeGoblet" };
+const JOB_ALIASES = { ConstructChair: "ConstructThrone", MakeChair: "ConstructThrone", ConstructCup: "MakeGoblet", MakeCup: "MakeGoblet",
+  MakeBag: "ConstructBag", MakeSack: "ConstructBag" };
 // Furniture that DF models as tools: MakeTool with an item subtype (the workshop "make wooden bookcase"
 // entry from dfhack.workshops asks for the wrong log type and never runs).
 const TOOL_ALIASES = { MakeBookcase: "ITEM_TOOL_BOOKCASE", ConstructBookcase: "ITEM_TOOL_BOOKCASE",
@@ -90,6 +91,8 @@ async function queueOrder(a) {
   else if (mat) order.material = mat.toUpperCase();
   if (a.repeat) order.frequency = a.repeat[0].toUpperCase() + a.repeat.slice(1);
   const out = await command("workorder", [JSON.stringify(order)]);
+  // workorder reports a rejected order as text, not as an error; say so instead of printing it as queued
+  if (/invalid|unknown|error|could not|not found/i.test(out)) throw new Error(`${out.trim()}\nNo order was queued. df_cmd 'workorder -l <filter>' lists the job names.`);
   return { out: out + fallback, order };
 }
 
@@ -154,9 +157,14 @@ export async function runUpkeep(action = "check", targets) {
     if (short > 0 && r.needs && !r.needs(stock)) note = " (no ingredients)";
     else if (short > 0 && action === "apply") {
       const amount = Math.ceil(short / r.per);
-      await queueOrder({ ...r.order, amount });
-      for (const c of r.chain ?? []) await queueOrder({ ...c, amount });
-      note = ` -> added ${amount} production job(s), expected ${amount * r.per} item(s)`;
+      try {
+        await queueOrder({ ...r.order, amount });
+        for (const c of r.chain ?? []) await queueOrder({ ...c, amount });
+        note = ` -> added ${amount} production job(s), expected ${amount * r.per} item(s)`;
+      } catch (e) {
+        if (/MANAGER/.test(e.message)) throw e;
+        note = ` -> order rejected: ${e.message.split("\n")[0]}`;
+      }
     } else if (short > 0) note = " (short)";
     lines.push(`${r.key.padEnd(14)} ${String(have).padStart(5)} / ${String(want).padEnd(5)} expected from existing orders: ${queued} item(s)${note}`);
   }

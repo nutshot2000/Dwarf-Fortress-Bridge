@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.5.12
+
+- `df_order` reports an order DFHack rejects ("Invalid job type for manager order") as a failure. It used to print
+  the order as if it had been queued. `df_upkeep apply` notes a rejected order and carries on with the other stocks.
+- `df_order job=MakeBag` (or MakeSack) queues bags: the game's job is ConstructBag.
+- `df_military train` only suggests making a barracks when the squad has none to train in.
+
 ## 1.5.11
 
 - A noble's stalled meeting with a liaison or diplomat is explained properly (`df_problems`, `df_trade
