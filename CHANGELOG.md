@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.5.9
+
+- `df_help topic=build` lists `~a` for an altar (temples): the key worked but was not documented.
+
 ## 1.5.8
 
 - Fixed a crash of Dwarf Fortress itself. `df_order job=MakeShield` without `item_subtype` queued jobs with item
