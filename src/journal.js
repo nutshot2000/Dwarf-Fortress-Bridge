@@ -254,6 +254,8 @@ export function captureAnnouncements(j, messages, citizens = []) {
     if (/\(Tame\)|Stray /.test(m.text) && /birth|grown/.test(m.text)) continue; // the animals' family life
     const sp = !COMBATISH.test(type) && m.text.match(SPEECH);
     if (sp && BATTLE_CRY.test(sp[3])) continue;
+    // "Cilob, Miner cancels Brew drink: Needs empty food storage item." is a job report, not a dwarf speaking
+    if (sp && / cancels /.test(sp[2])) continue;
     if (sp) { quotes.push({ date: j.date.text, year: j.date.year, tick: j.date.tick, season: j.date.season, speaker: sp[1], role: sp[2], text: sp[3] }); continue; }
     if (/^COMBAT/.test(type)) continue;
     const rule = RULES.find(([re]) => re.test(type) || re.test(m.text));

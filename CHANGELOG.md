@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.5.6
+
+- The journal's overheard lines no longer include job reports ("Cilob, Miner cancels Brew drink from plant: Needs
+  empty food storage item."), which look like speech but are not.
+
 ## 1.5.5
 
 - `df_upkeep` targets really are per fort now (`<fort> - <world>`). They were kept in one file for every fort, so a
