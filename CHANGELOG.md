@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.5.14
+
+- `df_crop set` explains a light/dark mismatch the right way round: a surface crop on an underground plot is now
+  "a surface crop and needs light tiles", not "underground crops need dark tiles". It names the crop.
+
 ## 1.5.13
 
 - `df_problems` warns about a farm plot that is mostly bare: fewer than half its tiles planted and no spare seeds for

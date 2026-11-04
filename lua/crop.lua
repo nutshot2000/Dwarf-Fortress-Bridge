@@ -108,7 +108,12 @@ if pid>=0 then
       if f and (needs_dark and f.light or not needs_dark and not f.light) then bad=bad+1 end
     end
   end end
-  if bad>0 then emit({error=('Crop incompatible with %d plot tile(s). Underground crops need dark tiles. Roofing a surface plot does not remove its Light attribute. Use a genuinely dark underground plot.'):format(bad),plot=plot_info(b)}) return end
+  if bad>0 then
+    local why = needs_dark
+      and '%s is an underground crop and needs dark tiles. Roofing a surface plot does not remove its Light attribute. Use a genuinely dark underground plot.'
+      or '%s is a surface crop and needs light tiles: it cannot grow on an underground plot. Plant it on a surface plot, or pick an underground crop here.'
+    emit({error=('Crop incompatible with %d plot tile(s). ' .. why):format(bad, plants[pid].name),plot=plot_info(b)}) return
+  end
 end
 for _, s in ipairs(seasons) do
   for i, name in ipairs(SEASONS) do
