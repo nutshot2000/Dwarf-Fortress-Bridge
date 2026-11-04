@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.5.13
+
+- `df_problems` warns about a farm plot that is mostly bare: fewer than half its tiles planted and no spare seeds for
+  this season's crop. Seeds are used up planting and harvesting does not bring them back, so a field can empty
+  itself while the food stores still look full. A planted tile is recognised by the seed item it holds, which this
+  game version keeps inside the plot.
+
 ## 1.5.12
 
 - `df_order` reports an order DFHack rejects ("Invalid job type for manager order") as a failure. It used to print

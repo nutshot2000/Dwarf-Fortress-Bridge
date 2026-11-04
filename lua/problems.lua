@@ -144,6 +144,39 @@ if stills > 0 then
   if warning then add(warning.severity, warning.issue) end
 end
 if (counts.FarmPlot or 0) == 0 then add('medium', 'No farm plots.') end
+-- A field with nothing growing and no seeds for this season's crop stays bare, however full the stores look:
+-- seeds are used up planting, and harvesting does not return them.
+for _, plot in ipairs(df.global.world.buildings.other.FARM_PLOT) do
+  local pid = plot.plant_id[df.global.cur_season]
+  local raw = pid >= 0 and df.global.world.raws.plants.all[pid]
+  if raw and plot:getBuildStage() >= plot:getMaxBuildStage() then
+    -- a planted tile holds either a growing plant or the seed that was planted there (an item inside the plot)
+    local tiles, planted = 0, {}
+    for x = plot.x1, plot.x2 do for y = plot.y1, plot.y2 do
+      tiles = tiles + 1
+      if dfhack.maps.getPlantAtTile(x, y, plot.z) then planted[x .. ',' .. y] = true end
+    end end
+    local free = 0
+    for _, it in ipairs(df.global.world.items.other.SEEDS) do
+      local f = it.flags
+      local m = not (f.forbid or f.trader or f.dump or f.rotten) and dfhack.matinfo.decode(it)
+      if m and m.plant and m.plant.id == raw.id then
+        if f.in_building and it.pos.z == plot.z and it.pos.x >= plot.x1 and it.pos.x <= plot.x2
+            and it.pos.y >= plot.y1 and it.pos.y <= plot.y2 then
+          planted[it.pos.x .. ',' .. it.pos.y] = true
+        else
+          free = free + it.stack_size
+        end
+      end
+    end
+    local n = 0
+    for _ in pairs(planted) do n = n + 1 end
+    if free == 0 and n < tiles / 2 then
+      add('medium', ('Farm plot %d (%d,%d,%d): only %d of %d tiles are planted, and there are no spare %s seeds for this season. The rest stays bare until seeds arrive (trade for them, or df_crop set a crop it has seeds for).'):format(
+        plot.id, plot.x1, plot.y1, plot.z, n, tiles, raw.name))
+    end
+  end
+end
 if (counts.Table or 0) == 0 or (counts.Chair or 0) == 0 then add('low', 'No tables/chairs: dwarves will eat on the floor.') end
 
 local idle = 0
