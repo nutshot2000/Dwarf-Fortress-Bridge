@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.5.15
+
+- `df_workshop add` queues as many jobs as fit and says so ("queued 9 of 10: the workshop holds 10 jobs and had
+  1"). It used to refuse the whole request with "Workshop queue is full" when the queue held a single job.
+- `df_trade select` / `deselect` on a container (a merchant's "Cloth Bin", a barrel) also marks the items inside it.
+  Only the container row was marked, so buying a cloth bin bought the empty bin: the game's footer valued the
+  purchase at 1143 while the bridge reported 2741 with contents.
+- A noble in a meeting with a liaison is only reported as stuck when they have no office. The meeting never records
+  a place, even when it goes well, so 1.5.11's "office not good enough" warning fired for a meeting that ended
+  fine in a Decent office.
+- `df_trade send item_ids=[...]` marks every listed item whatever `limit` says. A `limit` meant to shorten the
+  listing used to cap the marking too, and only 5 of 54 goods reached a caravan.
+
 ## 1.5.14
 
 - `df_crop set` explains a light/dark mismatch the right way round: a surface crop on an underground plot is now

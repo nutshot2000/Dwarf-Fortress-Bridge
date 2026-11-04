@@ -75,8 +75,9 @@ if action == 'send' or action == 'goods' then
   if ARGS.depot_id then depot = df.building.find(ARGS.depot_id) end
   if not depot then emit({error = 'No trade depot. Build one with df_build key=D.'}) return end
   local text = (ARGS.search or ''):lower()
-  -- An explicit item_ids list is the request itself: do not cut it at the default 20.
-  local limit = math.min(ARGS.limit or (ARGS.item_ids and #ARGS.item_ids) or 20, 200)
+  -- An explicit item_ids list is the request itself: it is never cut, by the default 20 or by a `limit` meant to
+  -- shorten the listing (limit=5 with 54 ids once sent 5 items to a caravan).
+  local limit = ARGS.item_ids and #ARGS.item_ids or math.min(ARGS.limit or 20, 200)
   local sent,protected,banned = {},{},{}
   -- a noble's export ban (mandate mode 0): trading a matching item is a crime, so never send one
   local bans = {}
@@ -160,8 +161,18 @@ if action == 'select' or action == 'deselect' then
   local idx = SIDES[ARGS.side or 'fort']
   if not idx then emit({error = 'side must be merchant or fort'}) return end
   local n = 0
+  local flags = T.goodflag[idx]
   for _, i in ipairs(ARGS.indices or {}) do
-    if T.goodflag[idx][i] then T.goodflag[idx][i].selected = (action == 'select') n = n + 1 end
+    if flags[i] then
+      flags[i].selected = (action == 'select') n = n + 1
+      -- A container's contents are the "contained" rows right after it (hidden from action=screen). Marking only
+      -- the container row buys or sells the empty bin: a "Cloth Bin" worth 588 came home as a 10-value bin.
+      local j = i + 1
+      while flags[j] and flags[j].contained do
+        flags[j].selected = (action == 'select')
+        j = j + 1
+      end
+    end
   end
   local total = {0, 0}
   for s = 0, 1 do

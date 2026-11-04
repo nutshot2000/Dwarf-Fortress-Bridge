@@ -145,8 +145,11 @@ if action == 'add' then
       break
     end
   end
-  local count = math.min(ARGS.count or 1, 10)
-  if #b.jobs + count > 10 then emit({error = 'Workshop queue is full (10 jobs max)'}) return end
+  local wanted = math.min(ARGS.count or 1, 10)
+  if #b.jobs >= 10 then emit({error = ('Workshop queue is full (%d of 10 jobs)'):format(#b.jobs)}) return end
+  -- queue what fits rather than refusing the whole request
+  local count = math.min(wanted, 10 - #b.jobs)
+  local clamped = count < wanted and ('queued %d of %d: the workshop holds 10 jobs and had %d'):format(count, wanted, #b.jobs) or nil
   for _ = 1, count do
     local job = df.job:new()
     job.id = df.global.job_next_id
@@ -176,7 +179,7 @@ if action == 'add' then
   local inputs = {}
   for _, item in ipairs(pick.items or {}) do table.insert(inputs, job_item_filter(item)) end
   local magma = df.building_furnacest:is_instance(b) and df.furnace_type[b.type]:find('^Magma') ~= nil
-  emit({ok = true, added = dfhack.df2utf(pick.name), count = count, jobs = queued(b),
+  emit({ok = true, added = dfhack.df2utf(pick.name), count = count, note = clamped, jobs = queued(b),
     preflight = {items = inputs, building_id = b.id, magma = magma,
       job_type = pick.job_fields and pick.job_fields.job_type or nil}}) return
 end

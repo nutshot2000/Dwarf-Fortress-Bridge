@@ -67,17 +67,17 @@ local function unit_job(u)
   return job_name(j)
 end
 
--- A visitor's meeting with a noble (liaison, diplomat) needs one of the noble's rooms of at least the quality rank
--- the meeting asks for (activity.worstroomrank); with none it never starts (place -1) and the visitor leaves unhappy.
+-- A visitor's meeting with a noble (liaison, diplomat) needs an office: without one the visitor eventually leaves
+-- unhappy. activity.place stays -1 even in a meeting that goes well (a liaison and an expedition leader with a
+-- Decent office met in the temple and parted content), so only a missing office counts as a problem. Returns nil
+-- when the noble has an office.
 local ROOM_RANKS = {[0] = 'Meager', 'Modest', 'plain', 'Decent', 'Fine', 'Great', 'Grand', 'Royal'}
 local function meeting_room_advice(u, act)
-  local rank = try(function() return act.worstroomrank end, -1) or -1
-  local need = rank >= 0 and (' (the meeting asks for room rank %d, %s or better)'):format(rank, ROOM_RANKS[rank] or '?') or ''
-  local office = false
   for _, b in ipairs(u.owned_buildings) do
-    if try(function() return b.type == df.civzone_type.Office end, false) then office = true end
+    if try(function() return b.type == df.civzone_type.Office end, false) then return nil end
   end
-  if office then return 'their office is not good enough to meet in' .. need .. ': smooth and engrave it, add furniture' end
+  local rank = try(function() return act.worstroomrank end, -1) or -1
+  local need = rank >= 0 and (' (Decent quality or better is safest; the meeting asks for room rank %d, %s)'):format(rank, ROOM_RANKS[rank] or '?') or ''
   return 'they have no office to meet in: give them an Office zone' .. need
 end
 

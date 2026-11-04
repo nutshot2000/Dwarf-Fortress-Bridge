@@ -48,7 +48,7 @@ tool("df_trade", "Trading. goods previews tradeable goods and contents; send mar
             local act = try(function() return r.data.activity end)
             local actor = act and try(function() return df.unit.find(act.unit_actor) end)
             if actor and not dfhack.units.isCitizen(actor) and act.unit_noble == unit.id then
-              emit({broker = unit_name(unit), visitor = unit_name(actor), no_room = act.place == -1 and meeting_room_advice(unit, act) or nil}) return
+              emit({broker = unit_name(unit), visitor = unit_name(actor), no_room = meeting_room_advice(unit, act)}) return
             end
           end
         end
