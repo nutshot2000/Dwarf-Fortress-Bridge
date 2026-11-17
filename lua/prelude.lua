@@ -265,3 +265,74 @@ local function job_item_filter(f)
   end
   return out
 end
+
+-- Work orders the manager has not validated yet, and what keeps the manager from them. df_order / df_upkeep note
+-- when each order was first seen (site data, saved with the fort), so the wait can be told in days; an order made in
+-- the game's own screens is dated by the next bridge order, or has no date. A manager kept busy by ordinary jobs
+-- (gathering, hauling) never seems to get to the orders. DFHack autolabor in legacy mode rewrites every citizen's
+-- labors all the time and switches work details off, so neither work details nor "only do assigned jobs" keep the
+-- manager free; it leaves alone only units in a burrow or on active military duty.
+local TICKS_PER_DAY, TICKS_PER_YEAR = 1200, 403200
+local function autolabor_legacy()
+  return try(function()
+    return dfhack.run_command_silent('enable'):match('autolabor:%s*(%a+)') == 'on'
+      and dfhack.run_command_silent('autolabor', 'mode'):find('legacy') ~= nil
+  end, false)
+end
+local ORDER_DATES = 'df-bridge/order-dates'
+local function abs_tick() return df.global.cur_year * TICKS_PER_YEAR + df.global.cur_year_tick end
+local function enabled_labors(u)
+  local t = {}
+  for i, name in ipairs(df.unit_labor) do
+    if name ~= 'NONE' and not name:find('^UNUSED') and u.status.labors[i] then t[#t + 1] = name end
+  end
+  return t
+end
+local function manager_status()
+  local dates = try(function() return dfhack.persistent.getSiteData(ORDER_DATES) end, {}) or {}
+  local now, oldest, ids = abs_tick(), nil, {}
+  for _, o in ipairs(df.global.world.manager_orders.all) do
+    if o.amount_left > 0 and not o.status.validated then
+      ids[#ids + 1] = o.id
+      local t = dates[tostring(o.id)]
+      if t then
+        local d = (now - t) / TICKS_PER_DAY
+        if not oldest or d > oldest then oldest = d end
+      end
+    end
+  end
+  local out = {ids = ids, oldest_days = oldest and math.floor(oldest * 10) / 10}
+  local m = dfhack.units.getUnitsByNobleRole('manager')[1]
+  if m then
+    out.manager = {id = m.id, name = unit_name(m), job = unit_job(m),
+      specialized = try(function() return m.flags4.only_do_assigned_jobs end, false), labors = enabled_labors(m),
+      -- autolabor skips units in a burrow or a squad
+      autolabor = autolabor_legacy() and #m.burrows == 0 and m.military.squad_id < 0 or nil}
+    -- Plant gathering zones pull every free dwarf, whatever their labors or burrow: a large zone kept the manager
+    -- gathering for days (58 GatherPlants jobs); shrinking it got an order validated within a day.
+    local j = m.job.current_job
+    if j and j.job_type == df.job_type.GatherPlants then
+      local g = {jobs = 0}
+      for _, jj in require('utils').listpairs(df.global.world.jobs.list) do
+        if jj.job_type == df.job_type.GatherPlants then g.jobs = g.jobs + 1 end
+      end
+      for _, z in ipairs(try(function() return df.global.world.buildings.other.ZONE_PLANT_GATHERING end, {})) do
+        if z.z == j.pos.z and j.pos.x >= z.x1 and j.pos.x <= z.x2 and j.pos.y >= z.y1 and j.pos.y <= z.y2 then
+          g.zone = {id = z.id, x1 = z.x1, y1 = z.y1, x2 = z.x2, y2 = z.y2, z = z.z}
+        end
+      end
+      out.manager.gathering = g
+    end
+  end
+  return out
+end
+-- Date every order not seen before (now) and forget orders that are gone.
+local function note_order_dates()
+  local old = dfhack.persistent.getSiteData(ORDER_DATES) or {}
+  local now, dates = abs_tick(), {}
+  for _, o in ipairs(df.global.world.manager_orders.all) do
+    local k = tostring(o.id)
+    dates[k] = old[k] or now
+  end
+  dfhack.persistent.saveSiteData(ORDER_DATES, dates)
+end

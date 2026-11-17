@@ -311,6 +311,11 @@ The bridge was written by Claude while playing; most of its tools exist because 
 **Work and workshops**
 - Work orders need a manager. If the game says "A manager is required" although one is appointed, `df_noble
   action=repair` rebuilds the index the game checks.
+- DFHack `autolabor` in legacy mode rewrites every citizen's labors within a day and switches work details off:
+  labors turned off by hand, work details and "only do assigned jobs" (`flags4.only_do_assigned_jobs`) do not last.
+  It leaves alone units in a burrow or on military duty.
+- Plant gathering zones pull every free dwarf, whatever their labors and even out of their burrow. A large zone kept
+  the manager gathering and left work orders unvalidated for days; a small zone fixed it.
 - Many v53 workshop items (wooden chairs, shields) are reactions that need an edged tool; the native "construct"
   jobs for hatch covers and thrones need none.
 - A workshop with linked "give" stockpiles takes every input only from them, empty barrels included.

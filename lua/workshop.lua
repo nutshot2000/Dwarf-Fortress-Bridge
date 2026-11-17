@@ -46,6 +46,55 @@ local EXTRA = {
       items = {{item_type = -1, quantity = 1, flags1 = {}, flags2 = {bone = true, body_part = true}}}},
   },
 }
+-- dfhack.workshops lists only reactions (instrument parts) for the Metalsmith's forge: the game builds its
+-- weapon/armour/anvil menu per metal at run time. Rebuild it for the metals the fort has bars of, with the
+-- civilisation's own item types. Bars needed = MATERIAL_SIZE / 3 rounded down, at least 1 (a bar is 150 units).
+local function forge_tasks()
+  local ent = df.historical_entity.find(df.global.plotinfo.civ_id)
+  local res = ent and ent.resources
+  local bars = {}
+  for _, it in ipairs(df.global.world.items.other.BAR) do
+    if it.mat_type == 0 and not it.flags.forbid and not it.flags.in_job then
+      bars[it.mat_index] = (bars[it.mat_index] or 0) + it.stack_size
+    end
+  end
+  local kinds = {
+    {res = 'weapon_type', defs = 'weapons', job = 'MakeWeapon', flag = 'ITEMS_WEAPON'},
+    {res = 'digger_type', defs = 'weapons', job = 'MakeWeapon', flag = 'ITEMS_DIGGER'},
+    {res = 'armor_type', defs = 'armor', job = 'MakeArmor', flag = 'ITEMS_ARMOR'},
+    {res = 'helm_type', defs = 'helms', job = 'MakeHelm', flag = 'ITEMS_ARMOR'},
+    {res = 'pants_type', defs = 'pants', job = 'MakePants', flag = 'ITEMS_ARMOR'},
+    {res = 'gloves_type', defs = 'gloves', job = 'MakeGloves', flag = 'ITEMS_ARMOR'},
+    {res = 'shoes_type', defs = 'shoes', job = 'MakeShoes', flag = 'ITEMS_ARMOR'},
+    {res = 'shield_type', defs = 'shields', job = 'MakeShield', flag = 'ITEMS_ARMOR'},
+  }
+  local out = {}
+  local function add(name, job_type, subtype, mat_index, nbars)
+    table.insert(out, {name = name, job_fields = {job_type = df.job_type[job_type], item_subtype = subtype,
+      mat_type = 0, mat_index = mat_index},
+      items = {{item_type = df.item_type.BAR, item_subtype = -1, mat_type = 0, mat_index = mat_index,
+        quantity = 150 * nbars, vector_id = df.job_item_vector_id.BAR}}})
+  end
+  for mat_index, count in pairs(bars) do
+    local inorg = df.inorganic_raw.find(mat_index)
+    local flags = inorg and inorg.material.flags
+    if flags and count > 0 then
+      local metal = dfhack.df2utf(inorg.material.state_name.Solid)
+      for _, k in ipairs(kinds) do
+        if flags[k.flag] and res then
+          for _, st in ipairs(res[k.res]) do
+            local def = df.global.world.raws.itemdefs[k.defs][st]
+            local nbars = def and math.max(1, math.floor(def.material_size / 3))
+            -- clothing (robe, sock, hood...) has no METAL token: the forge never offers it; shields carry no such flag
+            local forgeable = def and (try(function() return def.props.flags.METAL end) ~= false)
+            if def and forgeable and nbars <= count then add('forge ' .. metal .. ' ' .. def.name, k.job, st, mat_index, nbars) end
+          end
+        end
+      end
+    end
+  end
+  return out
+end
 local function task_list(b)
   -- dfhack.workshops prints debug lines ("adding: <ore>" plus a table dump) while it builds the
   -- smelter list; mute print around the call so they don't flood the result.
@@ -59,6 +108,9 @@ local function task_list(b)
   for _, j in pairs(jobs) do table.insert(list, j) end
   local sub = df.building_workshopst:is_instance(b) and df.workshop_type[b.type]
   for _, j in ipairs(sub and EXTRA[sub] or {}) do table.insert(list, j) end
+  if sub == 'MetalsmithsForge' or sub == 'MagmaForge' then
+    for _, j in ipairs(forge_tasks()) do table.insert(list, j) end
+  end
   table.sort(list, function(a, c) return a.name < c.name end)
   return list
 end

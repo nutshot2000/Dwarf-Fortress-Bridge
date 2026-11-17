@@ -19,6 +19,10 @@ const READ_ONLY = [
     path:fileURLToPath(new URL("./test-room-guard.lua",import.meta.url)),
     root:fileURLToPath(new URL("../",import.meta.url)).replace(/\\/g,"/")
   }}],
+  ...["test-noble-index.lua", "test-trade-select.lua"].map((t) => ["df_lua", {code:"assert(loadfile(ARGS.path))(ARGS,emit)",args:{
+    path:fileURLToPath(new URL(`./${t}`,import.meta.url)),
+    root:fileURLToPath(new URL("../",import.meta.url)).replace(/\\/g,"/")
+  }}]),
   ["df_room_plan", {}],
   ["df_blueprint", {mode:"dig",rows:["x"],x:0,y:0,z:0,dry_run:true}],
   ["df_lua", { code: "local b=df.global.world.buildings.all[0]; if b then local a={building_id=b.id,dry_run=true,allow_built=true}; local env=setmetatable({ARGS=a,emit=emit,need_map=need_map},{__index=_ENV}); assert(loadfile(ARGS.path,'t',env))() else emit({skipped=true}) end",args:{

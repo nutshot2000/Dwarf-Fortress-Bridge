@@ -126,10 +126,8 @@ for _, it in ipairs(df.global.world.items.other.TOOL) do
      and #dfhack.items.getContainedItems(it) == 0 then empty = empty + 1 end
 end
 local pending_containers = 0
-local unvalidated_orders=0
 for _, o in ipairs(df.global.world.manager_orders.all) do
   if o.amount_left > 0 then
-    if not o.status.validated then unvalidated_orders=unvalidated_orders+1 end
     local pot = o.job_type == df.job_type.MakeTool and o.item_subtype >= 0
       and df.itemdef_toolst.find(o.item_subtype)
     if o.job_type == df.job_type.MakeBarrel or (pot and pot.id == 'ITEM_TOOL_LARGE_POT') then
@@ -137,8 +135,34 @@ for _, o in ipairs(df.global.world.manager_orders.all) do
     end
   end
 end
-if unvalidated_orders>0 and #dfhack.units.getUnitsByNobleRole('manager')==0 then
-  add('high',('%d work order(s) cannot validate: no active MANAGER. Appoint one with df_noble, or repair the noble index if already assigned.'):format(unvalidated_orders))
+local ms = manager_status()
+local waiting, m, d = #ms.ids, ms.manager, ms.oldest_days
+if waiting > 0 and not m then
+  add('high',('%d work order(s) cannot validate: no active MANAGER. Appoint one with df_noble, or repair the noble index if already assigned.'):format(waiting))
+elseif waiting > 0 and not (d and d < 1) then -- an order queued less than a day ago gets time
+  -- not %.1f: DF's C locale may print a decimal comma
+  local age = d and (', the oldest for %d.%d days'):format(math.floor(d), math.floor(d * 10) % 10) or ''
+  local ids = table.concat(ms.ids, ', ')
+  local busy = m.job and ('busy with ' .. m.job) or 'idle right now'
+  local g = m.gathering
+  if g then
+    local where = g.zone and ('zone #%d, %d,%d to %d,%d z%d'):format(g.zone.id, g.zone.x1, g.zone.y1,
+      g.zone.x2, g.zone.y2, g.zone.z) or 'a plant gathering zone'
+    add((d or 0) >= 3 and 'high' or 'medium',
+      ('%d work order(s) not validated yet (%s)%s. The manager %s (#%d) is gathering plants (%s; %d gathering jobs in the fort): plant gathering zones pull every free dwarf whatever their labors or burrow, and the manager never gets to the orders. Shrink or remove the gathering zone in the game\'s Zones screen; a large zone did this for days, a small one let the order through within a day.')
+      :format(waiting, ids, age, m.name, m.id, where, g.jobs))
+  elseif m.autolabor then
+    add((d or 0) >= 3 and 'high' or 'medium',
+      ('%d work order(s) not validated yet (%s)%s. The manager %s (#%d) is %s with %d labors: DFHack autolabor (legacy mode) keeps handing them labors and ignores work details and specialization, so they rarely get to the orders. autolabor leaves alone units in a burrow: put the manager alone in a small burrow around their office (df_burrow create, add_rect, add_units), then df_labor disable their labors; or switch autolabor to modern mode (df_cmd \'autolabor mode modern\').')
+      :format(waiting, ids, age, m.name, m.id, busy, #m.labors))
+  elseif not m.specialized then
+    add((d or 0) >= 3 and 'high' or 'medium',
+      ('%d work order(s) not validated yet (%s)%s. The manager %s (#%d) is not specialized and %s (%d labors enabled), so ordinary jobs may keep them from the orders. df_labor action=specialize unit_id=%d keeps only the labors of their work details.')
+      :format(waiting, ids, age, m.name, m.id, busy, #m.labors, m.id))
+  elseif (d or 3) >= 3 then
+    add('medium',('%d work order(s) not validated yet (%s)%s although the manager %s (#%d) is specialized. Check that they can reach their office and are not stuck in a long job (%s); df_noble action=repair if the Work orders screen asks for a manager.')
+      :format(waiting, ids, age, m.name, m.id, m.job or 'idle'))
+  end
 end
 if stills > 0 then
   local warning = container_warning(empty, pending_containers, drink, pop, ARGS.empty_storage_target)

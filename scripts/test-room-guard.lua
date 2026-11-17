@@ -23,7 +23,9 @@ local denied=run({{'d(2x1)'}},p.x-1,p.y)
 assert(denied.error and #denied.conflicts>0,'a rectangle crossing the planned wall must fail')
 assert(dfhack.maps.getTileFlags(p.x-1,p.y,p.z).dig==before,'rejected request must leave the wall unchanged')
 local allowed=run({{'d(3x3)'}},p.x,p.y)
-assert(not allowed.error and allowed.stats.dig_designated.value==9,'interior excavation must remain available')
+local dug=0
+for label,value in pairs(allowed.stats or {}) do if label:find('designated for digging') then dug=value end end
+assert(not allowed.error and dug==9,'interior excavation must remain available')
 local remodel=run({{'d'}},p.x-1,p.y,true)
 assert(not remodel.error and remodel.intentional_room_changes==1,'explicit remodelling preview must work')
 local erase=run({{'x'}},p.x-1,p.y)
