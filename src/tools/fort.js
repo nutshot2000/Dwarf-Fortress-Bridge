@@ -155,15 +155,20 @@ tool("df_rooms", "Zones. action=list shows all zones with owners. action=assign 
         if (existing.has(`${x},${yy}`) || notReady.has(`${x},${yy}`)) continue;
         await quickfort("zone", [`b{name="${name}"}(3x3)`], x, yy, Z); made++;
       }
-      // assign to adults without a bedroom
+      // assign to adults without a bedroom, by unit id: a spouse lodged in their partner's room is housed (the game
+      // lists that room in the spouse's owned_buildings), and one room per couple when both are homeless
       const { value: zl } = await luaFile("rooms", { action: "list" });
-      const owned = new Set((zl?.zones ?? []).filter((q) => q.type === "Bedroom" && q.owner).map((q) => q.owner));
       const free = (zl?.zones ?? []).filter((q) => names.includes(q.name) && !q.owner);
-      const { value: ul } = await luaFile("units", {});
-      const homeless = (ul?.citizens ?? []).filter((u) => !u.child && !owned.has(u.name));
+      const { value: hl } = await lua(`local t = {}
+        for _, u in ipairs(unhoused_adults()) do t[#t + 1] = {id = u.id, spouse = u.relationship_ids.Spouse} end emit(t)`);
+      const homeless = [], taken = new Set();
+      for (const u of hl ?? []) {
+        if (taken.has(u.id)) continue;
+        homeless.push(u.id); taken.add(u.id); if (u.spouse >= 0) taken.add(u.spouse);
+      }
       let assigned = 0;
       for (let i = 0; i < free.length && i < homeless.length; i++) {
-        await luaFile("rooms", { action: "assign", zone_id: free[i].id, unit_id: homeless[i].id }); assigned++;
+        await luaFile("rooms", { action: "assign", zone_id: free[i].id, unit_id: homeless[i] }); assigned++;
       }
       log.push(`zone: ${made} new of ${names.length} bedroom zones (existing kept); assigned ${assigned} to adults without a room` +
         (notReady.size ? `; ${notReady.size} room(s) not finished yet (${[...notReady].join(" ")}): run phase zone again once their doors/walls are built` : ""));

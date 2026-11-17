@@ -165,15 +165,10 @@ local function staff(loc)
   return s
 end
 
--- adults without a bedroom: a spare bedroom is only a problem while someone is unhoused
-local housed = {}
-for _, z in ipairs(zones) do
-  if df.civzone_type[z.type] == 'Bedroom' and z.assigned_unit_id >= 0 then housed[z.assigned_unit_id] = true end
-end
+-- adults without a bedroom (a spouse lodged with their partner counts as housed): a spare bedroom is only a
+-- problem while someone is unhoused
 local unhoused = {}
-for _, u in ipairs(citizens()) do
-  if dfhack.units.isAdult(u) and not housed[u.id] then table.insert(unhoused, unit_name(u)) end
-end
+for _, u in ipairs(unhoused_adults()) do table.insert(unhoused, unit_name(u)) end
 local spare = {}
 
 local report = {}

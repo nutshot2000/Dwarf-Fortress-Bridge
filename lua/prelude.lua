@@ -93,6 +93,23 @@ local function citizens()
       or try(function() return dfhack.units.getCitizens() end, {})
 end
 
+-- Adults without a bedroom. The game lodges a spouse in their partner's bedroom and lists that zone in the
+-- spouse's owned_buildings, while zone.assigned_unit_id names only the partner: counting by zone owner takes
+-- every lodged spouse for homeless (17 of 88 in one fort).
+local function owns_bedroom(u)
+  for _, b in ipairs(u.owned_buildings) do
+    if df.building_civzonest:is_instance(b) and b.type == df.civzone_type.Bedroom then return true end
+  end
+  return false
+end
+local function unhoused_adults()
+  local out = {}
+  for _, u in ipairs(citizens()) do
+    if dfhack.units.isAdult(u) and not owns_bedroom(u) then table.insert(out, u) end
+  end
+  return out
+end
+
 -- Connectivity is a warning, not proof of ability to move (locks, injuries and
 -- burrows still require inspection). Compare against the majority citizen group.
 local function citizen_access_report(units, connected)

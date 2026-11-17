@@ -322,6 +322,8 @@ The bridge was written by Claude while playing; most of its tools exist because 
 **Rooms, locations and nobles**
 - Temple and guildhall agreements need the location to reach tier 1 (a guildhall reached it at about 2,500 value);
   they are abandoned after about a year. Artifacts and masterwork crafts on display raise the value.
+- A spouse lodged in their partner's bedroom has it in `unit.owned_buildings`, but the zone's
+  `assigned_unit_id` names only the partner. Count adults without a room through `owned_buildings`.
 - A temple dedicated to a religion is set through the location's deity fields; a guildhall needs its guild's
   profession, which a guild's name doesn't tell you ("The Mechanical Guild" is craftsdwarves).
 - Recognizing a temple's priesthood is a button in the location details panel, which only draws when opened with
