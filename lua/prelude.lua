@@ -197,6 +197,44 @@ local function container_warning(empty, pending, drink, pop, target)
   end
 end
 
+-- A liaison or diplomat ready to meet shows a DIPLOMACY button at the top left of the v50 fort screen; the
+-- meeting waits until the player clicks it, and nothing is announced (5 game days passed unnoticed). The visitors
+-- themselves are plotinfo.dip_meeting_info; the button is read from the screen, as the player sees it.
+local SCREEN_BUTTONS = {'DIPLOMACY'}
+local function diplomacy_status()
+  local r = {visitors = {}}
+  for _, m in ipairs(df.global.plotinfo.dip_meeting_info) do
+    local hf = df.historical_figure.find(m.diplomat_id)
+    local u = hf and df.unit.find(hf.unit_id)
+    local civ = df.historical_entity.find(m.civ_id)
+    r.visitors[#r.visitors + 1] = {
+      name = u and unit_name(u) or hf and dfhack.translation.translateName(hf.name) or ('figure ' .. m.diplomat_id),
+      civ = civ and dfhack.translation.translateName(civ.name, true) or nil,
+      on_map = u and dfhack.units.isActive(u) or false}
+  end
+  local W, H = dfhack.screen.getWindowSize()
+  for y = 0, math.min(H - 1, 24) do
+    local line = {}
+    for x = 0, math.min(W - 1, 40) do
+      local t = dfhack.screen.readTile(x, y)
+      local c = t and t.ch or 32
+      line[#line + 1] = (c >= 32 and c < 127) and string.char(c) or ' '
+    end
+    local s = table.concat(line)
+    for _, w in ipairs(SCREEN_BUTTONS) do
+      local i = s:find(w, 1, true)
+      if i then r.button = {text = w, x = i - 1, y = y} end
+    end
+  end
+  if r.button then
+    local who = {}
+    for _, v in ipairs(r.visitors) do who[#who + 1] = v.name .. (v.civ and (' of ' .. v.civ) or '') end
+    r.message = ('A diplomacy meeting%s is waiting for you: the game shows a DIPLOMACY button and the meeting does not start until it is clicked. df_screen click text=\'DIPLOMACY\', then answer the dialog with df_screen (trade requests: df_trade action=requests).'):format(
+      #who > 0 and (' with ' .. table.concat(who, ', ')) or '')
+  end
+  return r
+end
+
 local function construction_review(j, b)
   if j.job_type ~= df.job_type.ConstructBuilding or not j.flags.suspend or not b
      or b:getBuildStage() >= b:getMaxBuildStage() then return nil end

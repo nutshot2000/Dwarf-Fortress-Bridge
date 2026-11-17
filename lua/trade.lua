@@ -138,6 +138,44 @@ if action == 'send' or action == 'goods' then
     guidance='Nonempty containers are protected by default, including booze and seed barrels. Inspect contents, then explicitly set allow_contents=true if intended. value excludes contents; value_with_contents includes them.'}) return
 end
 
+-- The diplomacy meeting's requests screen (what the fort asks the caravan to bring). Its tabs are not
+-- entity_sell_category values: tab i shows category taking_requests_tablist[i], and the priorities are indexed by
+-- category (Sand: tab 46, priority[49]). Work by category name, as DFHack's trade-agreement overlay does.
+if action == 'requests' then
+  local D = df.global.game.main_interface.diplomacy
+  if not (D.open and D.taking_requests) then
+    emit({error = "The diplomacy requests screen is not open. Click the DIPLOMACY button (df_screen click text='DIPLOMACY'), go through the dialog to the trade requests, then call again."}) return
+  end
+  local pri = D.environment.dipev.sell_requests.priority
+  local function cat_name(c) return df.entity_sell_category[c] or tostring(c) end
+  local function norm(s) return (s:upper():gsub('[%s_]', '')) end
+  if not ARGS.category then
+    local tabs = {}
+    for i, c in ipairs(D.taking_requests_tablist) do
+      local p, n = pri[c], 0
+      for j = 0, #p - 1 do if p[j] > 0 then n = n + 1 end end
+      tabs[#tabs + 1] = {tab = i, category = cat_name(c), items = #p, requested = n}
+    end
+    emit({tabs = tabs, selected_tab = D.taking_requests_selected_tab}) return
+  end
+  local cat
+  for _, c in ipairs(D.taking_requests_tablist) do if norm(cat_name(c)) == norm(ARGS.category) then cat = c end end
+  if not cat then emit({error = 'No requests tab for ' .. ARGS.category .. ': call action=requests without category to list them.'}) return end
+  local p = pri[cat]
+  if ARGS.priority ~= nil then
+    local idx = ARGS.indices
+    if not idx then idx = {} for j = 0, #p - 1 do idx[#idx + 1] = j end end
+    for _, j in ipairs(idx) do
+      if j < 0 or j >= #p then emit({error = ('Index %d out of range: %s has %d items (0-%d). Nothing changed.'):format(j, cat_name(cat), #p, #p - 1)}) return end
+    end
+    for _, j in ipairs(idx) do p[j] = ARGS.priority end
+  end
+  local items = {}
+  for j = 0, #p - 1 do items[#items + 1] = {index = j, priority = p[j]} end
+  emit({category = cat_name(cat), items = items,
+    note = 'Item names are only on the game screen: open this tab there (df_screen read) to match the indices.'}) return
+end
+
 -- trade screen
 if not T.open then emit({error = 'The trade screen is not open. Open it from the depot (needs a caravan and the broker at the depot).'}) return end
 local SIDES = {merchant = 0, fort = 1}

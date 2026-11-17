@@ -318,6 +318,8 @@ The bridge was written by Claude while playing; most of its tools exist because 
   `df_order` for the rest.
 - Workshop queues run front to back and ignore the do-now flag; `df_jobs do_now` moves a job forward.
 - Farm plots reset to fallow when construction finishes, so set crops afterwards.
+- A surface crop grows only in its biome (`BIOME_<type>` raw flag) and seasons; the game plants nothing else,
+  and a MOUNTAIN biome grows no crop at all. Scripts can set any crop: `df_crop set` checks both.
 
 **Rooms, locations and nobles**
 - Temple and guildhall agreements need the location to reach tier 1 (a guildhall reached it at about 2,500 value);
@@ -327,6 +329,10 @@ The bridge was written by Claude while playing; most of its tools exist because 
 - Recognizing a temple's priesthood is a button in the location details panel, which only draws when opened with
   the right context; `df_location action=priesthood` presses it and can appoint the priest.
 - Diplomats meet nobles in an office of decent quality, or the meeting and depot trading stall.
+- A liaison or diplomat ready to meet only shows a DIPLOMACY button at the top left; nothing is announced and the
+  meeting waits until it is clicked. `df_wait` and `df_problems` report the button.
+- On the meeting's trade requests screen, tab numbers are not `entity_sell_category` values: tab i shows category
+  `taking_requests_tablist[i]` (Sand is tab 46, priority 49). `df_trade action=requests` works by category name.
 - Tombs hold one body each: put a 1x1 tomb zone on every coffin.
 - Every location quickfort creates gets the same generated name; `df_zone` sets the requested one.
 

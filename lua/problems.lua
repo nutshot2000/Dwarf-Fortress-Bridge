@@ -69,6 +69,8 @@ for _, u in ipairs(df.global.world.units.active) do
   end
 end
 
+local dip = try(diplomacy_status, {})
+if dip.message then add('high', dip.message) end
 -- diplomat meetings: a noble stuck in a meeting with no place blocks trading (broker) until the visitor leaves
 for _, u in ipairs(cits) do
   for _, r in ipairs(u.specific_refs) do

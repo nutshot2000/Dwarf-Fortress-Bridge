@@ -152,6 +152,9 @@ tool("df_wait","Unpause and let the game run for a number of in-game days (1 day
       end
       emit(r)`);
     if (pet?.length) imp.push({ text: `Pending petition(s), they expire if ignored: ${pet.join("; ")}. Vet and answer with df_petition.` });
+    // a liaison or diplomat ready to meet only shows a DIPLOMACY button, announced nowhere: report it on every wait
+    const { value: dip } = await lua(`emit(try(diplomacy_status, {}))`);
+    if (dip?.message) imp.unshift({ text: dip.message });
     if (camera.mode !== "off" && camera.log.length) out += `Camera (${camera.mode}) showed: ${camera.log.slice(-6).join(" | ")}\n`;
     if (popups.length) out += `POPUPS (dismissed so time could run):\n${popups.map((t) => `! ${t}`).join("\n")}\n`;
     if (imp.length) out += `IMPORTANT:\n${imp.map((m) => `! ${m.text}`).join("\n")}\n`;
