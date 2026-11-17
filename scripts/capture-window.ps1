@@ -12,8 +12,12 @@ public static class DFWindowCapture {
   [DllImport("user32.dll")] public static extern bool GetClientRect(IntPtr h, out Rect r);
   [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr h);
   [DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr h, IntPtr dc, uint flags);
+  [DllImport("user32.dll")] public static extern bool SetProcessDPIAware();
 }
 '@
+# The game is DPI-aware; without this, on a scaled display (e.g. 200%) GetClientRect returns the scaled-down size
+# and PrintWindow fills a bitmap that holds only the top-left part of the window.
+[void][DFWindowCapture]::SetProcessDPIAware()
 $game=@(Get-Process | Where-Object { $_.ProcessName -eq 'Dwarf Fortress' -and $_.MainWindowHandle -ne 0 })
 if ($game.Count -ne 1) { throw "Expected one Dwarf Fortress window; found $($game.Count). Open one game window and retry." }
 $game=$game[0]

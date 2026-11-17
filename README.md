@@ -347,7 +347,8 @@ The bridge was written by Claude while playing; most of its tools exist because 
 
 **Interface**
 - Panels (trade, squads, petitions, building sheets) ignore Esc sent from scripts and some freeze time; `df_ui close`
-  shuts them. Popups pause the game until their Okay button is clicked; `df_wait` clicks them.
+  shuts them, and also drops a bottom toolbar tool left open (mining, building, zones...), which is a mode rather than
+  a panel and is drawn over the panels, taking their clicks. Popups pause the game until their Okay button is clicked; `df_wait` clicks them.
 - A seasonal autosave freezes time for a while at the start of each season.
 - Follow mode switches itself off, so the camera director follows units itself.
 

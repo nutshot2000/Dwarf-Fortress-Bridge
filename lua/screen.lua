@@ -9,6 +9,12 @@ if action == 'close' then
     local ok, open = pcall(function() return v.open end)
     if ok and open == true then v.open = false table.insert(closed, k) end
   end
+  -- the bottom toolbar tools (mining, building, zones, stockpiles...) are modes, not panels: an open one
+  -- stays drawn over the panels and takes their clicks. A selection half made with them is dropped.
+  local mi = df.global.game.main_interface
+  for _, k in ipairs({'bottom_mode_selected', 'main_designation_selected'}) do
+    if mi[k] ~= -1 then mi[k] = -1 table.insert(closed, k) end
+  end
   emit({closed = closed, focus = dfhack.gui.getCurFocus(true)}) return
 end
 local W, H = dfhack.screen.getWindowSize()
