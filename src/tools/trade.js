@@ -101,33 +101,10 @@ tool("df_justice", "Crimes involving the fort: type, criminal, accused, victim, 
     return text(`Exiled: ${value.unit}. They leave the map and cannot return to this fort.`);
   });
 
-tool("df_petition", "Petitions (residency, citizenship, temples/guildhalls). list: pending petitions with who asks, race, profession, age, syndromes and a CURSED warning for disguised werebeasts/vampires. approve / deny: answer the oldest pending one through the game's Petitions screen (the same buttons a player clicks).",
+tool("df_petition", "Petitions (residency, citizenship, temples/guildhalls). list: pending petitions with who asks, race, profession, age, syndromes and a CURSED warning for disguised werebeasts/vampires. A temple or guildhall request (wants Location) also gives the location type, tier, guild profession or deity, the fort's locations of that kind with their tier (answered_by), and the group's earlier requests: a group keeps asking while its location stays below the tier. approve / deny: answer the oldest pending one through the game's Petitions screen (the same buttons a player clicks).",
   { action: z.enum(["list", "approve", "deny"]).default("list") },
   async (a) => {
-    const { value: list } = await lua(
-      `local r = {}
-       for _, id in ipairs(df.global.plotinfo.petitions) do
-         local ag = df.agreement.find(id)
-         -- a temple or guildhall request comes from a group (religion, guild): its party lists an entity, no figure
-         local p = ag and #ag.parties > 0 and ag.parties[0]
-         local hid = p and #p.histfig_ids > 0 and p.histfig_ids[0]
-         local eid = p and #p.entity_ids > 0 and p.entity_ids[0]
-         local hf = hid and df.historical_figure.find(hid)
-         local ent = eid and df.historical_entity.find(eid)
-         local u = hf and df.unit.find(hf.unit_id)
-         local det = {}
-         for _, d in ipairs(ag and ag.details or {}) do det[#det + 1] = df.agreement_details_type[d.type] end
-         -- vet for disguised night creatures: werebeasts and vampires carry a syndrome / curse record
-         local syn = {}
-         if u then for _, sa in ipairs(u.syndromes.active) do local sy = df.syndrome.find(sa.type) syn[#syn + 1] = sy and sy.syn_name or '?' end end
-         local cursed = hf and try(function() return hf.info.curse ~= nil end, false) or false
-         local race = hf and df.creature_raw.find(hf.race).creature_id
-         r[#r + 1] = {id = id, who = u and unit_name(u) or (hf and dfhack.df2utf(dfhack.translation.translateName(hf.name, true)))
-             or (ent and dfhack.df2utf(dfhack.translation.translateName(ent.name, true)) .. ' (' .. df.historical_entity_type[ent.type] .. ')') or '?',
-           race = race, age = u and math.floor(dfhack.units.getAge(u)), wants = det, syndromes = syn,
-           warning = (cursed or (race or ''):find('NIGHT_CREATURE')) and 'CURSED: likely a werebeast or vampire, deny' or nil}
-       end
-       emit(r)`);
+    const { value: list } = await luaFile("petition", {});
     if (a.action === "list") return text(JSON.stringify({ petitions: list ?? [] }, null, 1));
     if (!list?.length) return fail("No pending petitions");
     // Answering goes through the Petitions panel, which closes whatever panel is open: never mid-trade.
