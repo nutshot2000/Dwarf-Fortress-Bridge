@@ -25,11 +25,14 @@ tool("df_screenshot", "Capture the actual Dwarf Fortress game window as a PNG im
       await new Promise(r=>setTimeout(r,250));
       context=await readContext();
     }
-    const rooms=context.map_loaded?(await luaFile("room_plan",{})).value:null;
+    // Rooms of the level in view only: every plan of a grown fort made ~25 KB of text per capture.
+    const rooms=context.map_loaded?(await luaFile("room_plan",{z:context.camera_origin.z})).value:null;
     const access=context.map_loaded?(await luaFile("access",{})).value:{checked:false,isolated:[],reason:"No map loaded"};
     const {metadata,image}=await captureScreenshot(a.max_width);
     const summary={...metadata,...context,requested_center:coords===3?{x:a.x,y:a.y,z:a.z}:undefined,
-      enclosure:rooms?{room_count:rooms.room_count,incomplete_rooms:rooms.damaged_rooms,rooms:rooms.rooms.map(r=>({id:r.id,x:r.x,y:r.y,z:r.z,state:r.state,next_step:r.next_step}))}:{checked:false,reason:"No map loaded"},
+      enclosure:rooms?{level_z:context.camera_origin.z,room_count:rooms.room_count,incomplete_rooms:rooms.damaged_rooms,
+        rooms:rooms.rooms.filter(r=>!r.enclosed).map(r=>({id:r.id,x:r.x,y:r.y,state:r.state,next_step:r.next_step})),
+        note:"Rooms on the level in view; enclosed rooms are counted, not listed. df_room_plan status for other levels."}:{checked:false,reason:"No map loaded"},
       citizen_access:access,review_checklist:["Check workers outside newly enclosed rooms have a way out.","Follow corridors to main stairs; inspect walls, doors and shared boundaries.","Look for loose clutter, furniture in passages, and unfinished construction.","Run df_problems and df_rooms audit; preserve escape routes before closing the final wall."],
       warning:context.paused?undefined:"Game was running during capture; positions and checks may differ. Pause and repeat for a stable review.",
       image_guidance:"The image is the current game view, not the entire map. Checks cover the fort and may reference rooms outside this view. If image input is unavailable, rely on text tools and do not claim visual verification."};

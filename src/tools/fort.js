@@ -39,7 +39,8 @@ tool("df_rooms", "Zones. action=list shows all zones with owners. action=assign 
     building_id: z.number().int().optional().describe("display: the display case or pedestal"),
     item_id: z.number().int().optional().describe("display: the item (e.g. an artifact) to put on show"),
     item_ids: z.array(z.number().int()).min(1).max(100).optional().describe("display: several items for one case at once (a case of masterwork crafts raises a guildhall's value)"),
-    full: z.boolean().optional().describe("audit: list every zone and room layout, not only those needing attention") },
+    zone_type: z.string().optional().describe("audit: list every flagged zone of this type in full (e.g. Bedroom, Tomb)"),
+    full: z.boolean().optional().describe("audit: list every zone and room layout, not only counts of the problems") },
   async (a) => {
     if (a.action === "display") {
       // Through the game's own "Assign new display items" panel: writing displayed_items directly made a
@@ -69,17 +70,36 @@ tool("df_rooms", "Zones. action=list shows all zones with owners. action=assign 
     }
     if (a.action === "audit") {
       const {value:report}=await luaFile("audit",a);
-      const {value:layout}=await luaFile("room_plan",{action:"status"});
+      const {value:layout}=await luaFile("room_plan",{action:"status",detail:!!a.full});
       const {value:access}=await luaFile("access",{});
       if (a.full) return text(JSON.stringify({...report,room_layouts:layout?.rooms,citizen_access:access},null,1));
-      // A grown fort has 80+ zones: by default list only what needs attention (or the one zone_id asked about).
-      const zones = (report?.zones ?? []).filter((zn) => a.zone_id !== undefined ? zn.id === a.zone_id
-        : (zn.missing?.length || zn.warnings?.length));
-      const rooms = (layout?.rooms ?? []).filter((r) => r.state !== "enclosed");
-      const ok = (report?.zones?.length ?? 0) - zones.length;
-      return text(JSON.stringify({...report, zones, zones_ok: a.zone_id === undefined ? ok : undefined,
-        room_layouts: rooms, citizen_access: access?.isolated?.length ? access : { isolated: [], main_group_size: access?.main_group_size },
-        hint: "Only zones with something missing or a warning are listed; zone_id=<id> shows one zone, full=true everything."}, null, 1));
+      const access_short = access?.isolated?.length ? access : { isolated: [], main_group_size: access?.main_group_size };
+      const flagged = (report?.zones ?? []).filter((zn) => zn.missing?.length || zn.warnings?.length);
+      const room_layouts = { room_count: layout?.room_count, damaged_rooms: layout?.damaged_rooms, by_state: layout?.by_state };
+      // One zone, or every flagged zone of one type, in full.
+      if (a.zone_id !== undefined || a.zone_type) {
+        const want = a.zone_type?.toLowerCase();
+        const zones = (a.zone_id !== undefined ? report?.zones ?? [] : flagged)
+          .filter((zn) => a.zone_id !== undefined ? zn.id === a.zone_id : String(zn.type).toLowerCase() === want);
+        return text(JSON.stringify({ zones, room_layouts, citizen_access: access_short }));
+      }
+      // A grown fort repeats the same few problems over hundreds of zones (164 empty one-tile tombs, 76 overlapping
+      // bedrooms in one fort: 139 KB of output). Count each problem once, with a few zone ids to look at.
+      const groups = new Map();
+      for (const zn of flagged) for (const [kind, list] of [["missing", zn.missing], ["warning", zn.warnings]])
+        for (const issue of list ?? []) {
+          // "overlaps Wing 22#2410, Wing 12#2400: ..." names other zones: count all overlaps as one problem
+          const label = issue.replace(/^overlaps [^:]+:/, "overlaps other zones:");
+          const key = `${zn.type}|${kind}|${label}`;
+          const g = groups.get(key) ?? { zone_type: zn.type, kind, issue: label, count: 0, zone_ids: [] };
+          g.count++; if (g.zone_ids.length < 8) g.zone_ids.push(zn.id);
+          groups.set(key, g);
+        }
+      const problems = [...groups.values()].sort((p, q) => q.count - p.count);
+      const { zones: _z, ...rest } = report ?? {};
+      return text(JSON.stringify({ ...rest, zones_checked: report?.zones?.length ?? 0, zones_flagged: flagged.length,
+        problems, room_layouts, citizen_access: access_short,
+        hint: "Problems are counted by zone type; zone_ids are examples. zone_id=<id> shows one zone, zone_type=<type, e.g. Tomb> every flagged zone of that type, full=true everything. df_room_plan status z=<level> or id=<id> details room layouts." }));
     }
     if (a.action !== "bedroom_wing") return luaTool("rooms", a);
     // A tidy wing of private 3x3 bedrooms either side of a corridor (row y), each with a doorway.
@@ -97,7 +117,7 @@ tool("df_rooms", "Zones. action=list shows all zones with owners. action=assign 
     if (protectedPlan?.error) return fail(protectedPlan.error);
     if (a.phase === "dig" || !a.phase) {
       const ids=new Set(layout.map(r=>`${r.x},${r.y},${Z}`));
-      const damaged=(protectedPlan?.rooms??[]).filter(r=>ids.has(r.id)&&r.missing_walls.length);
+      const damaged=(protectedPlan?.rooms??[]).filter(r=>ids.has(r.id)&&r.missing_walls?.length);
       // A refused wing must not leave phantom protected plans behind.
       if (damaged.length) await luaFile("room_plan", { action: "forget", ids: [...ids] });
       if (damaged.length) return fail(JSON.stringify({error:"Proposed room boundaries are already open. Choose intact rock or construct enclosing walls before mining/furnishing.",rooms:damaged}));

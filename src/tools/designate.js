@@ -8,7 +8,7 @@ tool("df_designations", "List actual pending dig/smooth and tree-felling/plant-g
 tool("df_remove", "Preview or deconstruct one building/plan by ID using ordinary game removal. dry_run defaults true. To release a reserved blocker, inspect df_jobs suspended, preview the owning unbuilt building, then dry_run=false. Built structures require allow_built=true. This removes the selected plan; it does not merely release its materials.",
   {building_id:z.number().int(),dry_run:z.boolean().default(true),allow_built:z.boolean().default(false)},a=>luaTool("remove",a));
 
-tool("df_room_plan", "Protect, audit or repair private rooms. status reports missing walls, pending construction and enclosed. repair id=... previews missing wall/door jobs (dry_run defaults true); dry_run=false queues ordinary construction. Supply door_x,door_y when the damaged room has no surviving entrance. Repair preserves furniture and the doorway; wait and recheck enclosed=true before calling it finished. tidy id=... previews loose stone/gem cleanup in that room; dry_run=false marks eligible clutter for hauling to a dump, skipping reserved items and furniture. protect saves custom interiors and doorway coordinates. Existing bedroom zones are protected automatically. forget removes a saved plan (id) or every saved plan on level z, for intentional remodelling or abandoned layouts. status z=... reports one level.",
+tool("df_room_plan", "Protect, audit or repair private rooms. status reports missing walls, pending construction and enclosed. repair id=... previews missing wall/door jobs (dry_run defaults true); dry_run=false queues ordinary construction. Supply door_x,door_y when the damaged room has no surviving entrance. Repair preserves furniture and the doorway; wait and recheck enclosed=true before calling it finished. tidy id=... previews loose stone/gem cleanup in that room; dry_run=false marks eligible clutter for hauling to a dump, skipping reserved items and furniture. protect saves custom interiors and doorway coordinates. Existing bedroom zones are protected automatically. forget removes a saved plan (id) or every saved plan on level z, for intentional remodelling or abandoned layouts. status without z or id counts plans by state and level; status z=... lists one level, id=... one room, detail=true every room with full tile lists. protect reports only the rooms it saved.",
   {action:z.enum(["status","protect","forget","repair","tidy"]).default("status"),z:optCoord,id:z.string().optional(),detail:z.boolean().default(false),
     dry_run:z.boolean().default(true),door_x:optCoord,door_y:optCoord,
     rooms:z.array(z.object({x:coord,y:coord,w:z.number().int().min(1).max(30).optional(),h:z.number().int().min(1).max(30).optional(),door_x:optCoord,door_y:coord})).optional()},async a=>{
@@ -321,12 +321,19 @@ tool("df_zone", "Create a zone rectangle. Bedroom zones require dry floor and co
       if(!check?.ok) return fail(JSON.stringify({...check,guidance:"Bedroom zones require dry floor and completed walls/doors. Use df_room_plan protect, repair, wait and verify before zoning."}));
     }
     const props = [];
-    if (a.name) props.push(`name="${a.name.replace(/"/g, "")}"`);
+    // quickfort reads the (WxH) size only when nothing before it holds a "(": a name like "Wing 2 (SS3) 13" made a
+    // one-tile zone without an error. A comma would split the CSV cell, braces end the property list.
+    const zoneName = a.name?.replace(/\(/g, "[").replace(/\)/g, "]").replace(/,/g, ";").replace(/["{}]/g, "");
+    if (a.name) props.push(`name="${zoneName}"`);
     if (a.location) props.push(`location=${a.location}`);
     if (a.location === "guildhall") props.push(`profession=${a.profession.toUpperCase().replace(/[^A-Z_]/g, "")}`);
     const cell = a.type + (props.length ? `{${props.join(" ")}}` : "") + `(${a.w}x${a.h})`;
     await cameraTo(a.x + (a.w >> 1), a.y + (a.h >> 1), a.z, `zone at ${a.x},${a.y},${a.z}`);
     const out = await quickfort("zone", [cell], a.x, a.y, a.z);
+    const tiles = Number(/Zone tiles designated:\s*(\d+)/i.exec(out)?.[1] ?? NaN);
+    if (tiles < a.w * a.h)
+      return fail(`${out}${await newIdNote("zone", a)}\nThe zone covers ${tiles} of the ${a.w * a.h} tiles asked for (${a.w}x${a.h}). Look at the area with df_look; remove it with df_remove building_id=<zone id> dry_run=false if it is not what you wanted.`);
+    const nameNote = a.name && zoneName !== a.name ? `\nZone named "${zoneName}" (parentheses, commas, quotes and braces are not allowed in a quickfort zone name).` : "";
     let locNote = "";
     if (a.location && a.name) {
       // Quickfort gives every new location the same generated name. A nickname would only be shown in quotes in front
@@ -351,7 +358,7 @@ tool("df_zone", "Create a zone rectangle. Bedroom zones require dry floor and co
     // A tomb zone is one grave: DF assigns it to a single body whatever its size or coffin count.
     const tombNote = a.type === "T" && a.w * a.h > 1
       ? "\nNOTE: a tomb zone holds ONE burial however many coffins it covers. Make a 1x1 tomb zone on each coffin and no zone over the row: a coffin inside two tomb zones gets no burials." : "";
-    return text(out + await newIdNote("zone", a) + locNote + tombNote + await skippedTilesNote(out, a));
+    return text(out + await newIdNote("zone", a) + nameNote + locNote + tombNote + await skippedTilesNote(out, a));
   });
 
 // Report the id of the zone/stockpile just made, so follow-up calls (assign, barracks, presets) need no listing.

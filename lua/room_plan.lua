@@ -2,6 +2,7 @@ if not need_map() then return end
 local key='df-bridge/room-plans'
 local plans=dfhack.persistent.getSiteData(key,{})
 local action=ARGS.action or 'status'
+local saved={}
 if action=='protect' then
   if ARGS.z==nil or not ARGS.rooms or #ARGS.rooms==0 then emit({error='protect requires z and rooms'}) return end
   for _,r in ipairs(ARGS.rooms) do
@@ -13,6 +14,7 @@ if action=='protect' then
     end
     local id=('%d,%d,%d'):format(r.x,r.y,ARGS.z)
     plans[id]={id=id,x=r.x,y=r.y,z=ARGS.z,w=w,h=h,door_x=dx,door_y=dy}
+    saved[id]=true
   end
   dfhack.persistent.saveSiteData(key,plans)
 elseif action=='forget' then
@@ -121,17 +123,38 @@ for _,r in ipairs(status) do
   r.invalid_interior_count=#r.invalid_interior
   -- A finished room needs no repair data; keep the summary short unless detail=true.
   if r.enclosed and not ARGS.detail then
-    status[_]={id=r.id,zone=r.zone,x=r.x,y=r.y,z=r.z,w=r.w,h=r.h,state=r.state,enclosed=true,door=r.door,next_step=r.next_step}
+    status[_]={id=r.id,zone=r.zone,x=r.x,y=r.y,z=r.z,w=r.w,h=r.h,state=r.state,enclosed=true,door=r.door}
   elseif not ARGS.detail then
     while #r.missing_walls>6 do table.remove(r.missing_walls) end
     while #r.unsafe_designations>6 do table.remove(r.unsafe_designations) end
     while #r.invalid_interior>2 do table.remove(r.invalid_interior) end
   end
 end
--- z narrows the report to one level (protection itself always covers every level).
-if ARGS.z~=nil and action=='status' then
+-- Narrow the report: z to one level, id to one room, protect to the rooms just saved (protection itself always
+-- covers every level). With none of them and no detail, a grown fort has 100+ plans: count them by state instead.
+local function keep_if(fn)
   local keep={} damaged=0
-  for _,r in ipairs(status) do if r.z==ARGS.z then keep[#keep+1]=r if not r.enclosed then damaged=damaged+1 end end end
+  for _,r in ipairs(status) do if fn(r) then keep[#keep+1]=r if not r.enclosed then damaged=damaged+1 end end end
   status=keep
 end
-emit({room_count=#status,damaged_rooms=damaged,rooms=status,guidance='Repair: df_room_plan action=repair id=... previews wall/door jobs; dry_run=false queues them. If the entrance is unknown, supply door_x,door_y on the perimeter first. Pending walls/doors are not enclosure: wait, inspect suspended jobs, then recheck enclosed=true. Never wall over an entrance, corridor, stair or furniture. Clear loose clutter with a bounded df_dump after repairs. Coordinate lists are samples unless detail=true.'})
+if action=='protect' then keep_if(function(r) return saved[('%d,%d,%d'):format(r.x,r.y,r.z)] end)
+elseif ARGS.id then keep_if(function(r) return r.id==ARGS.id end)
+elseif ARGS.z~=nil then keep_if(function(r) return r.z==ARGS.z end) end
+local guidance='Repair: df_room_plan action=repair id=... previews wall/door jobs; dry_run=false queues them. If the entrance is unknown, supply door_x,door_y on the perimeter first. Pending walls/doors are not enclosure: wait, inspect suspended jobs, then recheck enclosed=true. Never wall over an entrance, corridor, stair or furniture. Clear loose clutter with a bounded df_dump after repairs. Coordinate lists are samples unless detail=true.'
+if action=='status' and ARGS.z==nil and not ARGS.id and not ARGS.detail then
+  local by_state,levels={},{}
+  for _,r in ipairs(status) do
+    local s=by_state[r.state] or {count=0,next_step=r.next_step,ids=r.state~='enclosed' and {} or nil}
+    s.count=s.count+1
+    if s.ids then if #s.ids<10 then s.ids[#s.ids+1]=r.id else s.more=(s.more or 0)+1 end end
+    by_state[r.state]=s
+    local l=levels['z'..r.z] or {rooms=0,not_enclosed=0}
+    l.rooms=l.rooms+1 if not r.enclosed then l.not_enclosed=l.not_enclosed+1 end
+    levels['z'..r.z]=l
+  end
+  emit({room_count=#status,damaged_rooms=damaged,by_state=by_state,levels=levels,
+    hint='Counts only. status z=<level> lists one level, id=<id> one room, detail=true every room with full tile lists.',
+    guidance=guidance})
+  return
+end
+emit({room_count=#status,damaged_rooms=damaged,rooms=status,guidance=guidance})

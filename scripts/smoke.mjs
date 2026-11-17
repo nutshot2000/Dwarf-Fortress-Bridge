@@ -93,7 +93,7 @@ if (!offline) {
       assert(!res.isError,(res.content??[]).map(c=>c.text).join("\n"));
       return JSON.parse(res.content.map(c=>c.text).join("\n"));
     };
-    const r=(await call("df_room_plan",{})).rooms.find(r=>r.enclosed);
+    const r=(await call("df_room_plan",{detail:true})).rooms.find(r=>r.enclosed);
     if(r){
       const snapshot=()=>call("df_lua",{code:"local n=0 for _,it in ipairs(df.global.world.items.all) do if it.flags.dump then n=n+1 end end emit({buildings=#df.global.world.buildings.all,marked_dump=n,plans=dfhack.persistent.getSiteData('df-bridge/room-plans',{})})"});
       const before=await snapshot();

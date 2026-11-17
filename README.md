@@ -329,6 +329,8 @@ The bridge was written by Claude while playing; most of its tools exist because 
 - Diplomats meet nobles in an office of decent quality, or the meeting and depot trading stall.
 - Tombs hold one body each: put a 1x1 tomb zone on every coffin.
 - Every location quickfort creates gets the same generated name; `df_zone` sets the requested one.
+- quickfort reads a zone's `(WxH)` size only when nothing before it holds a `(`: `b{name="Wing (SS3) 13"}(3x3)`
+  makes a one-tile zone without an error. `df_zone` turns parentheses in a name into brackets.
 
 **Military**
 - Soldiers only fetch items listed in their position's assigned items; `df_military equip` keeps that in sync.
