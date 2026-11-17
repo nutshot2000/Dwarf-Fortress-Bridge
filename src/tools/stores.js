@@ -1,7 +1,7 @@
 // Tools: stores.
 import { tool, luaTool, luaFile, text, fail, json, optCoord, z, command, inputWarnings } from "../core.js";
 
-tool("df_crop", "Farming. list reports built state, light/dark tiles, incompatible crops and seeds. set requires a completed plot and compatible light/dark conditions; unbuilt plots reset on completion, and roofing surface soil does NOT make it dark. Set plot_id, plant name/id or fallow, seasons (default all).",
+tool("df_crop", "Farming. list reports built state, light/dark tiles, biome, incompatible crops and per plot the crops it can grow with seeds in stock (plantable_now) and how many it could grow at all (growable_crops). set requires a completed plot, compatible light/dark conditions and, for a surface crop, the plot's biome (a MOUNTAIN plot grows nothing); a crop is written only into its own seasons; unbuilt plots reset on completion, and roofing surface soil does NOT make it dark. Set plot_id, plant name/id or fallow, seasons (default all).",
   { action: z.enum(["list", "set"]).default("list"), plot_id: z.number().int().optional(), plant: z.string().optional(),
     seasons: z.array(z.enum(["spring", "summer", "autumn", "winter"])).optional() },
   (a) => luaTool("crop", a));

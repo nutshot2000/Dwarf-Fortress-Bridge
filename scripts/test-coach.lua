@@ -8,6 +8,10 @@ local function run(name,params,overrides)
     need_map=function() return true end,
     try=function(fn,d) local ok,v=pcall(fn) if ok then return v end return d end}, {__index=_ENV})
   for k,v in pairs(overrides or {}) do env[k]=v end
+  -- shared farm helpers come from the prelude, bound to the same (fake) df/dfhack
+  local fh=assert(io.open(args.root..'/lua/prelude.lua')) local src=fh:read('a') fh:close()
+  env.plot_conditions,env.crop_mismatch,env.off_season,env.crop_seasons=assert(load(src..
+    '\nreturn plot_conditions, crop_mismatch, off_season, crop_seasons','prelude','t',env))()
   assert(loadfile(args.root..'/lua/'..name..'.lua','t',env))()
   return result
 end
@@ -23,8 +27,28 @@ fake.getBuildStage=function() return 1 end
 local fake_hack=setmetatable({maps={getTileFlags=function() return {light=true,subterranean=false} end},
   buildings={containsTile=function() return true end}}, {__index=dfhack})
 bad=run('crop',{action='set',plot_id=1,plant='plump helmet'},{df=fake_df,dfhack=fake_hack})
-check(bad.error and bad.error:find('incompatible'),'surface plots must reject underground crops')
+check(bad.error and bad.error:find('underground crop'),'surface plots must reject underground crops')
 check(fake.plant_id[0]==-1,'incompatible crop must not be written')
+-- a surface crop must also match the plot's biome: nothing grows on a MOUNTAIN plot
+local biome=df.biome_type.MOUNTAIN
+fake_hack.maps.getTileBiomeRgn=function() return 0,0 end
+fake_hack.maps.getBiomeType=function() return biome end
+bad=run('crop',{action='set',plot_id=1,plant='wild carrot'},{df=fake_df,dfhack=fake_hack})
+check(bad.error and bad.error:find('MOUNTAIN biome'),'a crop outside the plot biome must be rejected')
+check(fake.plant_id[0]==-1,'out-of-biome crop must not be written')
+check(bad.plot.warning and bad.plot.warning:find('No crop can grow here'),'a MOUNTAIN plot must say nothing can grow')
+biome=df.biome_type.FOREST_TEMPERATE_CONIFER
+local ok=run('crop',{action='set',plot_id=1,plant='wild carrot'},{df=fake_df,dfhack=fake_hack})
+check(ok.ok and fake.plant_id[0]>=0,'a crop of the plot biome must be accepted')
+-- a crop is written only into its own seasons (sweet pod: spring and summer)
+fake_hack.maps.getTileFlags=function() return {light=false,subterranean=true} end
+for s=0,3 do fake.plant_id[s]=-1 end
+ok=run('crop',{action='set',plot_id=1,plant='sweet pod'},{df=fake_df,dfhack=fake_hack})
+check(ok.ok and fake.plant_id[0]>=0 and fake.plant_id[1]>=0,'in-season crop must be written')
+check(fake.plant_id[2]==-1 and fake.plant_id[3]==-1,'off-season crop must not be written')
+check(ok.warning and ok.warning:find('autumn, winter unchanged'),'skipped seasons must be named')
+bad=run('crop',{action='set',plot_id=1,plant='sweet pod',seasons={'winter'}},{df=fake_df,dfhack=fake_hack})
+check(bad.error and bad.error:find('not in winter') and fake.plant_id[3]==-1,'an only off-season request must be refused')
 bad=run('items',{type='NOT_AN_ITEM_TYPE'})
 check(bad.error and bad.error:find('Unknown item type'),'invalid item filter must not broaden the search')
 local map=setmetatable({maps={getTileFlags=function() return {hidden=false,flow_size=0} end,
