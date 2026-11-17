@@ -21,7 +21,7 @@ local env = setmetatable({
   need_map = function() return true end,
   try = function(fn, default) local ok,v = pcall(fn) if ok then return v end return default end,
   emit = function(value) result = value end,
-  df = setmetatable({global = {world = {buildings = {all = {pile}}, units = {active = {}}}}}, {__index = df}),
+  df = setmetatable({global = {world = {buildings = {all = {pile}}, units = {active = {}}, jobs = {list = {}}}}}, {__index = df}),
   dfhack = setmetatable({maps = {
     getTileSize = function() return 7, 7, 1 end,
     getTileType = function(x,y) return y == 2 and (x == 1 or x == 2) and df.tiletype.FrozenWall or df.tiletype.StoneWall end,

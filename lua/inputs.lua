@@ -91,12 +91,17 @@ local function count(f)
       return false
     end, false)
   end
-  local want_plant, f2_rest = false, {}
+  -- Likewise it rejects silk under flags2.silk (cave spider silk cloth, 107 pieces, read as "0 usable cloth"):
+  -- check silk and yarn against the material flags.
+  local MAT_FLAG = {silk = 'SILK', yarn = 'YARN'}
+  local want_plant, want_mat, f2_rest = false, nil, {}
   for _, n in ipairs(f.flags2 or {}) do
-    if n == 'plant' then want_plant = true else f2_rest[#f2_rest + 1] = n end
+    if n == 'plant' then want_plant = true
+    elseif MAT_FLAG[n] then want_mat = MAT_FLAG[n]
+    else f2_rest[#f2_rest + 1] = n end
   end
   local fm = f
-  if want_plant then
+  if want_plant or want_mat then
     fm = {}
     for k, v in pairs(f) do fm[k] = v end
     fm.flags2 = f2_rest
@@ -117,7 +122,10 @@ local function count(f)
          and try(function() return dfhack.job.isSuitableItem(ji_item, itype, it:getSubtype()) end, true) then
         local ok_mat = try(function() return dfhack.job.isSuitableMaterial(ji, mt, mi, itype) end, true)
           and (not want_plant or try(function() return dfhack.matinfo.decode(mt, mi).plant ~= nil end, false))
+          and (not want_mat or try(function() return dfhack.matinfo.decode(mt, mi).material.flags[want_mat] end, false))
           and (not want_edged or edged(it))
+          -- cloth cut-offs (dimension below a whole piece) do not count for jobs that need a whole one
+          and (not f.min_dimension or try(function() return it.dimension >= f.min_dimension end, true))
         local st = state(it)
         if st and ok_mat then
           if st == 'usable' then usable = usable + 1 else held = held + 1 end
@@ -149,7 +157,13 @@ local function describe(f)
   end
   if mat then return mat .. ' ' .. kind end
   local adj = {}
-  for _, n in ipairs(f.flags2 or {}) do if n == 'non_economic' then adj[#adj + 1] = 'non-economic' end end
+  for _, n in ipairs(f.flags2 or {}) do
+    if n == 'non_economic' then adj[#adj + 1] = 'non-economic'
+    elseif (f.item_type == IT.CLOTH or f.item_type == IT.THREAD) and (n == 'silk' or n == 'yarn' or n == 'plant') then
+      adj[#adj + 1] = n == 'plant' and 'plant fibre' or n
+    end
+  end
+  if f.min_dimension and f.min_dimension >= 10000 and f.item_type == IT.CLOTH then adj[#adj + 1] = 'whole-piece' end
   for _, n in ipairs(f.flags3 or {}) do
     if n == 'hard' then adj[#adj + 1] = 'hard' elseif n == 'edged' then adj[#adj + 1] = 'edged' end
   end

@@ -25,7 +25,10 @@ local function rebuild_index()
   local pos = {}
   for _, p in ipairs(e.positions.own) do pos[p.id] = p end
   local abt = e.assignments_by_type
-  for r = 0, #df.entity_position_responsibility do pcall(function() abt[r]:resize(0) end) end
+  -- `#` on a DFHack enum is 0, so iterate the enum bounds explicitly; otherwise only index 0
+  -- is cleared and every repair/appoint appends duplicates to the other responsibilities.
+  local R = df.entity_position_responsibility
+  for r = math.max(R._first_item, 0), R._last_item do pcall(function() abt[r]:resize(0) end) end
   local n = 0
   for _, a in ipairs(e.positions.assignments) do
     local p = pos[a.position_id]

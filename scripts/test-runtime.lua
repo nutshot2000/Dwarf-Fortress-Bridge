@@ -13,7 +13,15 @@ for _, flag in ipairs({'rotten', 'forbid', 'garbage_collect', 'trader', 'dump', 
 end
 check(helpers.usable(item({in_job = true})) and not helpers.available(item({in_job = true})),
   'reserved stock stays in inventory but is not available')
-check(not helpers.available(item({in_inventory = true})), 'carried or equipped items are not spare stock')
+-- The prelude asks DFHack who holds the item; fake that answer for synthetic items.
+local real_holder = dfhack.items.getHolderUnit
+local ok, err = pcall(function()
+  dfhack.items.getHolderUnit = function(it) return it.flags.held and {} or nil end
+  check(not helpers.available(item({in_inventory = true, held = true})), 'carried or equipped items are not spare stock')
+  check(helpers.available(item({in_inventory = true})), 'items in bins, barrels and bags are spare stock')
+end)
+dfhack.items.getHolderUnit = real_holder
+assert(ok, err)
 check(not helpers.warning(4, 1, 115, 7), 'queued reserve refill must prevent a false shortage')
 check(not helpers.warning(5, 0, 115, 7), 'adequate empty containers must not warn')
 check(not helpers.warning(2, 0, 115, 7, 2), 'reserve warning must respect a lower configured target')
@@ -61,7 +69,7 @@ local function heartbeat(actors, since, report_animals)
   local fake_df = setmetatable({global = {cur_year = 100, cur_year_tick = 120,
     pause_state = true, plotinfo = {caravans = {}},
     world = {status = {reports = reports}, units = {active = actors}}},
-    report = {find = function(id) return {id = id, text = 'A real combat report'} end}}, {__index = df})
+    report = {find = function(id) return {id = id, type = df.announcement_type.COMBAT_STRIKE_DETAILS, text = 'A real combat report'} end}}, {__index = df})
   local fake_dfhack = setmetatable({units = {
     isActive = function(u) return not u.dead end, isDead = function(u) return u.dead or false end,
     isDanger = function(u) return u.danger or false end, isCitizen = function(u) return u.citizen or false end,

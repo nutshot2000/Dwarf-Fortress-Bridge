@@ -53,14 +53,16 @@ tool("df_order", "Queue a manager work order (needs a MANAGER; df_noble repair i
     }
     if (a.reaction) { a.job = "CustomReaction"; }
     if (!a.job) return luaTool("orders");
-    const { out, order } = await queueOrder(a);
+    const { out, order, manager: m } = await queueOrder(a);
     const warn = await inputWarnings({ order });
+    if (m.gathering) warn.push(`the manager ${m.name} (#${m.id}) is gathering plants${m.gathering.zone ? ` in zone #${m.gathering.zone.id}` : ""} (${m.gathering.jobs} gathering jobs in the fort): gathering zones pull every free dwarf, and the order may wait for days. Shrink or remove the gathering zone.`);
+    else if (m.autolabor) warn.push(`DFHack autolabor (legacy mode) keeps giving the manager ${m.name} (#${m.id}) ordinary labors${m.job ? ` (now: ${m.job})` : ""}; a manager kept busy can leave orders unvalidated for days. df_problems explains how to free them.`);
     return text((out.trim() || "Queued") + `\norder: ${JSON.stringify(order)}` + warn.map((w) => `\nWARNING: ${w}`).join(""));
   });
 
 // Build and queue a manager order (shared by df_order and df_upkeep).
 async function queueOrder(a) {
-  const { value: manager } = await lua("emit(#dfhack.units.getUnitsByNobleRole('manager') > 0)");
+  const { value: manager } = await lua("emit(manager_status().manager or false)");
   if (!manager) throw new Error("No active MANAGER. Appoint one with df_noble action=appoint position=MANAGER unit_id=...; if already appointed, run df_noble action=repair. No order was queued.");
   // Without a material the manager never validates a MakeTool order: these furniture tools default to wood.
   if (TOOL_ALIASES[a.job]) { a = { ...a, item_subtype: a.item_subtype ?? TOOL_ALIASES[a.job], job: "MakeTool", material: a.material ?? "wood" }; }
@@ -93,7 +95,9 @@ async function queueOrder(a) {
   const out = await command("workorder", [JSON.stringify(order)]);
   // workorder reports a rejected order as text, not as an error; say so instead of printing it as queued
   if (/invalid|unknown|error|could not|not found/i.test(out)) throw new Error(`${out.trim()}\nNo order was queued. df_cmd 'workorder -l <filter>' lists the job names.`);
-  return { out: out + fallback, order };
+  // date the new order (and any made in the game's screens since) so df_problems can tell how long it waits
+  await lua("note_order_dates()");
+  return { out: out + fallback, order, manager };
 }
 
 // ---------- upkeep: keep everyday stocks topped up ----------

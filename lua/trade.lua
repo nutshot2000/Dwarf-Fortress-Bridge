@@ -162,16 +162,25 @@ if action == 'select' or action == 'deselect' then
   if not idx then emit({error = 'side must be merchant or fort'}) return end
   local n = 0
   local flags = T.goodflag[idx]
+  -- Reading past the end of a DF vector raises instead of returning nil: bound every index by the vector size.
+  local size = #flags
+  -- Check every index first so a bad one changes nothing (a raise mid-loop used to leave earlier rows marked).
+  local bad = {}
   for _, i in ipairs(ARGS.indices or {}) do
-    if flags[i] then
-      flags[i].selected = (action == 'select') n = n + 1
-      -- A container's contents are the "contained" rows right after it (hidden from action=screen). Marking only
-      -- the container row buys or sells the empty bin: a "Cloth Bin" worth 588 came home as a 10-value bin.
-      local j = i + 1
-      while flags[j] and flags[j].contained do
-        flags[j].selected = (action == 'select')
-        j = j + 1
-      end
+    if type(i) ~= 'number' or i < 0 or i >= size then table.insert(bad, tostring(i)) end
+  end
+  if #bad > 0 then
+    emit({error = ('No row at index %s on the %s side: it has %d rows (0-%d). Nothing was changed.'):format(
+      table.concat(bad, ','), ARGS.side or 'fort', size, size - 1)}) return
+  end
+  for _, i in ipairs(ARGS.indices or {}) do
+    flags[i].selected = (action == 'select') n = n + 1
+    -- A container's contents are the "contained" rows right after it (hidden from action=screen). Marking only
+    -- the container row buys or sells the empty bin: a "Cloth Bin" worth 588 came home as a 10-value bin.
+    local j = i + 1
+    while j < size and flags[j].contained do
+      flags[j].selected = (action == 'select')
+      j = j + 1
     end
   end
   local total = {0, 0}
