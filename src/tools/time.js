@@ -54,10 +54,21 @@ tool("df_wait","Unpause and let the game run for a number of in-game days (1 day
     let now = start, reason = "done", lastAbs = start.abs, lastMove = Date.now();
     const popups = [], animalReports = new Map();
     directorReset(start.last);
+    // dig designations the game drops as "damp" go back in while time runs: checked only after the wait,
+    // a wing over an aquifer advanced a tile or two per wait and the miners idled the rest of it
+    const redug = { n: 0, at: [] };
+    let loops = 0;
+    const redig = async () => {
+      try {
+        const { value: r } = await luaFile("dig_memory", { action: "reconfirm" });
+        if (r?.redesignated) { redug.n += r.redesignated; redug.at.push(...r.at); }
+      } catch { /* never break a wait */ }
+    };
     try {
       while (true) {
         await new Promise((r) => setTimeout(r, 700));
         now = await tick(now.last,a.animal_fights);
+        if (++loops % 3 === 0) await redig();
         for (const e of now.animal_combat ?? []) animalReports.set(e.report_id,e);
         // Stop once per fight: a citizen already reported fighting within the last game day keeps
         // being listed but does not stop the wait again on every blow.
@@ -168,6 +179,12 @@ tool("df_wait","Unpause and let the game run for a number of in-game days (1 day
     const { value: notices } = await luaFile("notices", {});
     if (notices?.length) out += `\nDFHack notices: ${notices.join(" | ")}` +
       (notices.some((n) => /petition/.test(n)) ? " (petition outstanding = an accepted temple/guildhall not yet up to tier: `list-agreements` via df_cmd)" : "");
+    // the game silently drops a dig designation on a tile revealed "damp" (next to an aquifer or water);
+    // a second designation sticks, so put back the ones df_dig / bedroom_wing remembered
+    await redig();
+    if (redug.n) out += `
+DIG: the game dropped ${redug.n} dig designation(s) as damp when they were revealed ` +
+      `(${redug.at.slice(0, 6).join("; ")}${redug.n > 6 ? "; ..." : ""}); designated them again, which confirms them.`;
     const journal = await journalAfterWait(all);
     if (journal) out += `\n${journal}`;
     if (a.upkeep) {

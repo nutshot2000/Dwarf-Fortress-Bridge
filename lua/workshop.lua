@@ -121,12 +121,29 @@ if action == 'add' then
     if t.name:lower() == want then pick = t break end
   end
   -- substring match: prefer native jobs over raw reactions (reactions often need extra reagents)
-  for pass = 1, 2 do
-    if pick then break end
-    for _, t in ipairs(task_list(b)) do
-      local is_reaction = t.job_fields and t.job_fields.reaction_name
-      if (pass == 1) ~= (is_reaction and true or false) and t.name:lower():find(want, 1, true) then pick = t break end
+  local candidates = {}
+  if not pick then
+    for pass = 1, 2 do
+      for _, t in ipairs(task_list(b)) do
+        local is_reaction = t.job_fields and t.job_fields.reaction_name
+        if (pass == 1) ~= (is_reaction and true or false) and t.name:lower():find(want, 1, true) then
+          table.insert(candidates, t)
+        end
+      end
     end
+    pick = candidates[1]
+  end
+  -- the JS side checks each candidate's inputs and asks again by exact name ("brew" matched "brew drink
+  -- from fruit" with no fruit in the fort while plants for "brew drink from plant" sat in the stockpile)
+  if ARGS.candidates_only then
+    local out = {}
+    for _, t in ipairs(#candidates > 0 and candidates or {pick}) do
+      local inputs = {}
+      for _, item in ipairs(t.items or {}) do table.insert(inputs, job_item_filter(item)) end
+      table.insert(out, {name = dfhack.df2utf(t.name), items = inputs, job_type = t.job_fields and t.job_fields.job_type or nil})
+    end
+    emit({candidates = out, building_id = b.id,
+      magma = df.building_furnacest:is_instance(b) and df.furnace_type[b.type]:find('^Magma') ~= nil}) return
   end
   if not pick then emit({error = 'No task matching "' .. want .. '". List tasks with action=list building_id=' .. b.id}) return end
   -- dfhack.workshops gives every reagent the first one's item type (the edged tool of 'make wooden chair'

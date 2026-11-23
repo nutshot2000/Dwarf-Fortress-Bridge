@@ -173,6 +173,53 @@ local function citizen_access_report(units, connected)
     guidance='Disconnected citizens may be trapped. Inspect walls, doors, stairs and access to supplies. Connected does not prove doors are unlocked or the unit is mobile. No majority group means no isolation verdict.'}
 end
 
+-- Dig designations no miner can reach: groups of designated tiles where no tile has a walkable neighbour
+-- (3x3x3) in the citizens' main walking group. A wing dug "inside out" with its corridor walled off at both
+-- ends sat for months like that: miners only dig a tile they can stand next to.
+local function stranded_digs(zonly)
+  local groups, best, main = {}, 0, nil
+  for _, u in ipairs(citizens()) do
+    local g = dfhack.maps.getWalkableGroup(u.pos)
+    if g ~= 0 then groups[g] = (groups[g] or 0) + 1 if groups[g] > best then best, main = groups[g], g end end
+  end
+  if not main then return {} end
+  local des = {}
+  local function key(x, y, z) return (z * 1000 + y) * 1000 + x end
+  for _, b in ipairs(df.global.world.map.map_blocks) do
+    if b.flags.designated and (not zonly or b.map_pos.z == zonly) then
+      for x = 0, 15 do for y = 0, 15 do
+        if b.designation[x][y].dig ~= 0 then
+          local X, Y, Z = b.map_pos.x + x, b.map_pos.y + y, b.map_pos.z
+          des[key(X, Y, Z)] = {X, Y, Z}
+        end
+      end end
+    end
+  end
+  local seen, out = {}, {}
+  for k, p in pairs(des) do
+    if not seen[k] then
+      seen[k] = true
+      local q, h, ok, n = {p}, 1, false, 0
+      local x1, y1, x2, y2 = p[1], p[2], p[1], p[2]
+      while h <= #q do
+        local x, y, z = q[h][1], q[h][2], q[h][3] h = h + 1 n = n + 1
+        x1, y1, x2, y2 = math.min(x1, x), math.min(y1, y), math.max(x2, x), math.max(y2, y)
+        for dz = -1, 1 do for dx = -1, 1 do for dy = -1, 1 do
+          local kk = key(x + dx, y + dy, z + dz)
+          if des[kk] then
+            if not seen[kk] then seen[kk] = true q[#q + 1] = des[kk] end
+          elseif not ok and dfhack.maps.getWalkableGroup(xyz2pos(x + dx, y + dy, z + dz)) == main then
+            ok = true
+          end
+        end end end
+      end
+      if not ok then out[#out + 1] = {tiles = n, x1 = x1, y1 = y1, x2 = x2, y2 = y2, z = p[3]} end
+    end
+  end
+  table.sort(out, function(a, c) return a.tiles > c.tiles end)
+  return out
+end
+
 -- Installed building materials and personal possessions are not communal stock.
 local function stock_usable(it)
   local f = it.flags

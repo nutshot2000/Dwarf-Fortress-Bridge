@@ -143,6 +143,8 @@ tool("df_dig", "Designate a rectangle for digging (or channel/stairs/ramp/chop/g
           for _,j in ipairs(doomed) do dfhack.job.removeJob(j) cancelled=cancelled+1 end
         end
         emit({marked_plants=n,tile_designations=tiles,cancelled_jobs=cancelled})`,{...a,x,y,w,h});
+      if (a.kind === "undesignate") await luaFile("dig_memory", { action: "forget", x1: x, y1: y, x2: x + w - 1, y2: y + h - 1,
+        z1: a.z, z2: a.z - ((a.levels ?? 1) - 1) });
       return text(out + `\nVerified: ${value.marked_plants} marked plant(s) in the requested footprint.` +
         (a.kind === "undesignate" ? ` ${value.tile_designations} tile designation(s) remain; ${value.cancelled_jobs} queued job(s) cancelled.` : "") +
         (a.kind !== "undesignate" && value.marked_plants === 0 ? " No tree/plant work is marked. Select tree bases, not canopy or another elevation; use df_designations to inspect." : ""));
@@ -170,8 +172,20 @@ tool("df_dig", "Designate a rectangle for digging (or channel/stairs/ramp/chop/g
            end
          end end
        end
-       emit({n = n, under = under})`);
+       local stranded = {}
+       if n > 0 and '${field}' == 'dig' then
+         for _, g in ipairs(stranded_digs(${a.z})) do
+           if g.x1 <= ${x + w - 1} and g.x2 >= ${x} and g.y1 <= ${y + h - 1} and g.y2 >= ${y} then stranded[#stranded + 1] = g end
+         end
+       end
+       emit({n = n, under = under, stranded = stranded})`);
+    // hidden tiles the game may drop as "damp" once revealed: df_wait puts them back (lua/dig_memory.lua)
+    if (field === "dig" && !["chop", "gather"].includes(a.kind)) {
+      await luaFile("dig_memory", { action: "record",
+        x1: x, y1: y, x2: x + w - 1, y2: y + h - 1, z1: a.z, z2: a.z - ((a.levels ?? 1) - 1) });
+    }
     const under = v.under ?? [];
+    const stranded = v.stranded ?? [];
     v = v.n;
     const want = w * h * (a.levels ?? 1);
     const note = ["chop", "gather"].includes(a.kind) ? "" :
@@ -184,7 +198,12 @@ Verified: ${v} of ${want} tile(s) now carry a ${a.kind} designation` +
       ? `\nWARNING: ${under.length} designated tile(s) lie directly under aquifer tiles; once dug, water drips down into them. ` +
         `Undesignate them or dig one level lower. At: ${under.slice(0, 12).join("; ")}${under.length > 12 ? "; ..." : ""}`
       : "";
-    return text(out + note + leak + stairNote);
+    const cut = stranded.length
+      ? `
+WARNING: unreachable: ${stranded.map((g) => `${g.tiles} designated tile(s) at ${g.x1},${g.y1}..${g.x2},${g.y2}`).join("; ")} ` +
+        `touch no floor the miners can walk to, so nobody will dig them. Designate a connecting tile from the nearest corridor.`
+      : "";
+    return text(out + note + leak + cut + stairNote);
   });
 
 tool("df_build", "Place a building, or dry_run=true for a real non-mutating native preview with invalid tile coordinates, terrain/occupancy reasons and ground-item reservations. No placement occurs when preflight rejects the footprint. Keys: wc carpenter, wm mason, wl still, wz kitchen, wu BUTCHER, wb BOWYER, wr craftsdwarf, D trade depot. See df_help topic=keys for the full list. Workshops use their CENTRE tile. Area buildings (p farm, Cw wall, Cf floor) use top-left plus w,h.",

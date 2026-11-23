@@ -20,10 +20,28 @@ tool("df_workshop", "Workshops and furnaces. action=list shows each with queued 
     if (!a.task && a.job) a.task = a.job.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
     if (a.count === undefined && a.quantity !== undefined) a.count = a.quantity;
     if (a.action !== "add") return luaTool("workshop", a);
+    // A substring can match several tasks ("brew": from fruit, from plant): take the first one whose
+    // inputs exist, so the dwarves get a job they can actually do.
+    let chose = null;
+    const probe = (await luaFile("workshop", { ...a, candidates_only: true })).value;
+    if (probe?.candidates?.length > 1) {
+      const skipped = [];
+      for (const c of probe.candidates) {
+        const w = await inputWarnings({ items: c.items, job_type: c.job_type, building_id: probe.building_id, magma: probe.magma });
+        if (!w.length) { chose = c.name; break; }
+        skipped.push(c.name);
+      }
+      if (chose) {
+        a = { ...a, task: chose };
+        if (skipped.length) chose = `"${chose}" (also matched, no usable inputs: ${skipped.join(", ")})`;
+        else chose = `"${chose}" (also matched: ${probe.candidates.slice(1).map((c) => c.name).join(", ")})`;
+      }
+    }
     const { value, log } = await luaFile("workshop", a);
     if (value?.error) return fail(value.error);
     const { preflight, ...rest } = value;
     const warn = preflight ? await inputWarnings(preflight) : [];
+    if (chose) rest.matched = chose;
     return text(json(rest) + warn.map((w) => `\nWARNING: ${w}`).join("") + (log ? `\n--- log ---\n${log}` : ""));
   });
 

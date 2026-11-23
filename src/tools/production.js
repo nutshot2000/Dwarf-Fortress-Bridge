@@ -127,9 +127,13 @@ const REFILL = [
   { key: "free_chests", have: (s) => s.free_chests, want: (t) => t.free_chests, per: 1, order: { job: "ConstructChest" }, pending: "ConstructChest" },
   { key: "goblets", have: (s) => s.goblets, want: (t) => t.goblets, per: 1, order: { job: "MakeGoblet" }, pending: "MakeGoblet" },
   { key: "soap", have: (s) => s.soap, want: (t) => t.soap, per: 1, order: { reaction: "MAKE_SOAP_FROM_TALLOW" },
-    pending: "CustomReaction:MAKE_SOAP_FROM_TALLOW", chain: [{ job: "MakeLye" }, { job: "MakeAsh", material: "wood" }] },
-  { key: "fuel", have: (s) => s.fuel, want: (t) => t.fuel, per: 1, order: { job: "MakeCharcoal", material: "wood" }, pending: "MakeCharcoal" },
+    pending: "CustomReaction:MAKE_SOAP_FROM_TALLOW", chain: [{ job: "MakeLye" }, { job: "MakeAsh", material: "wood" }], burns: 1 },
+  { key: "fuel", have: (s) => s.fuel, want: (t) => t.fuel, per: 1, order: { job: "MakeCharcoal", material: "wood" }, pending: "MakeCharcoal", burns: 1 },
 ];
+// Logs left alone by the burning refills (charcoal, ash): barrels, beds and bins come first. A 30-fuel target
+// used to queue 26 charcoal on a fort with 13 logs, leaving nothing for the barrels its brewers needed.
+const WOOD_RESERVE = 10;
+const USES_WOOD = new Set(["empty_storage", "free_beds", "free_chests", "free_cabinets"]);
 
 tool("df_upkeep", "Keep everyday stocks topped up with work orders: drink (per dwarf), empty barrels/pots, spare beds, doors, cabinets, chests, goblets, soap (with its lye/ash chain) and fuel. check: report each stock vs target and what is already queued. apply: queue only the shortfall (never duplicates running orders). set: change targets (saved per fort), e.g. {drink_per_dwarf: 6, goblets: 20}. df_wait upkeep=true runs apply after each wait.",
   { action: z.enum(["check", "apply", "set"]).default("check"), targets: z.record(z.string(), z.number()).optional() },
@@ -149,13 +153,25 @@ export async function runUpkeep(action = "check", targets) {
   if (!value?.stock) throw new Error(value?.error ?? "upkeep scan failed");
   const { stock, pending } = value;
   const lines = [];
+  // orders already queued will burn their logs too
+  let woodLeft = (stock.wood ?? 0) - WOOD_RESERVE - (pending.MakeAsh ?? 0) - (pending.MakeCharcoal ?? 0);
   for (const r of REFILL) {
     const have = r.have(stock), want = Math.ceil(r.want(t, stock));
     const queued = [].concat(r.pending).reduce((n, k) => n + (pending[k] ?? 0), 0) * r.per;
-    const short = Math.max(0, want - have - queued);
+    let short = Math.max(0, want - have - queued);
     let note = "";
+    let capped = "";
+    if (short > 0 && r.burns) {
+      const can = Math.max(0, woodLeft);
+      if (short > can) {
+        capped = ` (capped to ${can}: ${stock.wood ?? 0} logs, ${WOOD_RESERVE} kept for barrels and furniture, the rest already promised to ash/charcoal orders; chop trees for more)`;
+        short = can;
+      }
+      woodLeft -= short;
+    }
     if (short > 0 && r.needs && !r.needs(stock)) note = " (no ingredients)";
     else if (short > 0 && action === "apply") {
+      if (USES_WOOD.has(r.key)) woodLeft -= short;
       const amount = Math.ceil(short / r.per);
       try {
         await queueOrder({ ...r.order, amount });
@@ -166,6 +182,7 @@ export async function runUpkeep(action = "check", targets) {
         note = ` -> order rejected: ${e.message.split("\n")[0]}`;
       }
     } else if (short > 0) note = " (short)";
+    note += capped;
     lines.push(`${r.key.padEnd(14)} ${String(have).padStart(5)} / ${String(want).padEnd(5)} expected from existing orders: ${queued} item(s)${note}`);
   }
   return `Upkeep ${action} (stock / target):\n` + lines.join("\n");

@@ -33,6 +33,7 @@ local stock = {
     return usable(it) and (n:find('coal') or n:find('coke')) ~= nil
   end),
   plants = count(O.PLANT, usable),
+  wood = count(O.WOOD, usable),
 }
 
 -- amount still to be produced by existing orders, keyed like the refill jobs ("MakeBarrel", "CustomReaction:BREW_DRINK_FROM_PLANT", "MakeTool:ITEM_TOOL_LARGE_POT")

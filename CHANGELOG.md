@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.5.16
+
+- `df_military equip` gives each soldier one left and one right glove. It used to fill both glove slots with any
+  gauntlet, so soldiers got two right gauntlets and a bare left hand. A re-run drops a same-hand duplicate it finds
+  and fills the missing hand.
+- Digs over an aquifer finish: the game silently drops a dig designation on a tile revealed "damp" (next to an
+  aquifer or water), and a second designation sticks. `df_dig` and `bedroom_wing` now remember the hidden tiles they
+  designate, and `df_wait` designates dropped ones again while time runs (reported as `DIG:`). A bedroom wing over
+  a light aquifer advanced a tile or two per wait and was left with half-walled rooms.
+- `df_problems` and `df_dig` name dig designations no miner can reach (no designated tile touches floor the
+  citizens can walk to). A bedroom wing whose corridor was walled off at both ends sat undug for months.
+- `df_workshop add` with a loose name ("brew", "smelt") takes the first matching task whose inputs exist and says
+  which others it skipped. "brew" used to queue "brew drink from fruit" with no fruit while plants sat in storage.
+- `df_upkeep` no longer burns the fort's last logs: charcoal and ash are capped to the wood beyond a 10-log reserve
+  (after counting ash/charcoal orders already queued). A 30-fuel target used to queue 26 charcoal with 13 logs.
+
 ## 1.5.15
 
 - `df_workshop add` queues as many jobs as fit and says so ("queued 9 of 10: the workshop holds 10 jobs and had

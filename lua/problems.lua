@@ -292,6 +292,11 @@ if lying >= 20 and not refuse_pile and not dumping then
     lying, refuse_pile and '' or ' and no refuse stockpile'))
 end
 
+for i, g in ipairs(stranded_digs()) do
+  if i > 3 then break end
+  add('medium', ('%d dig designation(s) at %d,%d..%d,%d z%d cannot be reached: no designated tile touches floor the miners can walk to, so nobody digs them. Designate a connecting tile (df_look the edge and dig from the nearest corridor).'):format(
+    g.tiles, g.x1, g.y1, g.x2, g.y2, g.z))
+end
 local ORDER = {high = 1, medium = 2, low = 3}
 local construction = suspended_construction()
 if #construction.review > 0 then

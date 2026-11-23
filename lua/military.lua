@@ -257,6 +257,38 @@ if action == 'equip' then
           -- upgrade: a filled armour slot takes a free item of a strictly higher armour level (new iron
           -- breastplates over leather or a dress); filling only empty slots left masterwork plate in storage
           local level = function(it) return it and try(function() return it.subtype.armorlevel end, 0) or 0 end
+          -- a pair of gloves is one left and one right: two right gauntlets leave a hand bare
+          local hand = function(it) return try(function() return it:getGloveHandedness() end, 0) or 0 end
+          local hand_free = function(it)
+            if tname ~= 'GLOVES' or hand(it) == 0 then return true end
+            for k = 0, #sp.assigned - 1 do
+              local a = df.item.find(sp.assigned[k])
+              if a and hand(a) == hand(it) then return false end
+            end
+            return true
+          end
+          if tname == 'GLOVES' then
+            -- undo an earlier same-hand pair so the fill below can pick the missing hand
+            local seen = {}
+            for k = 0, #sp.assigned - 1 do
+              local a = df.item.find(sp.assigned[k])
+              local h = a and hand(a) or 0
+              if h ~= 0 and seen[h] then
+                local cur_id = sp.assigned[k]
+                sp.assigned:erase(k)
+                local ai = utils.linear_index(p.equipment.assigned_items, cur_id)
+                if ai then p.equipment.assigned_items:erase(ai) end
+                local as = E.items_assigned[sp.item_type]
+                local i = utils.linear_index(as, cur_id)
+                if i then as:erase(i) utils.insert_sorted(E.items_unassigned[sp.item_type], cur_id) end
+                taken[cur_id] = nil
+                table.insert(done, (u and unit_name(u) or ('pos ' .. pi)) .. ': dropped a second glove for the same hand: ' ..
+                  dfhack.df2utf(dfhack.items.getReadableDescription(a)))
+                break
+              end
+              seen[h] = true
+            end
+          end
           if tname == 'ARMOR' or tname == 'HELM' or tname == 'PANTS' or tname == 'GLOVES' or tname == 'SHOES' then
             for k = #sp.assigned - 1, 0, -1 do
               local cur_id = sp.assigned[k]
@@ -300,14 +332,14 @@ if action == 'equip' then
             if u then
               for _, inv in ipairs(u.inventory) do
                 local it = inv.item
-                if it:getType() == sp.item_type and not taken[it.id] and fits(sp, it, u) then
+                if it:getType() == sp.item_type and not taken[it.id] and fits(sp, it, u) and hand_free(it) then
                   local v = score(it)
                   if v > best then pick, best = it, v end
                 end
               end
             end
             for _, it in ipairs(df.global.world.items.other[df.item_type[sp.item_type]]) do
-              if not taken[it.id] and fits(sp, it, u) then
+              if not taken[it.id] and fits(sp, it, u) and hand_free(it) then
                 local v = score(it)
                 if v > best then pick, best = it, v end
               end

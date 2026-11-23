@@ -132,6 +132,8 @@ tool("df_rooms", "Zones. action=list shows all zones with owners. action=assign 
       const { value: stairHere } = await lua(`local tt=dfhack.maps.getTileType(ARGS.x,ARGS.y,ARGS.z)
         emit(tt ~= nil and df.tiletype.attrs[tt].shape == df.tiletype_shape.STAIR_UPDOWN)`, { x: SX, y: Y, z: Z });
       if (stairHere) await quickfort("dig", ["i"], SX, Y, Z, ["-p", "1"]);
+      // remember hidden tiles: if the game drops them as "damp" when revealed, df_wait designates them again
+      await luaFile("dig_memory", { action: "record", x1: Math.min(X1, corrEnd), x2: Math.max(xEnd, corrEnd), y1: Y - 4, y2: Y + 4, z1: Z });
       log.push(`dig: corridor x${X1}-${corrEnd} y${Y} and ${rooms.length * 2} rooms on z${Z}` +
         (shaftGiven || stairHere ? `; shaft at ${SX},${Y}` : ""));
     }
