@@ -40,7 +40,7 @@ tool("df_workshop", "Workshops and furnaces. action=list shows each with queued 
     const { value, log } = await luaFile("workshop", a);
     if (value?.error) return fail(value.error);
     const { preflight, ...rest } = value;
-    const warn = preflight ? await inputWarnings(preflight) : [];
+    const warn = preflight ? await inputWarnings({ ...preflight, jobs: rest.count }) : [];
     if (chose) rest.matched = chose;
     return text(json(rest) + warn.map((w) => `\nWARNING: ${w}`).join("") + (log ? `\n--- log ---\n${log}` : ""));
   });

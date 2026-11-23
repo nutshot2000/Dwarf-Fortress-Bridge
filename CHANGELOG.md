@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.5.20
+
+- `df_problems` warns while a dwarf is still only very hungry or very thirsty, names what they are doing, and says
+  when soldiers on a kill order or constant training are skipping meals. `df_wait` names any starving, dehydrated or
+  exhausted dwarf as IMPORTANT when DFHack's corner box reports one. The militia commander hunting keas went
+  from fine to starving between two checks, with only a footnote to show for it.
+- A soldier fighting on a kill order stops `df_wait` again once they take a fresh wound (under a game day old).
+- `df_blueprint` dig remembers the hidden tiles it designates, so `df_wait` puts back the ones the game drops as
+  damp, like it does for `df_dig`.
+- `df_blueprint` build names the real reason a cell got no building (liquid depth 2+, a plant, a wall, open space)
+  instead of always blaming saplings.
+- The unreachable-dig check counts digs a miner has already claimed and designations on the levels just above and
+  below, so a stair shaft dug level by level no longer reads as unreachable.
+- `df_dig` no longer warns about water dripping from an aquifer tile above when that tile is being dug out too.
+
+## 1.5.19
+
+- `df_workshop add` warns when it queues more jobs than there are inputs ("only 2 usable tetrahedrite boulders for
+  4 jobs: the rest will cancel"). The input check also stopped counting at the first item, so it could only ever
+  tell "none" from "some".
+
 ## 1.5.18
 
 - `df_problems` names doors that lead nowhere: no open floor straight through them (a bedroom door facing solid

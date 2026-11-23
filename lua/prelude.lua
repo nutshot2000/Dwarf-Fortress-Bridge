@@ -195,6 +195,27 @@ local function stranded_digs(zonly)
       end end
     end
   end
+  -- a designation a miner has claimed is a job now (its tile flag is cleared): it still links what is below it
+  local DIG = {Dig = 1, DigChannel = 1, CarveUpwardStaircase = 1, CarveDownwardStaircase = 1, CarveUpDownStaircase = 1,
+    CarveRamp = 1, RemoveStairs = 1}
+  for _, j in require('utils').listpairs(df.global.world.jobs.list) do
+    if DIG[df.job_type[j.job_type]] and (not zonly or j.pos.z == zonly or math.abs(j.pos.z - zonly) == 1) then
+      des[key(j.pos.x, j.pos.y, j.pos.z)] = des[key(j.pos.x, j.pos.y, j.pos.z)] or {j.pos.x, j.pos.y, j.pos.z, job = true}
+    end
+  end
+  -- with zonly, designations on the levels just above and below can link this one to the fort too
+  if zonly then
+    for _, b in ipairs(df.global.world.map.map_blocks) do
+      if b.flags.designated and math.abs(b.map_pos.z - zonly) == 1 then
+        for x = 0, 15 do for y = 0, 15 do
+          if b.designation[x][y].dig ~= 0 then
+            local X, Y, Z = b.map_pos.x + x, b.map_pos.y + y, b.map_pos.z
+            des[key(X, Y, Z)] = des[key(X, Y, Z)] or {X, Y, Z}
+          end
+        end end
+      end
+    end
+  end
   local seen, out = {}, {}
   for k, p in pairs(des) do
     if not seen[k] then
@@ -213,7 +234,7 @@ local function stranded_digs(zonly)
           end
         end end end
       end
-      if not ok then out[#out + 1] = {tiles = n, x1 = x1, y1 = y1, x2 = x2, y2 = y2, z = p[3]} end
+      if not ok and (not zonly or p[3] == zonly) and not p.job then out[#out + 1] = {tiles = n, x1 = x1, y1 = y1, x2 = x2, y2 = y2, z = p[3]} end
     end
   end
   table.sort(out, function(a, c) return a.tiles > c.tiles end)

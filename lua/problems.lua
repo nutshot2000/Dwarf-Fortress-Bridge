@@ -47,8 +47,13 @@ for _, u in ipairs(cits) do
   local s = unit_stress(u)
   if s and s > 100000 then add('high', ('%s is badly stressed (%d).'):format(name, s))
   elseif s and s > 50000 then add('medium', ('%s is stressed (%d).'):format(name, s)) end
-  if u.counters2.thirst_timer > 50000 then add('high', name .. ' is dehydrated.') end
-  if u.counters2.hunger_timer > 75000 then add('high', name .. ' is starving.') end
+  -- warn on the way there too: a soldier hunting keas went from fine to starving between two checks
+  local soldier = u.military.squad_id >= 0 and ' Soldiers on a kill order or constant training skip meals: cancel the order or give them time off.' or ''
+  local doing = unit_job(u) and (' (now: %s)'):format(unit_job(u)) or ''
+  if u.counters2.thirst_timer > 50000 then add('high', name .. ' is dehydrated' .. doing .. '.' .. soldier)
+  elseif u.counters2.thirst_timer > 35000 then add('medium', name .. ' is very thirsty' .. doing .. ': check that drink is reachable.' .. soldier) end
+  if u.counters2.hunger_timer > 75000 then add('high', name .. ' is starving' .. doing .. '.' .. soldier)
+  elseif u.counters2.hunger_timer > 60000 then add('medium', name .. ' is very hungry' .. doing .. ': check that food is reachable.' .. soldier) end
 end
 
 -- livestock and pets: starving animals and grazers left out of a pasture

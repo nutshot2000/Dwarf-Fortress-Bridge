@@ -121,7 +121,8 @@ local function count(f)
         local st = state(it)
         if st and ok_mat then
           if st == 'usable' then usable = usable + 1 else held = held + 1 end
-          if usable > 0 then break end
+          -- enough is enough: one item answers "is there any"; with ARGS.jobs, count up to what the jobs need
+          if usable >= math.max(1, (ARGS.jobs or 1) * (f.quantity or 1)) then break end
         elseif st == 'usable' and want_noneco and mt == 0 and df.global.plotinfo.economic_stone[mi] == 1 then
           local name = dfhack.matinfo.decode(mt, mi):toString()
           economic[name] = (economic[name] or 0) + 1
@@ -303,6 +304,10 @@ for _, f in ipairs(items) do
       msg = msg .. '; make charcoal at a wood furnace'
     end
     warnings[#warnings + 1] = msg
+  elseif (ARGS.jobs or 0) > 1 and usable < ARGS.jobs * (f.quantity or 1) then
+    -- "smelt" x5 matched malachite with 3 malachite boulders: the other two jobs cancel and vanish
+    warnings[#warnings + 1] = ('only %d usable %s for %d jobs: the rest will cancel. Queue fewer, or queue the other inputs as their own task'):format(
+      usable, describe(f), ARGS.jobs)
   end
   end
 end

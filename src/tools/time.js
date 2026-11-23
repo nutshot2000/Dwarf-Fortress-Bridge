@@ -177,6 +177,21 @@ tool("df_wait","Unpause and let the game run for a number of in-game days (1 day
     lastConstructionWarning=constructionSignature;
     // DFHack's corner box: "petition outstanding" there is an accepted guildhall/temple agreement not yet met
     const { value: notices } = await luaFile("notices", {});
+    // a "starving, dehydrated, or drowsy" notice is a life-or-death one: name the unit up front, not in a footnote
+    if (notices?.some((n) => /starving|dehydrated|drowsy/.test(n))) {
+      const { value: who } = await lua(`local out = {}
+        for _, u in ipairs(df.global.world.units.active) do
+          if dfhack.units.isActive(u) and not dfhack.units.isDead(u) and (dfhack.units.isCitizen(u) or (dfhack.units.isTame(u) and dfhack.units.isOwnCiv(u))) then
+            local c, w = u.counters2, {}
+            if c.hunger_timer > 75000 then w[#w + 1] = 'starving' end
+            if c.thirst_timer > 50000 then w[#w + 1] = 'dehydrated' end
+            if c.sleepiness_timer > 150000 then w[#w + 1] = 'exhausted' end
+            if #w > 0 then out[#out + 1] = unit_name(u) .. ' #' .. u.id .. ' ' .. table.concat(w, '+') .. (unit_job(u) and (' (now: ' .. unit_job(u) .. ')') or '') end
+          end
+        end
+        emit(out)`);
+      if (who?.length) out += `\nIMPORTANT: ${who.join("; ")}. Check df_unit and df_problems now.`;
+    }
     if (notices?.length) out += `\nDFHack notices: ${notices.join(" | ")}` +
       (notices.some((n) => /petition/.test(n)) ? " (petition outstanding = an accepted temple/guildhall not yet up to tier: `list-agreements` via df_cmd)" : "");
     // the game silently drops a dig designation on a tile revealed "damp" (next to an aquifer or water);

@@ -22,6 +22,11 @@ end
 local function on_kill_order(u)
   local sq = u.military.squad_id >= 0 and df.squad.find(u.military.squad_id)
   if not sq then return false end
+  -- a hurt soldier is news whatever the orders: the combat log reads alike for blows given and taken
+  -- (fresh wounds only, under a game day old: an old bruise from last month's hunt is not news)
+  for _, w in ipairs(u.body.wounds) do
+    if try(function() return w.age end, 0) < 1200 then return false end
+  end
   -- any kill order counts: the blow that kills a target (and the scuffle after) comes when that target is
   -- already dead or out of reach. Real enemies still stop the wait as soon as they are visible.
   for _, o in ipairs(sq.orders) do

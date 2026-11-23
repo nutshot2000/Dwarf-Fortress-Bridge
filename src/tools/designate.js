@@ -168,7 +168,10 @@ tool("df_dig", "Designate a rectangle for digging (or channel/stairs/ramp/chop/g
              n = n + 1
              -- v50 aquifers leak downward too: a dug tile under a revealed aquifer tile slowly floods
              local up = dfhack.maps.getTileFlags(x, y, zz + 1)
-             if up and up.water_table and not up.hidden then under[#under + 1] = x .. ',' .. y .. ',' .. zz end
+             -- (not when the wet tile above is being dug too: a shaft dug down through it opens it, it stops dripping)
+             if up and up.water_table and not up.hidden and up.dig == 0 and not claimed[x .. ',' .. y .. ',' .. (zz + 1)] then
+               under[#under + 1] = x .. ',' .. y .. ',' .. zz
+             end
            end
          end end
        end
@@ -392,6 +395,11 @@ tool("df_blueprint", "Apply a free-form quickfort blueprint. rows are CSV lines 
     x: coord, y: coord, z: coord, dry_run: z.boolean().optional(),allow_room_changes:z.boolean().default(false) },
   async (a) => {
     const out = await quickfort(a.mode, a.rows, a.x, a.y, a.z, a.dry_run ? ["--dry-run"] : [],{allow_room_changes:a.allow_room_changes});
+    // hidden tiles dug here can be dropped as "damp" too: remember them like df_dig does (lua/dig_memory.lua)
+    if (a.mode === "dig" && !a.dry_run) {
+      const w = Math.max(...a.rows.map((r) => r.split(",").length));
+      await luaFile("dig_memory", { action: "record", x1: a.x, y1: a.y, x2: a.x + w - 1, y2: a.y + a.rows.length - 1, z1: a.z });
+    }
     if (a.mode !== "build" || a.dry_run || !/Unsuitable tiles for building/.test(out)) return text(out);
     // Name the cells that got no building, with what is on the tile, so they can be fixed or moved.
     const cells = [];
@@ -401,9 +409,19 @@ tool("df_blueprint", "Apply a free-form quickfort blueprint. rows are CSV lines 
         if not dfhack.buildings.findAtTile(c.x, c.y, ARGS.z) then
           local tt = dfhack.maps.getTileType(c.x, c.y, ARGS.z)
           local shape = tt and df.tiletype_shape[df.tiletype.attrs[tt].shape] or 'off map'
-          bad[#bad + 1] = c.key .. ' at ' .. c.x .. ',' .. c.y .. ': ' .. shape:lower()
+          -- the real reason first: a wall refused in an aquifer shaft read "floor (saplings/shrubs block furniture)"
+          -- when the tile stood in 2/7 of water
+          local f = tt and dfhack.maps.getTileFlags(c.x, c.y, ARGS.z)
+          local why = shape:lower()
+          if f and f.flow_size >= 2 then
+            why = ('%s with liquid depth %d (2+ blocks building: give the water somewhere to drain, or wait for it to dry)'):format(why, f.flow_size)
+          elseif shape == 'SHRUB' or shape == 'SAPLING' then why = why .. ' (a plant is in the way)'
+          elseif shape == 'WALL' then why = why .. ' (dig it out first)'
+          elseif shape == 'EMPTY' then why = why .. ' (open space: build a floor first)'
+          end
+          bad[#bad + 1] = c.key .. ' at ' .. c.x .. ',' .. c.y .. ': ' .. why
         end
       end
       emit(bad)`, { cells, z: a.z });
-    return text(out + (value?.length ? `\nNot placed: ${value.join("; ")} (saplings/shrubs block furniture; doors need a wall beside them)` : ""));
+    return text(out + (value?.length ? `\nNot placed: ${value.join("; ")}. df_build dry_run=true at one tile gives the game's own reason (doors also need a wall beside them).` : ""));
   });
