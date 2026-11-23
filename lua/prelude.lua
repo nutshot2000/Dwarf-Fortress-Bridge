@@ -97,6 +97,8 @@ end
 -- burrows still require inspection). Compare against the majority citizen group.
 local function citizen_access_report(units, connected)
   units=units or citizens()
+  -- a caller-supplied connectivity (the tests) also skips the locked-door walk, which reads the real map
+  local real_map=connected==nil
   connected=connected or dfhack.maps.canWalkBetween
   local groups,n={},0
   for _,u in ipairs(units) do
@@ -125,7 +127,7 @@ local function citizen_access_report(units, connected)
     for _,v in ipairs({'DOOR','HATCH'}) do for _,b in ipairs(df.global.world.buildings.other[v]) do
       if b.door_flags.forbidden then locked[(b.z*1000+b.centery)*1000+b.centerx]=true end
     end end
-    if next(locked) and #main>1 then
+    if real_map and next(locked) and #main>1 then
       local S=df.tiletype_shape
       -- a dwarf standing on a locked hatch is not shut out: their own tile can be reached from beside it
       local occupied={}

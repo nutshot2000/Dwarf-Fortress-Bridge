@@ -44,8 +44,9 @@ if (ARGS.action or 'list') == 'list' then
   for _, b in ipairs(df.global.world.buildings.other.FARM_PLOT) do table.insert(plots, plot_info(b)) end
   local seeds = {}
   for _, it in ipairs(df.global.world.items.other.SEEDS) do
-    -- in_building = already planted in a plot: not stock
-    if not it.flags.forbid and not it.flags.rotten and not it.flags.in_building then
+    -- in_building = already planted in a plot: not stock. trader = a caravan's goods left in the depot (40 sweet
+    -- pod seeds of a merchant's were counted as ours, and two plots were set to a crop the fort did not own)
+    if not it.flags.forbid and not it.flags.rotten and not it.flags.in_building and not it.flags.trader then
       local mi = dfhack.matinfo.decode(it)
       if mi and mi.plant then
         local k = mi.plant.id
@@ -126,7 +127,8 @@ if pid >= 0 then
   local n = 0
   for _, it in ipairs(df.global.world.items.other.SEEDS) do
     local mi = dfhack.matinfo.decode(it)
-    if mi and mi.plant and mi.index == pid and not it.flags.forbid and not it.flags.rotten and not it.flags.in_building then n = n + it.stack_size end
+    if mi and mi.plant and mi.index == pid and not it.flags.forbid and not it.flags.rotten and not it.flags.in_building
+      and not it.flags.trader then n = n + it.stack_size end
   end
   if n == 0 then warning = ('No %s seeds in stock: farmers will cancel planting. Pick a crop from seeds_in_stock (df_crop list) or buy seeds.'):format(plants[pid].name) end
 end

@@ -58,6 +58,12 @@ if action == 'lock' or action == 'unlock' then
   if not b or not b.door_flags then emit({error = 'No door or hatch at that id/position'}) return end
   b.door_flags.forbidden = action == 'lock'
   if action == 'lock' then b.door_flags.closed = true end
+  -- remember what we locked: df_wait reports a lock that goes away (a cavern door came unlocked and a dwarf
+  -- wandered out to a cave crocodile)
+  local KEY = 'df-bridge/locked-doors'
+  local mine = dfhack.persistent.getSiteData(KEY, {}) or {}
+  mine[tostring(b.id)] = action == 'lock' and (b.centerx .. ',' .. b.centery .. ',' .. b.z) or nil
+  dfhack.persistent.saveSiteData(KEY, mine)
   emit({ok = true, id = b.id, building = bname(b), locked = b.door_flags.forbidden,
     note = action == 'lock' and 'Locked. Walk groups ignore locks, so reachability checks still pass; dwarves will not use it until unlocked.' or nil}) return
 end

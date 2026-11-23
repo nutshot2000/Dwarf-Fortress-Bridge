@@ -25,7 +25,8 @@ local function on_kill_order(u)
   -- a hurt soldier is news whatever the orders: the combat log reads alike for blows given and taken
   -- (fresh wounds only, under a game day old: an old bruise from last month's hunt is not news)
   for _, w in ipairs(u.body.wounds) do
-    if try(function() return w.age end, 0) < 1200 then return false end
+    -- syndrome effects are wounds too (a drink puts inebriation on the lungs): only injuries count
+    if (w.syndrome_id or -1) < 0 and try(function() return w.age end, 0) < 1200 then return false end
   end
   -- any kill order counts: the blow that kills a target (and the scuffle after) comes when that target is
   -- already dead or out of reach. Real enemies still stop the wait as soon as they are visible.

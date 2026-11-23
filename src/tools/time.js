@@ -197,6 +197,11 @@ tool("df_wait","Unpause and let the game run for a number of in-game days (1 day
     // the game silently drops a dig designation on a tile revealed "damp" (next to an aquifer or water);
     // a second designation sticks, so put back the ones df_dig / bedroom_wing remembered
     await redig();
+    // a door df_levers locked that is open again: a gremlin, a building destroyer, or someone unlocking it
+    const { value: locks } = await luaFile("lock_watch", {});
+    if (locks?.lost?.length) out += `
+IMPORTANT: locked door(s) no longer locked: ${locks.lost.join("; ")}. ` +
+      `Check who is outside (df_problems), then df_levers lock again.`;
     if (redug.n) out += `
 DIG: the game dropped ${redug.n} dig designation(s) as damp when they were revealed ` +
       `(${redug.at.slice(0, 6).join("; ")}${redug.n > 6 ? "; ..." : ""}); designated them again, which confirms them.`;

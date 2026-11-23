@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.5.21
+
+- `df_wait` reports a door or hatch that `df_levers` locked and that is no longer locked (or gone), as IMPORTANT.
+  A cavern door came unlocked and a dwarf wandered out to a cave crocodile with no word from the bridge.
+- `df_crop` and the farm checks no longer count a caravan's seeds left in the depot as the fort's own: two plots
+  were set to sweet pods the fort did not own and stayed bare.
+- `df_unit` lists syndrome effects (inebriation puts a "wound" on both lungs after a drink) apart from injuries,
+  and a fresh syndrome no longer counts as a fresh wound for the kill-order check in `df_wait`.
+- `npm test`: the citizen-access test no longer depends on doors locked in the running game.
+
 ## 1.5.20
 
 - `df_problems` warns while a dwarf is still only very hungry or very thirsty, names what they are doing, and says

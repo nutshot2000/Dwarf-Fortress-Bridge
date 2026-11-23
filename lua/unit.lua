@@ -39,14 +39,18 @@ end)
 out.recent_emotions = thoughts
 
 -- wounds
-local wounds = {}
+-- A syndrome's effects are kept as a "wound" too (drinking puts inebriation on both lungs): list those apart,
+-- or a tipsy dwarf reads as one with injured lungs.
+local wounds, effects = {}, {}
 for _, w in ipairs(u.body.wounds) do
+  local syn = (w.syndrome_id or -1) >= 0 and df.syndrome.find(w.syndrome_id)
   for _, p in ipairs(w.parts) do
     local part = try(function() return u.body.body_plan.body_parts[p.body_part_id].name_singular[0].value end, 'part')
-    table.insert(wounds, part)
+    if syn then table.insert(effects, part .. ' (' .. syn.syn_name .. ')') else table.insert(wounds, part) end
   end
 end
 out.wounds = #wounds > 0 and wounds or nil
+out.syndrome_effects = #effects > 0 and effects or nil
 
 local inv = {}
 for _, it in ipairs(u.inventory) do
