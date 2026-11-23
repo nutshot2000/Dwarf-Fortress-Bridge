@@ -34,6 +34,7 @@ local stock = {
   end),
   plants = count(O.PLANT, usable),
   wood = count(O.WOOD, usable),
+  stone = count(O.BOULDER, function(it) return usable(it) and not try(function() return dfhack.matinfo.decode(it).inorganic.flags.METAL_ORE end, false) end),
 }
 
 -- amount still to be produced by existing orders, keyed like the refill jobs ("MakeBarrel", "CustomReaction:BREW_DRINK_FROM_PLANT", "MakeTool:ITEM_TOOL_LARGE_POT")

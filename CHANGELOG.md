@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.5.18
+
+- `df_problems` names doors that lead nowhere: no open floor straight through them (a bedroom door facing solid
+  rock, with the corridor passing only diagonally).
+- `df_problems` names corner-only links on levels with workshops or bedrooms: floors that meet diagonally between
+  two walls with no straight way round within 12 steps, so dwarves squeeze through or walk the long way. A new food
+  store met its corridor at one corner only.
+- `df_upkeep` makes doors, cabinets, chests (coffers) and large pots from stone once the logs run out, and stops
+  queueing beds it has no wood for, saying so instead of leaving jobs that cancel with "Needs logs".
+
 ## 1.5.17
 
 - `df_wait` keeps running while a squad carries out a kill order: soldiers fighting their kill-list targets are

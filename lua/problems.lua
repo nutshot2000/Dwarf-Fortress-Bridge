@@ -340,6 +340,92 @@ do
       loose, rotten, table.concat(zs, ', '), table.concat(samples, '; ')) .. full)
   end
 end
+-- A door needs open floor straight in front and behind it. One built in a room's wall where the corridor
+-- passes only diagonally (a bedroom door facing solid rock) looks sealed and makes a dead-end room.
+do
+  local S = df.tiletype_shape
+  local function open(x, y, z)
+    local t = dfhack.maps.getTileType(x, y, z)
+    if not t then return false end
+    local sh = df.tiletype.attrs[t].shape
+    return sh ~= S.WALL and sh ~= S.EMPTY and sh ~= S.NONE and sh ~= S.FORTIFICATION
+  end
+  local bad = {}
+  for _, b in ipairs(df.global.world.buildings.other.DOOR) do
+    local x, y, z = b.centerx, b.centery, b.z
+    local ns = open(x, y - 1, z) and open(x, y + 1, z)
+    local ew = open(x - 1, y, z) and open(x + 1, y, z)
+    if not ns and not ew then
+      local side = {}
+      for _, d in ipairs({{0, -1, 'north'}, {0, 1, 'south'}, {-1, 0, 'west'}, {1, 0, 'east'}}) do
+        if open(x + d[1], y + d[2], z) then side[#side + 1] = d[3] end
+      end
+      bad[#bad + 1] = ('%d,%d,%d (open only to the %s)'):format(x, y, z, #side > 0 and table.concat(side, '/') or 'nothing')
+    end
+  end
+  if #bad > 0 then
+    add('medium', ('%d door(s) lead nowhere: no open floor straight through them, only diagonal access at best: %s. Dig the wall tile in front of each door so it opens onto the corridor.'):format(
+      #bad, table.concat(bad, '; ', 1, math.min(#bad, 6))))
+  end
+end
+-- Corner-only links: two floors that touch only diagonally between two walls. Dwarves squeeze through or walk
+-- the long way round, and to the player it looks sealed (a new food store met the corridor at one corner only,
+-- so hauls from the east went round two corridors). Checked on levels with workshops or bedrooms; a corner
+-- counts only when the nearest straight way round is over 12 steps.
+do
+  local S = df.tiletype_shape
+  local W = df.global.world.map
+  local function open(x, y, z)
+    if x < 0 or y < 0 or x >= W.x_count or y >= W.y_count then return false end
+    local t = dfhack.maps.getTileType(x, y, z)
+    if not t then return false end
+    local f = dfhack.maps.getTileFlags(x, y, z)
+    if f.hidden then return false end
+    local sh = df.tiletype.attrs[t].shape
+    return sh ~= S.WALL and sh ~= S.EMPTY and sh ~= S.NONE and sh ~= S.FORTIFICATION and sh ~= S.TRUNK_BRANCH
+      and sh ~= S.BRANCH and sh ~= S.TWIG
+  end
+  -- the long way round, orthogonal steps only, within 12 steps
+  local function near(ax, ay, bx, by, z)
+    local seen, q, h = {[ax * 1000 + ay] = 0}, {{ax, ay}}, 1
+    while h <= #q do
+      local x, y = q[h][1], q[h][2]
+      local d = seen[x * 1000 + y]
+      h = h + 1
+      if x == bx and y == by then return true end
+      if d < 12 then
+        for _, o in ipairs({{1, 0}, {-1, 0}, {0, 1}, {0, -1}}) do
+          local nx, ny = x + o[1], y + o[2]
+          if not seen[nx * 1000 + ny] and open(nx, ny, z) then seen[nx * 1000 + ny] = d + 1 q[#q + 1] = {nx, ny} end
+        end
+      end
+    end
+    return false
+  end
+  local levels = {}
+  for _, b in ipairs(df.global.world.buildings.all) do
+    local t = b:getType()
+    if t == df.building_type.Bed or t == df.building_type.Workshop or t == df.building_type.Furnace then levels[b.z] = true end
+  end
+  local found, total = {}, 0
+  for z in pairs(levels) do
+    for x = 1, W.x_count - 2 do for y = 1, W.y_count - 2 do
+      if open(x, y, z) then
+        for _, dx in ipairs({1, -1}) do
+          local nx, ny = x + dx, y + 1
+          if open(nx, ny, z) and not open(nx, y, z) and not open(x, ny, z) and not near(x, y, nx, ny, z) then
+            total = total + 1
+            if #found < 6 then found[#found + 1] = ('%d,%d -> %d,%d z%d'):format(x, y, nx, ny, z) end
+          end
+        end
+      end
+    end end
+  end
+  if total > 0 then
+    add('low', ('%d corner-only link(s): floors meeting diagonally between two walls, with no straight way round within 12 steps: %s. Dwarves squeeze through or walk round. Dig one of the two corner wall tiles to open it up.'):format(
+      total, table.concat(found, '; ')))
+  end
+end
 local ORDER = {high = 1, medium = 2, low = 3}
 local construction = suspended_construction()
 if #construction.review > 0 then

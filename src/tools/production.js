@@ -136,6 +136,14 @@ const REFILL = [
 // used to queue 26 charcoal on a fort with 13 logs, leaving nothing for the barrels its brewers needed.
 const WOOD_RESERVE = 10;
 const USES_WOOD = new Set(["empty_storage", "free_beds", "free_chests", "free_cabinets"]);
+// Without logs, upkeep makes what it can from stone instead of queueing jobs nobody can start: stone doors,
+// cabinets and coffers at the mason, and large stone pots in place of barrels. Beds need wood.
+const STONE_INSTEAD = {
+  free_doors: { job: "ConstructDoor", material: "stone" },
+  free_cabinets: { job: "ConstructCabinet", material: "stone" },
+  free_chests: { job: "ConstructChest", material: "stone" },
+  empty_storage: { job: "MakeTool", item_subtype: "ITEM_TOOL_LARGE_POT", material: "stone" },
+};
 
 tool("df_upkeep", "Keep everyday stocks topped up with work orders: drink (per dwarf), empty barrels/pots, spare beds, doors, cabinets, chests, goblets, soap (with its lye/ash chain) and fuel. check: report each stock vs target and what is already queued. apply: queue only the shortfall (never duplicates running orders). set: change targets (saved per fort), e.g. {drink_per_dwarf: 6, goblets: 20}. df_wait upkeep=true runs apply after each wait.",
   { action: z.enum(["check", "apply", "set"]).default("check"), targets: z.record(z.string(), z.number()).optional() },
@@ -156,6 +164,7 @@ export async function runUpkeep(action = "check", targets) {
   const { stock, pending } = value;
   const lines = [];
   // orders already queued will burn their logs too
+  let logs = stock.wood ?? 0;
   let woodLeft = (stock.wood ?? 0) - WOOD_RESERVE - (pending.MakeAsh ?? 0) - (pending.MakeCharcoal ?? 0);
   for (const r of REFILL) {
     const have = r.have(stock), want = Math.ceil(r.want(t, stock));
@@ -178,12 +187,24 @@ export async function runUpkeep(action = "check", targets) {
         short = can;
       }
     }
+    // wood furniture only while logs last; then stone where the game allows it
+    let order = r.order;
+    if (short > 0 && (USES_WOOD.has(r.key) || r.key === "free_doors")) {
+      if (logs >= short) logs -= short;
+      else if (STONE_INSTEAD[r.key] && (stock.stone ?? 0) > 0) {
+        order = STONE_INSTEAD[r.key];
+        capped += ` (stone: only ${logs} log(s) left)`;
+      } else {
+        capped += ` (needs wood, only ${logs} log(s) left: chop trees or buy logs from a caravan)`;
+        short = 0;
+      }
+    }
     if (short > 0 && r.needs && !r.needs(stock)) note = " (no ingredients)";
     else if (short > 0 && action === "apply") {
-      if (USES_WOOD.has(r.key)) woodLeft -= short;
+      if (USES_WOOD.has(r.key) && order === r.order) woodLeft -= short;
       const amount = Math.ceil(short / r.per);
       try {
-        await queueOrder({ ...r.order, amount });
+        await queueOrder({ ...order, amount });
         for (const c of r.chain ?? []) await queueOrder({ ...c, amount });
         note = ` -> added ${amount} production job(s), expected ${amount * r.per} item(s)`;
       } catch (e) {
