@@ -16,7 +16,9 @@ for _,r in ipairs(ARGS.rooms) do
     if not f or f.hidden then failures[#failures+1]={x=x,y=y,reason='interior not excavated/visible'}
     else
       local a=df.tiletype.attrs[dfhack.maps.getTileType(x,y,ARGS.z)]
-      if a.shape~=df.tiletype_shape.FLOOR or f.flow_size>0 then failures[#failures+1]={x=x,y=y,reason='interior must be dry floor'} end
+      -- saplings and shrubs on a soil floor do not stop a bedroom from working
+      local plant=a.shape==df.tiletype_shape.SAPLING or a.shape==df.tiletype_shape.SHRUB
+      if (a.shape~=df.tiletype_shape.FLOOR and not plant) or f.flow_size>0 then failures[#failures+1]={x=x,y=y,reason='interior must be dry floor'} end
     end
   end end
   for x=r.x-1,r.x+w do for y=r.y-1,r.y+h do

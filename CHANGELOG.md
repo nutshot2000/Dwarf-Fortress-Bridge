@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.5.22
+
+- `df_levers lock` names any citizen the lock shuts out and what keeps sending dwarves past it: the
+  `auto_collect_webs` standing order and queued tree-felling. Both kept pulling dwarves into a sealed cavern.
+- Saplings and shrubs sprouting on a room's soil floor no longer make `df_room_plan` and `df_rooms audit` call a
+  working bedroom "unsuitable"; they are listed as plants with a note on what to do about them.
+
 ## 1.5.21
 
 - `df_wait` reports a door or hatch that `df_levers` locked and that is no longer locked (or gone), as IMPORTANT.

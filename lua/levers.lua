@@ -64,8 +64,27 @@ if action == 'lock' or action == 'unlock' then
   local mine = dfhack.persistent.getSiteData(KEY, {}) or {}
   mine[tostring(b.id)] = action == 'lock' and (b.centerx .. ',' .. b.centery .. ',' .. b.z) or nil
   dfhack.persistent.saveSiteData(KEY, mine)
+  local shut_out, lures
+  if action == 'lock' then
+    -- who is now on the wrong side, and what keeps sending dwarves there (each pulled someone past a cavern door)
+    for _, u in ipairs(try(function() return citizen_access_report().isolated end, {}) or {}) do
+      if u.behind_locked_door then shut_out = shut_out or {} shut_out[#shut_out + 1] = ('%s #%d at %d,%d,%d'):format(u.name, u.id, u.x, u.y, u.z) end
+    end
+    lures = {}
+    if (df.global.standing_orders_auto_collect_webs or 0) ~= 0 then
+      lures[#lures + 1] = 'standing order auto_collect_webs is on (df_standing auto_collect_webs=0 if webs lie beyond this door)'
+    end
+    local fell = 0
+    for _, j in require('utils').listpairs(df.global.world.jobs.list) do
+      if j.job_type == df.job_type.FellTree then fell = fell + 1 end
+    end
+    if fell > 0 then lures[#lures + 1] = fell .. ' tree-felling job(s) queued (autochop marks trees anywhere it can reach)' end
+    if #lures == 0 then lures = nil end
+  end
   emit({ok = true, id = b.id, building = bname(b), locked = b.door_flags.forbidden,
-    note = action == 'lock' and 'Locked. Walk groups ignore locks, so reachability checks still pass; dwarves will not use it until unlocked.' or nil}) return
+    shut_out = shut_out, check_lures = lures,
+    note = action == 'lock' and ('Locked. Walk groups ignore locks, so reachability checks still pass; dwarves will not use it until unlocked.' ..
+      (shut_out and ' WARNING: citizens are now shut out (see shut_out): unlock until they are back.' or '')) or nil}) return
 end
 
 local lever = df.building.find(ARGS.lever_id or -1)

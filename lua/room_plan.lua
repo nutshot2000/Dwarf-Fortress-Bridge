@@ -61,14 +61,18 @@ for _,b in ipairs(df.global.world.buildings.other.ANY_ZONE) do
 end
 local protected,status={},{}
 for _,r in ipairs(layouts) do
-  local missing,unsafe,pending,doors,interior,unknown={},{},{},{},{},0
+  local missing,unsafe,pending,doors,interior,unknown,plants={},{},{},{},{},0,{}
   for x=r.x,r.x+r.w-1 do for y=r.y,r.y+r.h-1 do
     local f=dfhack.maps.getTileFlags(x,y,r.z)
     local shape=f and not f.hidden and df.tiletype.attrs[dfhack.maps.getTileType(x,y,r.z)].shape
     if shape==df.tiletype_shape.FLOOR then
       protected[r.z..','..x..','..y]={x=x,y=y,z=r.z,room=r.id,reason='existing room floor'}
     end
-    if shape~=df.tiletype_shape.FLOOR or (f and f.flow_size>0) then
+    -- a sapling or shrub sprouting on a soil floor (underground soil grows cave fungus once a cavern is open) is
+    -- still a usable floor: note it, do not call the room unsuitable
+    if (shape==df.tiletype_shape.SAPLING or shape==df.tiletype_shape.SHRUB) and not (f and f.flow_size>0) then
+      plants[#plants+1]={x=x,y=y,z=r.z,plant=df.tiletype_shape[shape]:lower()}
+    elseif shape~=df.tiletype_shape.FLOOR or (f and f.flow_size>0) then
       interior[#interior+1]={x=x,y=y,z=r.z,reason=shape and ('interior must be dry floor, found '..df.tiletype_shape[shape]) or 'unrevealed interior'}
     end
   end end
@@ -95,6 +99,7 @@ for _,r in ipairs(layouts) do
   end end
   status[#status+1]={id=r.id,zone=r.zone,x=r.x,y=r.y,z=r.z,w=r.w,h=r.h,
     door_x=r.door_x,door_y=r.door_y,doors=doors,pending_walls=pending,invalid_interior=interior,
+    plants=#plants>0 and plants or nil,plants_note=#plants>0 and "Plants sprouting on the soil floor: harmless for now, but a sapling left alone grows into a tree in the room. Foot traffic tramples them; a constructed floor (Cf) over bare soil stops new ones." or nil,
     missing_walls=missing,unsafe_designations=unsafe,unrevealed_boundary_tiles=unknown}
 end
 if ARGS.internal then return {protected=protected,rooms=status} end
