@@ -297,6 +297,49 @@ for i, g in ipairs(stranded_digs()) do
   add('medium', ('%d dig designation(s) at %d,%d..%d,%d z%d cannot be reached: no designated tile touches floor the miners can walk to, so nobody digs them. Designate a connecting tile (df_look the edge and dig from the nearest corridor).'):format(
     g.tiles, g.x1, g.y1, g.x2, g.y2, g.z))
 end
+-- Food left lying around (a dropped catch, a hunter's kill) rots in a few days. A fisherdwarf kept being
+-- interrupted by keas and ~100 fish rotted along the brook without a word from here.
+do
+  local FOOD = {FISH_RAW = true, FISH = true, MEAT = true, PLANT = true, PLANT_GROWTH = true, CHEESE = true, EGG = true}
+  local loose, rotten, at, samples = 0, 0, {}, {}
+  for t in pairs(FOOD) do
+    for _, it in ipairs(df.global.world.items.other[t]) do
+      local f = it.flags
+      if f.on_ground and not f.in_building and not f.in_job and not f.dump and not f.forbid then
+        local b = dfhack.buildings.findAtTile(it.pos)
+        if not (b and df.building_stockpilest:is_instance(b)) then
+          loose = loose + 1
+          if f.rotten then rotten = rotten + 1 end
+          local k = it.pos.z
+          at[k] = (at[k] or 0) + 1
+          if #samples < 3 then samples[#samples + 1] = it.pos.x .. ',' .. it.pos.y .. ',' .. it.pos.z end
+        end
+      end
+    end
+  end
+  if loose >= 10 then
+    -- the usual cause: every food stockpile tile is taken, so the haulers have nowhere to put the catch
+    local pile_tiles, free_tiles = 0, 0
+    for _, b in ipairs(df.global.world.buildings.other.STOCKPILE) do
+      if b.settings.flags.food then
+        for x = b.x1, b.x2 do for y = b.y1, b.y2 do
+          if dfhack.buildings.containsTile(b, x, y) then
+            pile_tiles = pile_tiles + 1
+            local blk = dfhack.maps.getTileBlock(x, y, b.z)
+            if blk and not blk.occupancy[x % 16][y % 16].item then free_tiles = free_tiles + 1 end
+          end
+        end end
+      end
+    end
+    local full = pile_tiles > 0 and free_tiles == 0
+      and (' Every one of the %d food stockpile tiles is taken: make another food stockpile (df_stockpile type=f) first.'):format(pile_tiles)
+      or (pile_tiles == 0 and ' There is no food stockpile: make one (df_stockpile type=f).' or '')
+    local zs = {}
+    for z, n in pairs(at) do zs[#zs + 1] = ('%d on z%d'):format(n, z) end
+    add(rotten >= 10 and 'medium' or 'low', ('%d food items lying outside stockpiles (%d already rotten; %s; e.g. %s). Usually a dropped catch or kill: check that haulers have HAUL_FOOD and the path is safe (thieves and wildlife interrupt hauling), that a food stockpile with free barrels takes them, and turn on df_standing gather_refuse_outside=1 so the rotten ones are cleared to a refuse pile.'):format(
+      loose, rotten, table.concat(zs, ', '), table.concat(samples, '; ')) .. full)
+  end
+end
 local ORDER = {high = 1, medium = 2, low = 3}
 local construction = suspended_construction()
 if #construction.review > 0 then

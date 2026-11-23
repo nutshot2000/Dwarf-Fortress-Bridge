@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.5.17
+
+- `df_wait` keeps running while a squad carries out a kill order: soldiers fighting their kill-list targets are
+  reported ("on a kill order") instead of stopping the wait. Hunting ten keas used to stop every wait within a day.
+  Newly visible hostiles still stop it.
+- `df_upkeep` counts jobs already waiting in workshops, not only manager orders, and never queues more brews than
+  there are plants left over. Ten brews queued at the still used to get 22 more brew orders on top, for 100 plants.
+- `df_problems` reports food lying outside stockpiles (a dropped catch, fish stranded by a frozen brook) and says
+  when every food stockpile tile is taken, the usual cause. About 100 fish rotted along a brook unnoticed.
+- `scripts/session.mjs` prints each tool's full output (it cut results at 8 lines, hiding `Verified:` and
+  `WARNING:` lines); for `df_wait` it keeps the headline plus warnings.
+- `npm test` passes again: three test mocks had drifted from the code (dig stats keyed by label, the job list
+  `df_look` reads, typed combat reports, and the holder check for stock inside containers).
+
 ## 1.5.16
 
 - `df_military equip` gives each soldier one left and one right glove. It used to fill both glove slots with any

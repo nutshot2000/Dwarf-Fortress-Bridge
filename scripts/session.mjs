@@ -12,7 +12,11 @@ const view = async () => call("df_lua", { code: "emit({df.global.window_x, df.gl
 
 for (const [name, args] of JSON.parse(process.argv[2])) {
   console.log(`== ${name} ${JSON.stringify(args)}`);
-  console.log((await call(name, args)).split("\n").filter((l) => /^Ran|Camera|Following|Looking|Camera|mode|WATCHDOG/.test(l) || name !== "df_wait").slice(0, 8).join("\n"));
+  // the full result for every tool: cutting it at 8 lines hid the Verified:/WARNING: lines that follow a JSON body.
+  // df_wait alone is trimmed to its headline and warnings.
+  const out = await call(name, args);
+  console.log(name !== "df_wait" ? out
+    : out.split("\n").filter((l) => /^Ran|Camera|Following|Looking|mode|WATCHDOG|^!|IMPORTANT|WARNING|DIG:|CONSTRUCTION|ACCESS/.test(l)).join("\n"));
   console.log("   view:", (await view()).replace(/\s+/g, " "));
 }
 await client.close();

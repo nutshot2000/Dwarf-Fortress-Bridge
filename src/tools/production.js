@@ -118,7 +118,9 @@ export async function upkeepTargets() {
 // What each stock is refilled with; per = items one order unit yields.
 const REFILL = [
   { key: "drink", have: (s) => s.drink, want: (t, s) => t.drink_per_dwarf * s.pop, per: 5,
-    order: { reaction: "BREW_DRINK_FROM_PLANT" }, pending: "CustomReaction:BREW_DRINK_FROM_PLANT", needs: (s) => s.plants > 0 },
+    order: { reaction: "BREW_DRINK_FROM_PLANT" }, pending: "CustomReaction:BREW_DRINK_FROM_PLANT", needs: (s) => s.plants > 0,
+    // one plant per brew: never queue more brews than there are plants not already promised to queued ones
+    maxUnits: (s, p) => s.plants - (p["CustomReaction:BREW_DRINK_FROM_PLANT"] ?? 0), unitName: "plant(s)" },
   { key: "empty_storage", have: (s) => s.empty_barrels + s.empty_pots, want: (t) => t.empty_storage, per: 1,
     order: { job: "MakeBarrel" }, pending: ["MakeBarrel", "MakeTool:ITEM_TOOL_LARGE_POT"] },
   { key: "free_beds", have: (s) => s.free_beds, want: (t) => t.free_beds, per: 1, order: { job: "ConstructBed" }, pending: "ConstructBed" },
@@ -169,6 +171,13 @@ export async function runUpkeep(action = "check", targets) {
       }
       woodLeft -= short;
     }
+    if (short > 0 && r.maxUnits) {
+      const can = Math.max(0, r.maxUnits(stock, pending)) * r.per;
+      if (short > can) {
+        capped += ` (capped to ${can}: only ${Math.max(0, r.maxUnits(stock, pending))} ${r.unitName} left beyond queued jobs)`;
+        short = can;
+      }
+    }
     if (short > 0 && r.needs && !r.needs(stock)) note = " (no ingredients)";
     else if (short > 0 && action === "apply") {
       if (USES_WOOD.has(r.key)) woodLeft -= short;
@@ -183,7 +192,7 @@ export async function runUpkeep(action = "check", targets) {
       }
     } else if (short > 0) note = " (short)";
     note += capped;
-    lines.push(`${r.key.padEnd(14)} ${String(have).padStart(5)} / ${String(want).padEnd(5)} expected from existing orders: ${queued} item(s)${note}`);
+    lines.push(`${r.key.padEnd(14)} ${String(have).padStart(5)} / ${String(want).padEnd(5)} expected from queued orders and jobs: ${queued} item(s)${note}`);
   }
   return `Upkeep ${action} (stock / target):\n` + lines.join("\n");
 }

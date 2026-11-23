@@ -38,13 +38,24 @@ local stock = {
 
 -- amount still to be produced by existing orders, keyed like the refill jobs ("MakeBarrel", "CustomReaction:BREW_DRINK_FROM_PLANT", "MakeTool:ITEM_TOOL_LARGE_POT")
 local pending = {}
-for _, o in ipairs(df.global.world.manager_orders.all) do
-  local k = df.job_type[o.job_type]
-  if o.reaction_name ~= '' then k = k .. ':' .. o.reaction_name end
-  if o.job_type == df.job_type.MakeTool and o.item_subtype >= 0 then
-    local d = df.itemdef_toolst.find(o.item_subtype)
+local function key(job_type, reaction_name, item_subtype)
+  local k = df.job_type[job_type]
+  if reaction_name ~= '' then k = k .. ':' .. reaction_name end
+  if job_type == df.job_type.MakeTool and item_subtype >= 0 then
+    local d = df.itemdef_toolst.find(item_subtype)
     if d then k = k .. ':' .. d.id end
   end
+  return k
+end
+for _, o in ipairs(df.global.world.manager_orders.all) do
+  local k = key(o.job_type, o.reaction_name, o.item_subtype)
   pending[k] = (pending[k] or 0) + o.amount_left
+end
+-- jobs already waiting in a workshop count too: an order's amount_left drops as soon as its job is made, and a
+-- job queued straight at a workshop (df_workshop add) has no order at all. Ten brews queued at the still used to
+-- get another 22 brew orders on top.
+for _, j in utils.listpairs(df.global.world.jobs.list) do
+  local k = key(j.job_type, j.reaction_name, j.item_subtype)
+  pending[k] = (pending[k] or 0) + 1
 end
 emit({stock = stock, pending = pending})

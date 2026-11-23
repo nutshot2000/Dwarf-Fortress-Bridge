@@ -17,6 +17,18 @@ local function near_fort(p, r, reachable)
   end
   return false
 end
+-- A soldier fighting a target its squad was ordered to kill is doing its job: report it, don't stop the wait.
+-- Hunting ten keas used to stop every df_wait after a day or two.
+local function on_kill_order(u)
+  local sq = u.military.squad_id >= 0 and df.squad.find(u.military.squad_id)
+  if not sq then return false end
+  -- any kill order counts: the blow that kills a target (and the scuffle after) comes when that target is
+  -- already dead or out of reach. Real enemies still stop the wait as soon as they are visible.
+  for _, o in ipairs(sq.orders) do
+    if df.squad_order_kill_listst:is_instance(o) then return true end
+  end
+  return false
+end
 for _, u in ipairs(df.global.world.units.active) do
   local flags = try(function() return dfhack.maps.getTileFlags(u.pos) end)
   if flags and not flags.hidden then
@@ -51,9 +63,10 @@ for _, u in ipairs(df.global.world.units.active) do
         local ty = rep and df.announcement_type[rep.type] or ''
         if rep and not (ty:find('^COMBAT_') or ty:find('GRIP$')) then rep = nil end
         if rep then
-          local list=ARGS.report_animal_combat and not dfhack.units.isCitizen(u) and animal_combat or combat
+          local ordered = dfhack.units.isCitizen(u) and try(function() return on_kill_order(u) end, false)
+          local list=(ordered or (ARGS.report_animal_combat and not dfhack.units.isCitizen(u))) and animal_combat or combat
           list[#list + 1] = {unit_id = u.id, name = unit_name(u), report_id = id,
-            text = dfhack.df2utf(rep.text)}
+            text = dfhack.df2utf(rep.text), ordered = ordered or nil}
           break
         end
       end

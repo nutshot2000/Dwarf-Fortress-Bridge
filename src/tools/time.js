@@ -145,7 +145,7 @@ tool("df_wait","Unpause and let the game run for a number of in-game days (1 day
     const sparring = all.length - imp.length - rest.length;
     let out = `Ran ${ran.toFixed(2)} days in ${((Date.now() - t0) / 1000).toFixed(0)}s: ${reason}. Paused.\n`;
     if(now.isolated?.length) out+=`ACCESS WARNING: possibly trapped citizen(s): ${now.isolated.map(u=>`${u.name} #${u.id} at ${u.x},${u.y},${u.z}`).join("; ")}. Inspect with df_problems before further construction.\n`;
-    if (animalReports.size) out += `Ongoing fights (animal fights in ${a.animal_fights} mode; a citizen's fight stops a wait once per day; new hostiles always stop):\n${[...animalReports.values()].slice(-3).map(e=>`${e.name}: ${e.text}`).join("\n")}\n`;
+    if (animalReports.size) out += `Ongoing fights (animal fights in ${a.animal_fights} mode; soldiers fighting their kill-order targets never stop it; any other citizen's fight stops a wait once per day; new hostiles always stop):\n${[...animalReports.values()].slice(-3).map(e=>`${e.name}${e.ordered ? " (on a kill order)" : ""}: ${e.text}`).join("\n")}\n`;
     if (start.hostiles > 0) out += `(${start.hostiles} hostile(s) were already visible when the wait began: ${(start.hostile_names ?? []).join("; ")})\n`;
     // Migrant waves arrive as a big popup, not a regular report, so also compare the population.
     if (now.pop !== undefined && start.pop !== undefined && now.pop !== start.pop) {
